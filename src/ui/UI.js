@@ -28,6 +28,9 @@ export class UI {
       mobileControls: document.getElementById("mobile-controls"),
       joystick: document.getElementById("joystick"),
       actionBtn: document.getElementById("action-btn"),
+      flightPad: document.getElementById("flight-pad"),
+      climbUp: document.getElementById("climb-up"),
+      climbDown: document.getElementById("climb-down"),
     };
 
     this.input = null;
@@ -61,7 +64,30 @@ export class UI {
     });
     this.el.prompt.addEventListener("click", () => input.press("KeyE"));
     this.el.fact.addEventListener("click", () => this.closeFact());
+    this._bindHold(this.el.climbUp, 1);
+    this._bindHold(this.el.climbDown, -1);
     this._syncActionBtn();
+  }
+
+  _bindHold(el, dir) {
+    if (!el) return;
+    const on = (e) => {
+      e.preventDefault();
+      this.input?.setClimb(dir);
+    };
+    const off = () => this.input?.setClimb(0);
+    el.addEventListener("pointerdown", on);
+    el.addEventListener("pointerup", off);
+    el.addEventListener("pointerleave", off);
+    el.addEventListener("pointercancel", off);
+  }
+
+  setFlying(on) {
+    if (on) this.el.flightPad.classList.remove("hidden");
+    else {
+      this.el.flightPad.classList.add("hidden");
+      this.input?.setClimb(0);
+    }
   }
 
   _enableTouchUi() {

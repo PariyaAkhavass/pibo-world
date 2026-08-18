@@ -164,6 +164,20 @@ export class Pibo {
     return this.group.getWorldPosition(target);
   }
 
+  setVisible(v) {
+    this.group.visible = v;
+  }
+
+  /** Snap onto the surface after hopping out of the pot-ship. */
+  placeAt(dir, forward, collision = null) {
+    this.dir.copy(dir).normalize();
+    this.forward.copy(forward);
+    if (collision) this.dir.copy(collision.resolve(this.dir, this.radius));
+    const up = this.dir.clone().normalize();
+    this.forward.sub(up.clone().multiplyScalar(this.forward.dot(up))).normalize();
+    this._applyTransform();
+  }
+
   /** Freeze movement (e.g. while a UI panel is open) but keep it breathing. */
   update(dt, input, { frozen = false, collision = null } = {}) {
     let move = 0, turn = 0;

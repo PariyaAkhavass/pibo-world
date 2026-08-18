@@ -36,6 +36,7 @@ connection the first time.
 - **🪴** (top-right) — see the things you've grown
 - **Phone / tablet** — a little joystick (bottom-left) steers Pibo; tap **E** (bottom-right) to interact. On-screen prompts and plant cards are tappable too.
 - Houses, the workshop, the observatory, trees, and rocks are solid — Pibo slides around them.
+- **Pot-ship** (landing pad) — press **E** to board. **WASD** flies around the world, **Space** climbs into the toy sky, **Shift** / **F** descends, **E** lands anywhere. On a phone, ↑ / ↓ sit above the E button.
 
 Walk to the three planter beds in the garden, plant a seed in each, wait a few seconds for
 them to grow, and inspect them to learn a tiny fact. Grow all three and watch what happens
@@ -61,6 +62,7 @@ src/
     layout.js       the handcrafted lat/lon layout of this planet
   entities/
     Pibo.js         the player creature (walks, idles, faces movement)
+    Ufo.js          pot-shaped ship you can board and fly
   systems/
     GardenSystem.js the plant → grow → inspect → reward loop
   data/

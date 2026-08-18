@@ -27,8 +27,8 @@
       <div class="intro-mark">Pibo</div>
       <div class="intro-sub">your pocket planet</div>
       <div class="intro-hint">
-        <span class="hint-kb">move with <b>WASD</b> / <b>arrows</b> · interact with <b>E</b></span>
-        <span class="hint-touch">use the <b>joystick</b> · tap <b>E</b> to interact</span>
+        <span class="hint-kb">move with <b>WASD</b> / <b>arrows</b> · interact with <b>E</b> · a <b>pot-ship</b> waits at the pad</span>
+        <span class="hint-touch">use the <b>joystick</b> · tap <b>E</b> · find the <b>pot-ship</b></span>
       </div>
     </div>
 
@@ -71,6 +71,10 @@
         </div>
       </div>
       <button type="button" id="action-btn" class="action-btn" aria-label="Interact">E</button>
+      <div id="flight-pad" class="flight-pad hidden">
+        <button type="button" id="climb-up" class="flight-btn" aria-label="Climb">↑</button>
+        <button type="button" id="climb-down" class="flight-btn" aria-label="Descend">↓</button>
+      </div>
     </div>
   </div>
 
