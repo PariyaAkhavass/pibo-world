@@ -153,8 +153,9 @@ export class Game {
     this._camForward.lerp(fwd, k * (flying ? 0.85 : 0.6)).normalize();
 
     const alt = flying ? this.ufo.altitude : 0;
-    const height = flying ? 4.2 + alt * 0.28 : this.camHeight;
-    const back = flying ? 12 + alt * 0.95 : this.camBack;
+    const space = THREE.MathUtils.smoothstep(alt, 10, 26);
+    const height = flying ? 4.2 + alt * 0.22 : this.camHeight;
+    const back = flying ? 11 + alt * (0.85 + space * 0.55) : this.camBack;
 
     const desired = p.clone()
       .add(this._camUp.clone().multiplyScalar(height))
@@ -163,9 +164,11 @@ export class Game {
     this.camera.position.lerp(desired, flying ? k * 0.85 : k);
     this.camera.up.copy(this._camUp);
 
-    const lookAt = p.clone()
+    const lookShip = p.clone()
       .add(this._camUp.clone().multiplyScalar(flying ? 0.4 : 1.6))
       .add(this._camForward.clone().multiplyScalar(flying ? 2.2 : 1.4));
+    const lookPlanet = new THREE.Vector3(0, 0, 0);
+    const lookAt = lookShip.lerp(lookPlanet, space * 0.55);
     this._camTarget.lerp(lookAt, k);
     this.camera.lookAt(this._camTarget);
 
@@ -242,6 +245,7 @@ export class Game {
       this.ufo.parkAt(this.pibo.dir, this.pibo.forward);
       this.pibo.setVisible(true);
       this.ui.setFlying(false);
+      this._frameCameraOnPibo();
       this.ui.toast("Back on your planet 🌍", 2000);
     });
   }
@@ -258,6 +262,22 @@ export class Game {
       this.props.revealBloom();
       ui.toast("Something new is growing in the meadow 🌸", 3200);
     }, 3400);
+  }
+
+  _frameCameraOnPibo() {
+    const p = this.pibo.worldPosition();
+    this._camUp.copy(this.pibo.dir);
+    this._camForward.copy(this.pibo.forward);
+    this.camera.position.copy(p)
+      .add(this._camUp.clone().multiplyScalar(this.camHeight))
+      .add(this._camForward.clone().multiplyScalar(-this.camBack));
+    this._camTarget.copy(p)
+      .add(this._camUp.clone().multiplyScalar(1.6))
+      .add(this._camForward.clone().multiplyScalar(1.4));
+    this.camera.up.copy(this._camUp);
+    this.camera.fov = 34;
+    this.camera.lookAt(this._camTarget);
+    this.camera.updateProjectionMatrix();
   }
 
   _onResize() {

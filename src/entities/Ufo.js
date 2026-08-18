@@ -196,27 +196,31 @@ export class Ufo {
     const potDark = clay(0xefc65c);
     const soil = clay(0x5a3f2c, { roughness: 1 });
 
-    // wide flying-saucer planter
-    const hull = cyl(1.15, 0.62, 0.42, pot, 28);
-    hull.position.y = 0.34;
+    // planter-pot hull — taper like a flower pot, wide brim like a saucer
+    const hull = cyl(0.92, 0.58, 0.72, pot, 28);
+    hull.position.y = 0.48;
     this.body.add(hull);
 
-    const belly = cyl(0.62, 0.95, 0.2, potDark, 28);
-    belly.position.y = 0.1;
+    const belly = cyl(0.58, 0.82, 0.18, potDark, 28);
+    belly.position.y = 0.08;
     this.body.add(belly);
 
-    const rim = cyl(1.22, 1.18, 0.14, potDark, 28);
-    rim.position.y = 0.56;
-    this.body.add(rim);
+    const brim = cyl(1.28, 1.12, 0.12, potDark, 28);
+    brim.position.y = 0.82;
+    this.body.add(brim);
 
-    const dirt = cyl(0.72, 0.72, 0.1, soil, 20);
-    dirt.position.y = 0.58;
+    const lip = cyl(0.88, 0.9, 0.1, pot, 28);
+    lip.position.y = 0.88;
+    this.body.add(lip);
+
+    const dirt = cyl(0.7, 0.7, 0.1, soil, 20);
+    dirt.position.y = 0.9;
     this.body.add(dirt);
 
     // underside engine glow
     this.glowMat = clay(0x9eecff, { emissive: 0x66d8ff, emissiveIntensity: 0.7, roughness: 0.35 });
-    const glow = cyl(0.55, 0.88, 0.08, this.glowMat, 22);
-    glow.position.y = 0.02;
+    const glow = cyl(0.5, 0.78, 0.08, this.glowMat, 22);
+    glow.position.y = -0.02;
     this.body.add(glow);
 
     this.beamMat = clay(0x9eecff, {
@@ -232,9 +236,9 @@ export class Ufo {
 
     // spinning halo — the "UFO" read
     const ringMat = clay(0xbfe9ff, { emissive: 0x8fd7ff, emissiveIntensity: 1.1, roughness: 0.35 });
-    this.ring = new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.045, 10, 36), ringMat);
+    this.ring = new THREE.Mesh(new THREE.TorusGeometry(1.12, 0.045, 10, 36), ringMat);
     this.ring.rotation.x = Math.PI / 2;
-    this.ring.position.y = 0.28;
+    this.ring.position.y = 0.78;
     this.body.add(this.ring);
 
     // bubble canopy
@@ -248,18 +252,18 @@ export class Ufo {
         emissiveIntensity: 0.12,
       })
     );
-    dome.position.y = 0.58;
+    dome.position.y = 0.9;
     this.body.add(dome);
 
     // a little passenger seat so the empty pot still feels inhabited
     const seat = blob(0.16, pot, 1);
-    seat.position.set(0, 0.7, 0.04);
+    seat.position.set(0, 1.02, 0.04);
     seat.scale.set(0.85, 1.1, 0.75);
     this.body.add(seat);
     const eyeMat = clay(0x30303c, { roughness: 0.5 });
     for (const sx of [-1, 1]) {
       const eye = ball(0.035, eyeMat, 8);
-      eye.position.set(sx * 0.055, 0.74, 0.16);
+      eye.position.set(sx * 0.055, 1.06, 0.16);
       this.body.add(eye);
     }
 
@@ -278,10 +282,10 @@ export class Ufo {
 
     // tiny antenna
     const ant = cyl(0.02, 0.02, 0.38, clay(0x9aa0a6), 6);
-    ant.position.set(0.22, 1.05, -0.08);
+    ant.position.set(0.22, 1.38, -0.08);
     this.body.add(ant);
     const tip = ball(0.055, clay(0xff9a76, { emissive: 0xff9a76, emissiveIntensity: 0.45 }), 8);
-    tip.position.set(0.22, 1.26, -0.08);
+    tip.position.set(0.22, 1.58, -0.08);
     this.body.add(tip);
 
     shade(this.group, true, false);
