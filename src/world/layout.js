@@ -12,6 +12,8 @@ export const LAYOUT = {
   home: { lat: 24, lon: 20, yaw: -0.5 },
   workshop: { lat: 27, lon: -48, yaw: 0.7 },
   observatory: { lat: 18, lon: -108, yaw: 0.2 },
+  planetarium: { lat: 55, lon: -104, yaw: -0.35 },
+  cafe: { lat: 49, lon: 14, yaw: 0.55 },
   pond: { lat: 33, lon: -158 },
   landing: { lat: 36, lon: 66 },
   ufo: { lat: 36, lon: 66 },
@@ -32,16 +34,36 @@ export const LAYOUT = {
   trees: [
     { lat: 34, lon: 8 }, { lat: 40, lon: -20 }, { lat: 30, lon: 44 },
     { lat: 46, lon: -78 }, { lat: 44, lon: 150 }, { lat: 52, lon: 100 },
-    { lat: 38, lon: -128 },
+    { lat: 38, lon: -128 }, { lat: 58, lon: -38 }, { lat: 56, lon: 58 },
+    { lat: 62, lon: 142 }, { lat: 28, lon: -202 },
   ],
   rocks: [
     { lat: 30, lon: -70 }, { lat: 48, lon: 30 }, { lat: 26, lon: 96 },
-    { lat: 50, lon: -150 }, { lat: 42, lon: 180 },
+    { lat: 50, lon: -150 }, { lat: 42, lon: 180 }, { lat: 58, lon: -176 },
+    { lat: 60, lon: 86 }, { lat: 36, lon: -224 },
   ],
   flowers: [
     { lat: 16, lon: 40 }, { lat: 22, lon: -10 }, { lat: 28, lon: 60 },
     { lat: 34, lon: -30 }, { lat: 18, lon: 150 }, { lat: 30, lon: 170 },
     { lat: 24, lon: -90 }, { lat: 40, lon: 96 }, { lat: 12, lon: 90 },
+    { lat: 54, lon: -18 }, { lat: 58, lon: 32 }, { lat: 60, lon: 118 },
+    { lat: 48, lon: -206 }, { lat: 20, lon: -172 },
+  ],
+  lanterns: [
+    { lat: 39, lon: -100 }, { lat: 50, lon: -118 }, { lat: 43, lon: 36 },
+    { lat: 54, lon: -4 }, { lat: 42, lon: 132 }, { lat: 55, lon: 172 },
+  ],
+  mushrooms: [
+    { lat: 22, lon: -140 }, { lat: 26, lon: -188 }, { lat: 48, lon: -52 },
+    { lat: 52, lon: 72 }, { lat: 58, lon: 212 }, { lat: 38, lon: 222 },
+  ],
+  benches: [
+    { lat: 43, lon: -162, yaw: 0.8 },
+    { lat: 45, lon: 42, yaw: -0.55 },
+  ],
+  starStones: [
+    { lat: 31, lon: -108 }, { lat: 37, lon: -110 }, { lat: 44, lon: -109 },
+    { lat: 50, lon: -106 },
   ],
 };
 
@@ -63,7 +85,10 @@ export function collidersOf(layout = LAYOUT) {
   add(layout.home, 1.5);
   add(layout.workshop, 1.45);
   add(layout.observatory, 2.0);
+  add(layout.planetarium, 1.65);
+  add(layout.cafe, 1.55);
   for (const t of layout.trees ?? []) add(t, 0.72);
   for (const r of layout.rocks ?? []) add(r, 0.58);
+  for (const b of layout.benches ?? []) add(b, 0.55);
   return out;
 }

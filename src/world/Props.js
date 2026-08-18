@@ -15,6 +15,8 @@ export class Props {
     this.planet = planet;
     this.t = 0;
     this.observatoryLights = [];
+    this.planetariumLights = [];
+    this.twinklers = [];
     this.landingRing = null;
     this.pondWater = null;
     this.bridge = null;
@@ -30,6 +32,12 @@ export class Props {
 
     const obs = buildObservatory(this.observatoryLights);
     P.placeOnSurface(shade(obs), dirOf(LAYOUT.observatory), { lift: 0, yaw: LAYOUT.observatory.yaw });
+
+    const planetarium = buildPlanetarium(this.planetariumLights);
+    P.placeOnSurface(shade(planetarium), dirOf(LAYOUT.planetarium), { yaw: LAYOUT.planetarium.yaw });
+    this._collectTwinkles(planetarium);
+
+    P.placeOnSurface(shade(buildCafe()), dirOf(LAYOUT.cafe), { yaw: LAYOUT.cafe.yaw });
 
     const pond = buildPond();
     this.pondWater = pond.userData.water;
@@ -54,6 +62,20 @@ export class Props {
       P.placeOnSurface(shade(fl), dirOf(f), { yaw: f.lon });
       this._collectSway(fl);
     }
+    for (const l of LAYOUT.lanterns) {
+      const lantern = buildLantern(l.lon);
+      P.placeOnSurface(shade(lantern), dirOf(l), { yaw: l.lon });
+      this._collectTwinkles(lantern);
+    }
+    for (const m of LAYOUT.mushrooms) {
+      P.placeOnSurface(shade(buildMushrooms(m.lon)), dirOf(m), { yaw: m.lon });
+    }
+    for (const b of LAYOUT.benches) {
+      P.placeOnSurface(shade(buildBench()), dirOf(b), { yaw: b.yaw });
+    }
+    for (const s of LAYOUT.starStones) {
+      P.placeOnSurface(shade(buildStarStone(s.lon), true, true), dirOf(s), { yaw: s.lon });
+    }
 
     // reward pieces, hidden until earned
     this.bridge = shade(buildBridge());
@@ -72,6 +94,14 @@ export class Props {
     group.traverse((o) => {
       if (o.userData.sway) {
         this.swayers.push({ mesh: o, phase: Math.random() * Math.PI * 2, amp: o.userData.sway });
+      }
+    });
+  }
+
+  _collectTwinkles(group) {
+    group.traverse((o) => {
+      if (o.userData.twinkle && o.material) {
+        this.twinklers.push({ mesh: o, phase: Math.random() * Math.PI * 2, amp: o.userData.twinkle });
       }
     });
   }
@@ -120,6 +150,12 @@ export class Props {
       this.landingBeacon.scale.setScalar(0.9 + p * 0.18);
     }
     if (this.landingRing) this.landingRing.rotation.z += dt * 0.6;
+
+    for (const tw of this.twinklers) {
+      const p = (Math.sin(t * 2.4 + tw.phase) + 1) * 0.5;
+      tw.mesh.material.emissiveIntensity = 0.25 + p * tw.amp;
+      tw.mesh.scale.setScalar(0.92 + p * 0.18);
+    }
 
     // reward bloom pop-in
     const rb = this.rewardBloom;
@@ -242,6 +278,138 @@ function buildObservatory(lightRefs) {
   return g;
 }
 
+function buildPlanetarium(lightRefs) {
+  const g = new THREE.Group();
+
+  const base = cyl(1.35, 1.55, 0.65, clay(0x7b8fb5), 24);
+  base.position.y = 0.33;
+  g.add(base);
+
+  const floor = cyl(1.65, 1.75, 0.16, clay(0xe9e2cf), 24);
+  floor.position.y = 0.08;
+  g.add(floor);
+
+  const domeMat = clay(0x25324d, {
+    emissive: 0x111a33,
+    emissiveIntensity: 0.45,
+    roughness: 0.55,
+  });
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(1.32, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2),
+    domeMat
+  );
+  dome.position.y = 0.65;
+  g.add(dome);
+
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(1.28, 0.08, 10, 32), clay(0xf5d06f));
+  rim.rotation.x = Math.PI / 2;
+  rim.position.y = 0.66;
+  g.add(rim);
+
+  const door = box(0.5, 0.42, 0.08, clay(0xfff0c7, { emissive: 0xffd889, emissiveIntensity: 0.28 }));
+  door.position.set(0, 0.28, 1.52);
+  g.add(door);
+
+  const starMat = clay(0xfff3a6, { emissive: 0xffdc5a, emissiveIntensity: 0.75 });
+  for (let i = 0; i < 11; i++) {
+    const a = (i / 11) * Math.PI * 2;
+    const h = 0.97 + (i % 3) * 0.22;
+    const star = ball(0.055 + (i % 2) * 0.02, starMat, 8);
+    star.position.set(Math.cos(a) * 0.82, h, Math.sin(a) * 0.82);
+    star.userData.twinkle = 0.8;
+    g.add(star);
+    lightRefs.push(starMat);
+  }
+
+  const projector = cyl(0.18, 0.26, 0.34, clay(0x3f4b66), 14);
+  projector.position.set(0, 0.84, 0);
+  g.add(projector);
+
+  const beam = cone(
+    0.55,
+    1.05,
+    clay(0x9fd7ff, {
+      emissive: 0x72bfff,
+      emissiveIntensity: 0.35,
+      transparent: true,
+      opacity: 0.36,
+    }),
+    18
+  );
+  beam.position.y = 1.25;
+  beam.rotation.x = Math.PI;
+  g.add(beam);
+
+  return g;
+}
+
+function buildCafe() {
+  const g = new THREE.Group();
+
+  const patio = cyl(1.5, 1.6, 0.12, clay(0xe7d6bd), 18);
+  patio.position.y = 0.06;
+  g.add(patio);
+
+  const kiosk = box(1.45, 1.1, 1.05, clay(0xffc7a3));
+  kiosk.position.set(-0.15, 0.62, 0);
+  g.add(kiosk);
+
+  const counter = box(1.15, 0.36, 0.18, clay(0x8f6548));
+  counter.position.set(-0.15, 0.52, 0.61);
+  g.add(counter);
+
+  const roof = cone(1.22, 0.68, clay(0x5bb0a0), 4);
+  roof.position.set(-0.15, 1.48, 0);
+  roof.rotation.y = Math.PI / 4;
+  g.add(roof);
+
+  const cup = cyl(0.16, 0.13, 0.24, clay(0xfff3d6), 14);
+  cup.position.set(0.58, 0.83, 0.66);
+  g.add(cup);
+  const steamMat = clay(0xffffff, { transparent: true, opacity: 0.7 });
+  for (let i = 0; i < 3; i++) {
+    const steam = new THREE.Mesh(new THREE.TorusGeometry(0.06 + i * 0.015, 0.01, 6, 16, Math.PI * 1.25), steamMat);
+    steam.position.set(0.5 + i * 0.06, 1.05 + i * 0.13, 0.67);
+    steam.rotation.set(1.2, 0.2, 0.4);
+    g.add(steam);
+  }
+
+  const awningMat = clay(0xfff0c7);
+  for (let i = 0; i < 5; i++) {
+    const stripe = box(0.24, 0.12, 0.42, i % 2 ? clay(0xf26f6f) : awningMat);
+    stripe.position.set(-0.63 + i * 0.24, 1.1, 0.68);
+    stripe.rotation.x = -0.28;
+    g.add(stripe);
+  }
+
+  const table = cyl(0.35, 0.35, 0.08, clay(0xfff0c7), 18);
+  table.position.set(0.85, 0.44, -0.42);
+  g.add(table);
+  const leg = cyl(0.06, 0.08, 0.38, clay(0x8f6548), 10);
+  leg.position.set(0.85, 0.23, -0.42);
+  g.add(leg);
+
+  for (const sx of [-1, 1]) {
+    const stool = cyl(0.18, 0.2, 0.16, clay(0xf5d06f), 12);
+    stool.position.set(0.85 + sx * 0.5, 0.2, -0.42);
+    g.add(stool);
+  }
+
+  const signPost = cyl(0.04, 0.05, 0.72, clay(0x8f6548), 8);
+  signPost.position.set(-1.14, 0.42, 0.72);
+  g.add(signPost);
+  const sign = box(0.62, 0.32, 0.08, clay(0xfff0c7));
+  sign.position.set(-1.14, 0.82, 0.72);
+  g.add(sign);
+  const bean = ball(0.08, clay(0x6a4a35));
+  bean.scale.set(0.65, 1, 0.28);
+  bean.position.set(-1.14, 0.82, 0.78);
+  bean.rotation.z = 0.5;
+  g.add(bean);
+
+  return g;
+}
+
 function buildPond() {
   const g = new THREE.Group();
 
@@ -329,6 +497,78 @@ function buildLandingPad() {
   g.add(beacon);
   g.userData.beacon = beacon;
 
+  return g;
+}
+
+function buildLantern(seed = 0) {
+  const g = new THREE.Group();
+  const post = cyl(0.045, 0.06, 0.72, clay(0x7d6547), 8);
+  post.position.y = 0.36;
+  g.add(post);
+
+  const cap = cone(0.18, 0.18, clay(0x5bb0a0), 4);
+  cap.position.y = 0.87;
+  cap.rotation.y = Math.PI / 4;
+  g.add(cap);
+
+  const light = ball(0.16, clay(0xffeaa0, { emissive: 0xffc95a, emissiveIntensity: 0.8 }), 12);
+  light.position.y = 0.7;
+  light.userData.twinkle = 0.75;
+  g.add(light);
+
+  return g;
+}
+
+function buildMushrooms(seed = 0) {
+  const g = new THREE.Group();
+  const rng = mulberry32(Math.floor(seed * 109) + 31);
+  for (let i = 0; i < 3; i++) {
+    const x = (rng() - 0.5) * 0.56;
+    const z = (rng() - 0.5) * 0.46;
+    const h = 0.18 + rng() * 0.18;
+    const stem = cyl(0.045, 0.055, h, clay(0xfff0d2), 8);
+    stem.position.set(x, h / 2, z);
+    g.add(stem);
+    const cap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14 + rng() * 0.07, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+      clay(rng() > 0.5 ? 0xf26f6f : 0xb9a6ff)
+    );
+    cap.scale.y = 0.62;
+    cap.position.set(x, h, z);
+    g.add(cap);
+  }
+  return g;
+}
+
+function buildBench() {
+  const g = new THREE.Group();
+  const wood = clay(0xb98a55);
+  const seat = box(1.0, 0.12, 0.34, wood);
+  seat.position.y = 0.38;
+  g.add(seat);
+  const back = box(1.0, 0.1, 0.12, wood);
+  back.position.set(0, 0.62, -0.2);
+  back.rotation.x = -0.18;
+  g.add(back);
+  for (const sx of [-1, 1]) {
+    const leg = box(0.09, 0.36, 0.09, clay(0x7d6547));
+    leg.position.set(sx * 0.36, 0.18, 0.06);
+    g.add(leg);
+  }
+  return g;
+}
+
+function buildStarStone(seed = 0) {
+  const g = new THREE.Group();
+  const stone = cyl(0.28, 0.32, 0.08, clay(0xd8d2c4), 5);
+  stone.position.y = 0.04;
+  stone.rotation.y = seed;
+  g.add(stone);
+  const star = cone(0.09, 0.06, clay(0xffeaa0, { emissive: 0xffc95a, emissiveIntensity: 0.2 }), 5);
+  star.scale.set(1.4, 0.4, 1.4);
+  star.position.y = 0.11;
+  star.rotation.y = Math.PI / 5;
+  g.add(star);
   return g;
 }
 
