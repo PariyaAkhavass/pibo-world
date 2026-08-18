@@ -1,13 +1,14 @@
 import * as THREE from "three";
 import { Input } from "./Input.js";
 import { tangentToward } from "./SphereMath.js";
+import { Collision } from "./Collision.js";
 import { Planet } from "../world/Planet.js";
 import { Environment } from "../world/Environment.js";
 import { Props } from "../world/Props.js";
 import { Ambient } from "../world/Ambient.js";
 import { GardenSystem } from "../systems/GardenSystem.js";
 import { Pibo } from "../entities/Pibo.js";
-import { LAYOUT, dirOf } from "../world/layout.js";
+import { LAYOUT, dirOf, collidersOf } from "../world/layout.js";
 import { getPlant } from "../data/plants.js";
 import { UI } from "../ui/UI.js";
 
@@ -76,6 +77,7 @@ export class Game {
     this.garden.onAllGrown = () => this._reward();
 
     this.ambient = new Ambient(this.scene, 10);
+    this.collision = new Collision(this.planet.radius, collidersOf(LAYOUT));
   }
 
   _initPlayer() {
@@ -110,7 +112,7 @@ export class Game {
     const dt = Math.min(this.clock.getDelta(), 0.05);
 
     const frozen = this.ui.isModalOpen;
-    this.pibo.update(dt, this.input, { frozen });
+    this.pibo.update(dt, this.input, { frozen, collision: this.collision });
 
     if (!this.started && this.pibo.moving) {
       this.started = true;

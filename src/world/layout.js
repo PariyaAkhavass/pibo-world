@@ -47,3 +47,22 @@ export const LAYOUT = {
 export function dirOf(entry) {
   return latLonToDir(entry.lat, entry.lon);
 }
+
+/**
+ * Solid footprints for surface collision. Radii are world units on the
+ * planet (roughly half the building/tree width). Garden beds, the pond,
+ * the landing pad, and flowers stay walkable so you can still reach them.
+ */
+export function collidersOf(layout = LAYOUT) {
+  const out = [];
+  const add = (entry, radius) => {
+    if (!entry || !radius) return;
+    out.push({ dir: dirOf(entry), radius });
+  };
+  add(layout.home, 1.5);
+  add(layout.workshop, 1.45);
+  add(layout.observatory, 2.0);
+  for (const t of layout.trees ?? []) add(t, 0.72);
+  for (const r of layout.rocks ?? []) add(r, 0.58);
+  return out;
+}
