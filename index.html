@@ -1,11 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>pibo.world</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Pibo · Pocket Planet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
 </head>
 <body>
-    <h1>pibo world 🌏</h1>
+  <div id="sky"></div>
+  <canvas id="scene"></canvas>
+
+  <!-- Minimal UI overlay. The planet itself is the interface. -->
+  <div id="ui">
+    <!-- Intro title card -->
+    <div id="intro" class="intro">
+      <div class="intro-mark">Pibo</div>
+      <div class="intro-sub">your pocket planet</div>
+      <div class="intro-hint">move with <b>WASD</b> / <b>arrows</b> · interact with <b>E</b></div>
+    </div>
+
+    <!-- Contextual interaction prompt -->
+    <div id="prompt" class="prompt hidden">
+      <span class="key">E</span>
+      <span class="prompt-label">Interact</span>
+    </div>
+
+    <!-- Plant selection panel -->
+    <div id="plant-panel" class="panel hidden">
+      <div class="panel-title">Plant something</div>
+      <div class="cards" id="plant-cards"></div>
+      <div class="panel-foot">press <b>Esc</b> to step back</div>
+    </div>
+
+    <!-- Fact / inspect card -->
+    <div id="fact-card" class="fact hidden">
+      <div class="fact-emoji" id="fact-emoji">🌱</div>
+      <div class="fact-name" id="fact-name">Plant</div>
+      <div class="fact-text" id="fact-text">A little fact.</div>
+      <div class="fact-foot">press <b>Esc</b> to close</div>
+    </div>
+
+    <!-- Collection button + drawer -->
+    <button id="collection-btn" class="collection-btn" title="Your collection">🪴</button>
+    <div id="collection" class="collection hidden">
+      <div class="collection-title">Things you've grown</div>
+      <div class="collection-list" id="collection-list"></div>
+    </div>
+
+    <!-- Transient toast for gentle world moments -->
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <noscript>Pibo needs JavaScript to bloom.</noscript>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>
