@@ -41,8 +41,8 @@ export class Pibo {
     this.body = new THREE.Group();
     this.group.add(this.body);
 
-    const pot = clay(0xfff1b8); // light pastel yellow pot
-    const potDark = clay(0xe8d48a); // rim + feet, a softer butter shade
+    const pot = clay(0xffe27a); // light pastel yellow pot
+    const potDark = clay(0xefc65c); // rim + feet, a softer butter shade
     const soilMat = clay(0x5a3f2c, { roughness: 1 });
 
     // --- planter-pot body (rounded cube, like the reference creatures) ---
