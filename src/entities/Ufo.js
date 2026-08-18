@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { clay, blob, ball, cyl, shade } from "../world/materials.js";
+import { clay, blob, ball, cyl, cone, shade } from "../world/materials.js";
 import { surfaceQuaternion, tangentAt } from "../core/SphereMath.js";
 
 const PARKED_ALT = 0.42;
@@ -61,6 +61,7 @@ export class Ufo {
     if (this.mode !== "parked") return;
     this.mode = "takingOff";
     this.phaseT = 0;
+    this._setPilotVisible(true);
     this._setGlow(1.6);
   }
 
@@ -114,6 +115,7 @@ export class Ufo {
       if (this.altitude <= PARKED_ALT + 0.02) {
         this.altitude = PARKED_ALT;
         this.mode = "parked";
+        this._setPilotVisible(false);
         this._applyTransform();
         const cb = this.onLanded;
         this.onLanded = null;
@@ -176,6 +178,10 @@ export class Ufo {
   _setGlow(intensity) {
     if (this.glowMat) this.glowMat.emissiveIntensity = intensity;
     if (this.beamMat) this.beamMat.opacity = THREE.MathUtils.clamp(intensity * 0.18, 0.08, 0.45);
+  }
+
+  _setPilotVisible(visible) {
+    if (this.pilot) this.pilot.visible = visible;
   }
 
   _animate(dt, turn, move) {
@@ -255,16 +261,48 @@ export class Ufo {
     dome.position.y = 0.9;
     this.body.add(dome);
 
-    // a little passenger seat so the empty pot still feels inhabited
-    const seat = blob(0.16, pot, 1);
-    seat.position.set(0, 1.02, 0.04);
-    seat.scale.set(0.85, 1.1, 0.75);
-    this.body.add(seat);
+    // Mini Pibo pilot: visible only after boarding, so the player never vanishes.
+    this.pilot = new THREE.Group();
+    this.pilot.visible = false;
+    this.pilot.position.set(0, 0.98, 0.1);
+    this.pilot.scale.setScalar(0.42);
+    this.body.add(this.pilot);
+
+    const pilotBody = blob(0.4, pot, 1);
+    pilotBody.scale.set(1.0, 1.1, 0.9);
+    pilotBody.position.y = 0.12;
+    this.pilot.add(pilotBody);
+
+    const pilotRim = cyl(0.43, 0.5, 0.11, potDark, 18);
+    pilotRim.position.y = 0.48;
+    this.pilot.add(pilotRim);
+
     const eyeMat = clay(0x30303c, { roughness: 0.5 });
     for (const sx of [-1, 1]) {
-      const eye = ball(0.035, eyeMat, 8);
-      eye.position.set(sx * 0.055, 1.06, 0.16);
-      this.body.add(eye);
+      const eye = ball(0.055, eyeMat, 8);
+      eye.scale.set(0.9, 1.1, 0.45);
+      eye.position.set(sx * 0.12, 0.18, 0.36);
+      this.pilot.add(eye);
+
+      const cheek = ball(0.045, clay(0xffb6b6), 8);
+      cheek.scale.set(1, 0.72, 0.4);
+      cheek.position.set(sx * 0.22, 0.08, 0.34);
+      this.pilot.add(cheek);
+    }
+
+    const pilotSoil = cyl(0.27, 0.3, 0.06, soil, 14);
+    pilotSoil.position.y = 0.55;
+    this.pilot.add(pilotSoil);
+
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      const leaf = cone(0.045, 0.36 + (i % 2) * 0.08, clay(0x6fbf5f), 8);
+      leaf.scale.z = 0.3;
+      leaf.position.set(Math.cos(a) * 0.08, 0.7, Math.sin(a) * 0.08);
+      leaf.rotation.y = a;
+      leaf.rotation.z = -Math.cos(a) * 0.16;
+      leaf.rotation.x = Math.sin(a) * 0.12;
+      this.pilot.add(leaf);
     }
 
     // stubby landing legs
