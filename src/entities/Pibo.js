@@ -24,6 +24,7 @@ export class Pibo {
 
     this.linSpeed = 4.2; // units/sec along surface
     this.turnSpeed = 2.6; // rad/sec
+    this.radius = 0.5; // collision padding — about half the pot's width
     this.moving = false;
     this.walkPhase = 0;
     this.idleT = Math.random() * 10;
@@ -164,7 +165,7 @@ export class Pibo {
   }
 
   /** Freeze movement (e.g. while a UI panel is open) but keep it breathing. */
-  update(dt, input, { frozen = false } = {}) {
+  update(dt, input, { frozen = false, collision = null } = {}) {
     let move = 0, turn = 0;
     if (input && !frozen) {
       move = input.moveForward;
@@ -186,6 +187,10 @@ export class Pibo {
       const da = (move * this.linSpeed * dt) / this.planet.radius;
       this.dir.applyAxisAngle(right, da).normalize();
       this.forward.applyAxisAngle(right, da);
+    }
+
+    if (collision) {
+      this.dir.copy(collision.resolve(this.dir, this.radius));
     }
 
     // keep forward a clean tangent
