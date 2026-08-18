@@ -41,8 +41,8 @@ export class Pibo {
     this.body = new THREE.Group();
     this.group.add(this.body);
 
-    const pot = clay(0xff9a76); // warm terracotta-coral pot
-    const potDark = clay(0xef7f5c); // rim + feet, a shade deeper
+    const pot = clay(0xfff1b8); // light pastel yellow pot
+    const potDark = clay(0xe8d48a); // rim + feet, a softer butter shade
     const soilMat = clay(0x5a3f2c, { roughness: 1 });
 
     // --- planter-pot body (rounded cube, like the reference creatures) ---
@@ -84,7 +84,7 @@ export class Pibo {
     this.body.add(this.eyes);
 
     for (const sx of [-1, 1]) {
-      const cheek = ball(0.08, clay(0xff8a8a));
+      const cheek = ball(0.08, clay(0xffb6b6));
       cheek.scale.set(1, 0.68, 0.32);
       cheek.position.set(sx * 0.36, 0.54, 0.44);
       this.body.add(cheek);
@@ -92,7 +92,7 @@ export class Pibo {
 
     const smile = new THREE.Mesh(
       new THREE.TorusGeometry(0.09, 0.022, 8, 16, Math.PI),
-      clay(0x9c5a44, { roughness: 0.6 })
+      clay(0xc4a05a, { roughness: 0.6 })
     );
     smile.rotation.z = Math.PI; // flip the half-arc into an upward "u" smile
     smile.position.set(0, 0.52, 0.48);
