@@ -14,6 +14,10 @@ export const LAYOUT = {
   observatory: { lat: 18, lon: -108, yaw: 0.2 },
   planetarium: { lat: 55, lon: -104, yaw: -0.35 },
   cafe: { lat: 49, lon: 14, yaw: 0.55 },
+  library: { lat: 57, lon: -226, yaw: -0.15 },
+  windmill: { lat: 61, lon: 220, yaw: 0.6 },
+  well: { lat: 53, lon: -146, yaw: 0.25 },
+  picnic: { lat: 39, lon: -12, yaw: -0.45 },
   pond: { lat: 33, lon: -158 },
   landing: { lat: 36, lon: 66 },
   ufo: { lat: 36, lon: 66 },
@@ -65,6 +69,20 @@ export const LAYOUT = {
     { lat: 31, lon: -108 }, { lat: 37, lon: -110 }, { lat: 44, lon: -109 },
     { lat: 50, lon: -106 },
   ],
+  mailboxes: [
+    { lat: 26, lon: 36, yaw: -0.55 },
+    { lat: 48, lon: 92, yaw: 0.2 },
+    { lat: 54, lon: -212, yaw: -0.35 },
+  ],
+  signposts: [
+    { lat: 35, lon: -64, yaw: 0.35 },
+    { lat: 42, lon: 78, yaw: -0.25 },
+    { lat: 50, lon: -132, yaw: 0.75 },
+  ],
+  crystals: [
+    { lat: 59, lon: -70 }, { lat: 63, lon: 24 }, { lat: 56, lon: 190 },
+    { lat: 45, lon: 238 },
+  ],
 };
 
 export function dirOf(entry) {
@@ -87,6 +105,9 @@ export function collidersOf(layout = LAYOUT) {
   add(layout.observatory, 2.0);
   add(layout.planetarium, 1.65);
   add(layout.cafe, 1.55);
+  add(layout.library, 1.35);
+  add(layout.windmill, 1.35);
+  add(layout.well, 1.0);
   for (const t of layout.trees ?? []) add(t, 0.72);
   for (const r of layout.rocks ?? []) add(r, 0.58);
   for (const b of layout.benches ?? []) add(b, 0.55);

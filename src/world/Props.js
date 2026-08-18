@@ -38,6 +38,10 @@ export class Props {
     this._collectTwinkles(planetarium);
 
     P.placeOnSurface(shade(buildCafe()), dirOf(LAYOUT.cafe), { yaw: LAYOUT.cafe.yaw });
+    P.placeOnSurface(shade(buildLibrary()), dirOf(LAYOUT.library), { yaw: LAYOUT.library.yaw });
+    P.placeOnSurface(shade(buildWindmill()), dirOf(LAYOUT.windmill), { yaw: LAYOUT.windmill.yaw });
+    P.placeOnSurface(shade(buildWell()), dirOf(LAYOUT.well), { yaw: LAYOUT.well.yaw });
+    P.placeOnSurface(shade(buildPicnic()), dirOf(LAYOUT.picnic), { yaw: LAYOUT.picnic.yaw });
 
     const pond = buildPond();
     this.pondWater = pond.userData.water;
@@ -75,6 +79,17 @@ export class Props {
     }
     for (const s of LAYOUT.starStones) {
       P.placeOnSurface(shade(buildStarStone(s.lon), true, true), dirOf(s), { yaw: s.lon });
+    }
+    for (const m of LAYOUT.mailboxes) {
+      P.placeOnSurface(shade(buildMailbox(m.lon)), dirOf(m), { yaw: m.yaw });
+    }
+    for (const s of LAYOUT.signposts) {
+      P.placeOnSurface(shade(buildSignpost()), dirOf(s), { yaw: s.yaw });
+    }
+    for (const c of LAYOUT.crystals) {
+      const crystals = buildCrystals(c.lon);
+      P.placeOnSurface(shade(crystals), dirOf(c), { yaw: c.lon });
+      this._collectTwinkles(crystals);
     }
 
     // reward pieces, hidden until earned
@@ -410,6 +425,141 @@ function buildCafe() {
   return g;
 }
 
+function buildLibrary() {
+  const g = new THREE.Group();
+  const body = box(1.55, 1.12, 1.05, clay(0xa8c7e8));
+  body.position.y = 0.64;
+  g.add(body);
+
+  const roof = cone(1.22, 0.72, clay(0x7b5ea7), 4);
+  roof.position.y = 1.52;
+  roof.rotation.y = Math.PI / 4;
+  g.add(roof);
+
+  const door = box(0.42, 0.72, 0.08, clay(0x6a4a35));
+  door.position.set(0, 0.38, 0.57);
+  g.add(door);
+
+  const sign = box(0.82, 0.18, 0.08, clay(0xfff0c7));
+  sign.position.set(0, 1.12, 0.6);
+  g.add(sign);
+  for (let i = 0; i < 3; i++) {
+    const book = box(0.12, 0.28 + i * 0.04, 0.08, clay([0xf26f6f, 0xf5d06f, 0x5bb0a0][i]));
+    book.position.set(-0.18 + i * 0.18, 1.12, 0.66);
+    g.add(book);
+  }
+
+  for (const sx of [-1, 1]) {
+    const shelf = box(0.38, 0.34, 0.08, clay(0xfff0c7, { emissive: 0xffd889, emissiveIntensity: 0.18 }));
+    shelf.position.set(sx * 0.48, 0.73, 0.57);
+    g.add(shelf);
+  }
+
+  const stack = new THREE.Group();
+  stack.position.set(0.96, 0.1, 0.4);
+  for (let i = 0; i < 4; i++) {
+    const book = box(0.42, 0.08, 0.28, clay([0xf26f6f, 0x5bb0a0, 0xffd166, 0xb9a6ff][i]));
+    book.position.y = i * 0.085;
+    book.rotation.y = i * 0.16;
+    stack.add(book);
+  }
+  g.add(stack);
+
+  return g;
+}
+
+function buildWindmill() {
+  const g = new THREE.Group();
+  const tower = cyl(0.42, 0.68, 1.65, clay(0xfff0d2), 8);
+  tower.position.y = 0.82;
+  g.add(tower);
+
+  const cap = cone(0.62, 0.56, clay(0xe08a6b), 12);
+  cap.position.y = 1.92;
+  g.add(cap);
+
+  const hub = ball(0.16, clay(0xf5d06f), 12);
+  hub.position.set(0, 1.48, 0.58);
+  g.add(hub);
+
+  const bladeMat = clay(0xfff0c7);
+  for (let i = 0; i < 4; i++) {
+    const blade = box(0.16, 0.76, 0.055, bladeMat);
+    blade.position.set(0, 1.48, 0.64);
+    blade.rotation.z = (i / 4) * Math.PI * 2;
+    blade.translateY(0.42);
+    g.add(blade);
+  }
+
+  const door = box(0.26, 0.44, 0.07, clay(0x8f6548));
+  door.position.set(0, 0.28, 0.58);
+  g.add(door);
+
+  return g;
+}
+
+function buildWell() {
+  const g = new THREE.Group();
+  const ring = cyl(0.58, 0.64, 0.44, clay(0x9aa0a6), 18);
+  ring.position.y = 0.22;
+  g.add(ring);
+
+  const water = cyl(0.42, 0.42, 0.04, clay(0x5bb6db, { emissive: 0x2b7fb0, emissiveIntensity: 0.2 }), 18);
+  water.position.y = 0.46;
+  g.add(water);
+
+  for (const sx of [-1, 1]) {
+    const post = cyl(0.055, 0.07, 0.92, clay(0x8f6548), 8);
+    post.position.set(sx * 0.55, 0.75, 0);
+    g.add(post);
+  }
+
+  const roof = cone(0.76, 0.5, clay(0x5bb0a0), 4);
+  roof.position.y = 1.34;
+  roof.rotation.y = Math.PI / 4;
+  g.add(roof);
+
+  const bucket = cyl(0.14, 0.16, 0.22, clay(0xb98a55), 10);
+  bucket.position.set(0, 0.72, 0.12);
+  g.add(bucket);
+
+  return g;
+}
+
+function buildPicnic() {
+  const g = new THREE.Group();
+  const blanket = box(1.25, 0.04, 0.92, clay(0xf26f6f));
+  blanket.position.y = 0.03;
+  g.add(blanket);
+
+  for (const sx of [-1, 1]) {
+    const stripe = box(0.18, 0.045, 0.94, clay(0xfff0c7));
+    stripe.position.set(sx * 0.28, 0.055, 0);
+    g.add(stripe);
+  }
+  for (const z of [-0.22, 0.22]) {
+    const stripe = box(1.27, 0.046, 0.14, clay(0xfff0c7));
+    stripe.position.set(0, 0.06, z);
+    g.add(stripe);
+  }
+
+  const basket = box(0.42, 0.28, 0.3, clay(0xb98a55));
+  basket.position.set(0.3, 0.22, 0.16);
+  g.add(basket);
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 8, 18, Math.PI), clay(0x8f6548));
+  handle.position.set(0.3, 0.42, 0.16);
+  handle.rotation.z = Math.PI;
+  g.add(handle);
+
+  for (let i = 0; i < 3; i++) {
+    const snack = ball(0.09, clay([0xffd166, 0xff9a76, 0x8ccf78][i]), 10);
+    snack.position.set(-0.32 + i * 0.2, 0.14, -0.14 + i * 0.08);
+    g.add(snack);
+  }
+
+  return g;
+}
+
 function buildPond() {
   const g = new THREE.Group();
 
@@ -497,6 +647,77 @@ function buildLandingPad() {
   g.add(beacon);
   g.userData.beacon = beacon;
 
+  return g;
+}
+
+function buildMailbox(seed = 0) {
+  const g = new THREE.Group();
+  const post = cyl(0.04, 0.06, 0.48, clay(0x8f6548), 8);
+  post.position.y = 0.24;
+  g.add(post);
+
+  const boxBody = box(0.42, 0.26, 0.32, clay(0xff9a76));
+  boxBody.position.y = 0.6;
+  g.add(boxBody);
+  const top = new THREE.Mesh(
+    new THREE.SphereGeometry(0.21, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+    clay(0xf26f6f)
+  );
+  top.scale.z = 0.76;
+  top.position.y = 0.73;
+  top.rotation.y = Math.PI / 2;
+  g.add(top);
+
+  const flag = box(0.06, 0.24, 0.04, clay(0xf5d06f));
+  flag.position.set(0.26, 0.78, 0.02);
+  g.add(flag);
+  const face = box(0.34, 0.05, 0.04, clay(0xfff0c7));
+  face.position.set(0, 0.6, 0.18);
+  g.add(face);
+
+  return g;
+}
+
+function buildSignpost() {
+  const g = new THREE.Group();
+  const post = cyl(0.04, 0.055, 0.78, clay(0x8f6548), 8);
+  post.position.y = 0.39;
+  g.add(post);
+  const arrows = [
+    { y: 0.72, x: 0.18, rot: 0.06, color: 0xfff0c7 },
+    { y: 0.52, x: -0.18, rot: -0.08, color: 0xf5d06f },
+  ];
+  for (const a of arrows) {
+    const plank = box(0.62, 0.16, 0.07, clay(a.color));
+    plank.position.set(a.x, a.y, 0);
+    plank.rotation.z = a.rot;
+    g.add(plank);
+    const tip = cone(0.11, 0.18, clay(a.color), 3);
+    tip.position.set(a.x + Math.sign(a.x || 1) * 0.36, a.y, 0);
+    tip.rotation.z = -Math.sign(a.x || 1) * Math.PI / 2;
+    tip.rotation.y = Math.PI / 2;
+    g.add(tip);
+  }
+  return g;
+}
+
+function buildCrystals(seed = 0) {
+  const g = new THREE.Group();
+  const rng = mulberry32(Math.floor(seed * 73) + 47);
+  const colors = [0x9ad0ff, 0xb9a6ff, 0xffd166];
+  for (let i = 0; i < 4; i++) {
+    const h = 0.32 + rng() * 0.38;
+    const crystal = cone(0.12 + rng() * 0.04, h, clay(colors[i % colors.length], {
+      emissive: colors[i % colors.length],
+      emissiveIntensity: 0.25,
+      transparent: true,
+      opacity: 0.86,
+    }), 5);
+    crystal.position.set((rng() - 0.5) * 0.6, h / 2, (rng() - 0.5) * 0.6);
+    crystal.rotation.y = rng() * Math.PI;
+    crystal.userData.twinkle = 0.45;
+    g.add(crystal);
+  }
   return g;
 }
 

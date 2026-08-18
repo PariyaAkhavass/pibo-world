@@ -36,7 +36,8 @@ connection the first time.
 - **🪴** (top-right) — see the things you've grown
 - **Phone / tablet** — a little joystick (bottom-left) steers Pibo; tap **E** (bottom-right) to interact. On-screen prompts and plant cards are tappable too.
 - Houses, the workshop, the observatory, trees, and rocks are solid — Pibo slides around them.
-- New landmarks fill out the walk: a little planetarium, a mini café, benches, lanterns,
+- New landmarks fill out the walk: a little planetarium, mini café, tiny library,
+  windmill, wishing well, picnic blanket, benches, lanterns, mailboxes, crystals,
   mushrooms, and star-stone paths now make the quiet spaces feel intentionally inhabited.
 - **Pot-ship** (landing pad) — press **E** to board. **WASD** flies around the world, **Space** climbs into the toy sky, **Shift** / **F** descends, **E** lands anywhere. On a phone, ↑ / ↓ sit above the E button.
 
