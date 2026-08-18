@@ -14,6 +14,7 @@ export const LAYOUT = {
   observatory: { lat: 18, lon: -108, yaw: 0.2 },
   pond: { lat: 33, lon: -158 },
   landing: { lat: 36, lon: 66 },
+  ufo: { lat: 36, lon: 66 },
 
   // three planting spots in the garden patch, spread so they never overlap
   // (longitude compresses toward the pole, so spacing mostly uses latitude)

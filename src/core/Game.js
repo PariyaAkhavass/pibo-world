@@ -8,6 +8,7 @@ import { Props } from "../world/Props.js";
 import { Ambient } from "../world/Ambient.js";
 import { GardenSystem } from "../systems/GardenSystem.js";
 import { Pibo } from "../entities/Pibo.js";
+import { Ufo } from "../entities/Ufo.js";
 import { LAYOUT, dirOf, collidersOf } from "../world/layout.js";
 import { getPlant } from "../data/plants.js";
 import { UI } from "../ui/UI.js";
@@ -78,12 +79,16 @@ export class Game {
 
     this.ambient = new Ambient(this.scene, 10);
     this.collision = new Collision(this.planet.radius, collidersOf(LAYOUT));
+    if (this.props.landingBeacon) this.props.landingBeacon.visible = false;
   }
 
   _initPlayer() {
     const start = dirOf(LAYOUT.start);
     const forward = tangentToward(start, dirOf(LAYOUT.garden[1]));
     this.pibo = new Pibo(this.planet, start, forward);
+
+    const pad = dirOf(LAYOUT.ufo);
+    this.ufo = new Ufo(this.planet, pad, tangentToward(pad, start));
   }
 
   _initCamera() {
@@ -91,7 +96,7 @@ export class Game {
       34,
       window.innerWidth / window.innerHeight,
       0.1,
-      300
+      400
     );
     this.camHeight = 9.5;
     this.camBack = 13.5;
@@ -112,9 +117,14 @@ export class Game {
     const dt = Math.min(this.clock.getDelta(), 0.05);
 
     const frozen = this.ui.isModalOpen;
-    this.pibo.update(dt, this.input, { frozen, collision: this.collision });
+    if (this.ufo.riding) {
+      this.ufo.update(dt, this.input, { frozen });
+    } else {
+      this.pibo.update(dt, this.input, { frozen, collision: this.collision });
+      this.ufo.update(dt, null, { frozen });
+    }
 
-    if (!this.started && this.pibo.moving) {
+    if (!this.started && (this.pibo.moving || this.ufo.riding)) {
       this.started = true;
       this.ui.hideIntro();
     }
@@ -133,25 +143,37 @@ export class Game {
 
   _updateCamera(dt) {
     const k = 1 - Math.exp(-6 * dt); // smoothing factor
-    const p = this.pibo.worldPosition();
+    const flying = this.ufo.riding;
+    const subject = flying ? this.ufo : this.pibo;
+    const p = subject.worldPosition();
+    const up = flying ? this.ufo.dir : this.pibo.dir;
+    const fwd = flying ? this.ufo.forward : this.pibo.forward;
 
-    // smooth the basis so turning doesn't whip the camera around
-    this._camUp.lerp(this.pibo.dir, k).normalize();
-    this._camForward.lerp(this.pibo.forward, k * 0.6).normalize();
+    this._camUp.lerp(up, k).normalize();
+    this._camForward.lerp(fwd, k * (flying ? 0.85 : 0.6)).normalize();
+
+    const alt = flying ? this.ufo.altitude : 0;
+    const height = flying ? 4.2 + alt * 0.28 : this.camHeight;
+    const back = flying ? 12 + alt * 0.95 : this.camBack;
 
     const desired = p.clone()
-      .add(this._camUp.clone().multiplyScalar(this.camHeight))
-      .add(this._camForward.clone().multiplyScalar(-this.camBack));
+      .add(this._camUp.clone().multiplyScalar(height))
+      .add(this._camForward.clone().multiplyScalar(-back));
 
-    this.camera.position.lerp(desired, k);
+    this.camera.position.lerp(desired, flying ? k * 0.85 : k);
     this.camera.up.copy(this._camUp);
 
-    // look a touch ahead of and above Pibo
     const lookAt = p.clone()
-      .add(this._camUp.clone().multiplyScalar(1.6))
-      .add(this._camForward.clone().multiplyScalar(1.4));
+      .add(this._camUp.clone().multiplyScalar(flying ? 0.4 : 1.6))
+      .add(this._camForward.clone().multiplyScalar(flying ? 2.2 : 1.4));
     this._camTarget.lerp(lookAt, k);
     this.camera.lookAt(this._camTarget);
+
+    const wantFov = flying ? THREE.MathUtils.lerp(36, 50, THREE.MathUtils.clamp(alt / 34, 0, 1)) : 34;
+    if (Math.abs(this.camera.fov - wantFov) > 0.05) {
+      this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, wantFov, k);
+      this.camera.updateProjectionMatrix();
+    }
   }
 
   _handleInteraction() {
@@ -171,7 +193,20 @@ export class Game {
       return;
     }
 
+    if (this.ufo.riding) {
+      ui.setPrompt("Land");
+      if (this.input.consume("KeyE", "Enter")) this._landShip();
+      return;
+    }
+
     const p = this.pibo.worldPosition();
+    const ship = this.ufo.getInteractable(p);
+    if (ship) {
+      ui.setPrompt(ship.label);
+      if (this.input.consume("KeyE", "Enter")) this._boardShip();
+      return;
+    }
+
     const it = this.garden.getInteractable(p);
 
     if (!it) {
@@ -190,6 +225,25 @@ export class Game {
         ui.showFact(plant);
       }
     }
+  }
+
+  _boardShip() {
+    this.pibo.setVisible(false);
+    this.ufo.board();
+    this.ui.setFlying(true);
+    this.ui.hideIntro();
+    this.started = true;
+    this.ui.toast("The pot-ship hums to life 🛸", 2400);
+  }
+
+  _landShip() {
+    this.ufo.requestLand(() => {
+      this.pibo.placeAt(this.ufo.dir, this.ufo.forward, this.collision);
+      this.ufo.parkAt(this.pibo.dir, this.pibo.forward);
+      this.pibo.setVisible(true);
+      this.ui.setFlying(false);
+      this.ui.toast("Back on your planet 🌍", 2000);
+    });
   }
 
   _reward() {

@@ -11,6 +11,7 @@ export class Input {
     this.enabled = true;
     this.axisX = 0;
     this.axisY = 0;
+    this.axisClimb = 0;
 
     target.addEventListener("keydown", (e) => {
       if (!this.enabled) return;
@@ -26,6 +27,7 @@ export class Input {
     window.addEventListener("blur", () => {
       this.held.clear();
       this.setAxis(0, 0);
+      this.setClimb(0);
     });
   }
 
@@ -56,6 +58,11 @@ export class Input {
     this.axisY = clamp(y, -1, 1);
   }
 
+  /** Analog climb for the pot-ship: +1 up (space), −1 down. */
+  setClimb(v) {
+    this.axisClimb = clamp(v, -1, 1);
+  }
+
   /** Movement axes in screen-intuitive terms. */
   get moveForward() {
     const keys = (this.isDown("KeyW", "ArrowUp") ? 1 : 0) - (this.isDown("KeyS", "ArrowDown") ? 1 : 0);
@@ -65,6 +72,11 @@ export class Input {
     // positive = turn right
     const keys = (this.isDown("KeyD", "ArrowRight") ? 1 : 0) - (this.isDown("KeyA", "ArrowLeft") ? 1 : 0);
     return clamp(keys + this.axisX, -1, 1);
+  }
+  get climb() {
+    const keys = (this.isDown("Space") ? 1 : 0)
+      - (this.isDown("ShiftLeft", "ShiftRight", "KeyF") ? 1 : 0);
+    return clamp(keys + this.axisClimb, -1, 1);
   }
 
   /** Clear one-shot buffer at end of frame. */

@@ -1,0 +1,289 @@
+import * as THREE from "three";
+import { clay, blob, ball, cyl, shade } from "../world/materials.js";
+import { surfaceQuaternion, tangentAt } from "../core/SphereMath.js";
+
+const PARKED_ALT = 0.42;
+const CRUISE_ALT = 5.2;
+const MIN_FLY_ALT = 3.6;
+const MAX_FLY_ALT = 34;
+const FLY_SPEED = 9.2;
+const CLIMB_SPEED = 7.5;
+const TURN_SPEED = 2.1;
+
+/**
+ * A pot-shaped UFO parked on the landing pad. Pibo can hop in and fly it
+ * around the pocket planet or out into the toy-sky "space" beyond the clouds.
+ * Position lives as a surface direction + altitude so orbiting the world is
+ * the same math as walking, just higher up.
+ */
+export class Ufo {
+  constructor(planet, startDir, startForward) {
+    this.planet = planet;
+    this.dir = startDir.clone().normalize();
+    this.forward = startForward
+      ? startForward.clone().normalize()
+      : tangentAt(this.dir);
+    this.altitude = PARKED_ALT;
+    this.mode = "parked"; // parked | takingOff | flying | landing
+    this.t = 0;
+    this.phaseT = 0;
+    this.onLanded = null;
+
+    this.group = new THREE.Group();
+    this._buildModel();
+    planet.group.add(this.group);
+    this._applyTransform();
+  }
+
+  get riding() {
+    return this.mode !== "parked";
+  }
+
+  get altitudeWorld() {
+    return this.altitude;
+  }
+
+  worldPosition(target = new THREE.Vector3()) {
+    return this.group.getWorldPosition(target);
+  }
+
+  getInteractable(piboPos) {
+    if (this.riding) {
+      return { kind: "land", label: "Land" };
+    }
+    if (piboPos.distanceTo(this.worldPosition()) < 2.9) {
+      return { kind: "board", label: "Board the pot-ship" };
+    }
+    return null;
+  }
+
+  board() {
+    if (this.mode !== "parked") return;
+    this.mode = "takingOff";
+    this.phaseT = 0;
+    this._setGlow(1.6);
+  }
+
+  requestLand(onLanded) {
+    if (this.mode !== "flying") return;
+    this.mode = "landing";
+    this.phaseT = 0;
+    this.onLanded = onLanded || null;
+  }
+
+  parkAt(dir, forward) {
+    this.dir.copy(dir).normalize();
+    this.forward.copy(forward);
+    const up = this.dir.clone();
+    this.forward.sub(up.clone().multiplyScalar(this.forward.dot(up))).normalize();
+    this.altitude = PARKED_ALT;
+    this._applyTransform();
+  }
+
+  update(dt, input, { frozen = false } = {}) {
+    this.t += dt;
+
+    if (this.mode === "parked") {
+      this._bobParked();
+      this._spin(dt, 0.8);
+      this._setGlow(0.55 + Math.sin(this.t * 2.2) * 0.2);
+      this._animate(dt, 0, 0);
+      return;
+    }
+
+    if (this.mode === "takingOff") {
+      this.phaseT += dt;
+      const u = Math.min(1, this.phaseT / 1.15);
+      const e = 1 - (1 - u) ** 3;
+      this.altitude = PARKED_ALT + (CRUISE_ALT - PARKED_ALT) * e;
+      this._spin(dt, 2.4);
+      this._setGlow(0.7 + e * 1.4);
+      this._applyTransform();
+      this._animate(dt, 0, 0.4);
+      if (u >= 1) this.mode = "flying";
+      return;
+    }
+
+    if (this.mode === "landing") {
+      this.phaseT += dt;
+      this.altitude = Math.max(PARKED_ALT, this.altitude - 11 * dt);
+      this._spin(dt, 1.6);
+      this._setGlow(0.5 + this.altitude * 0.08);
+      this._applyTransform();
+      this._animate(dt, 0, -0.15);
+      if (this.altitude <= PARKED_ALT + 0.02) {
+        this.altitude = PARKED_ALT;
+        this.mode = "parked";
+        this._applyTransform();
+        const cb = this.onLanded;
+        this.onLanded = null;
+        if (cb) cb();
+      }
+      return;
+    }
+
+    // flying
+    let move = 0, turn = 0, climb = 0;
+    if (input && !frozen) {
+      move = input.moveForward;
+      turn = input.turn;
+      climb = input.climb;
+    }
+
+    const up = this.dir.clone().normalize();
+    if (turn !== 0) {
+      this.forward.applyAxisAngle(up, -turn * TURN_SPEED * dt);
+    }
+
+    if (move !== 0) {
+      const right = new THREE.Vector3().crossVectors(up, this.forward).normalize();
+      const da = (move * FLY_SPEED * dt) / (this.planet.radius + this.altitude);
+      this.dir.applyAxisAngle(right, da).normalize();
+      this.forward.applyAxisAngle(right, da);
+    }
+
+    if (climb !== 0) {
+      this.altitude = THREE.MathUtils.clamp(
+        this.altitude + climb * CLIMB_SPEED * dt,
+        MIN_FLY_ALT,
+        MAX_FLY_ALT
+      );
+    }
+
+    this.forward.sub(this.dir.clone().multiplyScalar(this.forward.dot(this.dir))).normalize();
+    this._spin(dt, 2.8 + Math.abs(move) * 1.4);
+    this._setGlow(1.3 + Math.abs(move) * 0.7 + Math.max(0, climb) * 0.5);
+    this._applyTransform();
+    this._animate(dt, turn, move);
+  }
+
+  _applyTransform() {
+    const r = this.planet.radius + this.altitude;
+    this.group.position.copy(this.dir).multiplyScalar(r);
+    surfaceQuaternion(this.dir, this.forward, this.group.quaternion);
+  }
+
+  _bobParked() {
+    const bob = PARKED_ALT + Math.sin(this.t * 1.7) * 0.06;
+    this.group.position.copy(this.dir).multiplyScalar(this.planet.radius + bob);
+    surfaceQuaternion(this.dir, this.forward, this.group.quaternion);
+  }
+
+  _spin(dt, speed) {
+    if (this.ring) this.ring.rotation.z += dt * speed;
+  }
+
+  _setGlow(intensity) {
+    if (this.glowMat) this.glowMat.emissiveIntensity = intensity;
+    if (this.beamMat) this.beamMat.opacity = THREE.MathUtils.clamp(intensity * 0.18, 0.08, 0.45);
+  }
+
+  _animate(dt, turn, move) {
+    const k = 1 - Math.exp(-8 * dt);
+    const tiltZ = THREE.MathUtils.clamp(-turn * 0.28, -0.32, 0.32);
+    const tiltX = THREE.MathUtils.clamp(move * 0.16, -0.2, 0.22);
+    this.body.rotation.z = THREE.MathUtils.lerp(this.body.rotation.z, tiltZ, k);
+    this.body.rotation.x = THREE.MathUtils.lerp(this.body.rotation.x, tiltX, k);
+    const hover = this.mode === "flying" ? Math.sin(this.t * 3.2) * 0.03 : 0;
+    this.body.position.y = hover;
+  }
+
+  _buildModel() {
+    this.body = new THREE.Group();
+    this.group.add(this.body);
+
+    const pot = clay(0xffe27a);
+    const potDark = clay(0xefc65c);
+    const soil = clay(0x5a3f2c, { roughness: 1 });
+
+    // wide flying-saucer planter
+    const hull = cyl(1.15, 0.62, 0.42, pot, 28);
+    hull.position.y = 0.34;
+    this.body.add(hull);
+
+    const belly = cyl(0.62, 0.95, 0.2, potDark, 28);
+    belly.position.y = 0.1;
+    this.body.add(belly);
+
+    const rim = cyl(1.22, 1.18, 0.14, potDark, 28);
+    rim.position.y = 0.56;
+    this.body.add(rim);
+
+    const dirt = cyl(0.72, 0.72, 0.1, soil, 20);
+    dirt.position.y = 0.58;
+    this.body.add(dirt);
+
+    // underside engine glow
+    this.glowMat = clay(0x9eecff, { emissive: 0x66d8ff, emissiveIntensity: 0.7, roughness: 0.35 });
+    const glow = cyl(0.55, 0.88, 0.08, this.glowMat, 22);
+    glow.position.y = 0.02;
+    this.body.add(glow);
+
+    this.beamMat = clay(0x9eecff, {
+      emissive: 0x7ae0ff,
+      emissiveIntensity: 0.8,
+      transparent: true,
+      opacity: 0.16,
+      roughness: 0.4,
+    });
+    const beam = cyl(0.15, 0.55, 0.7, this.beamMat, 16);
+    beam.position.y = -0.32;
+    this.body.add(beam);
+
+    // spinning halo — the "UFO" read
+    const ringMat = clay(0xbfe9ff, { emissive: 0x8fd7ff, emissiveIntensity: 1.1, roughness: 0.35 });
+    this.ring = new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.045, 10, 36), ringMat);
+    this.ring.rotation.x = Math.PI / 2;
+    this.ring.position.y = 0.28;
+    this.body.add(this.ring);
+
+    // bubble canopy
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(0.58, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+      clay(0xc8f0ff, {
+        roughness: 0.12,
+        transparent: true,
+        opacity: 0.42,
+        emissive: 0x8fd7ff,
+        emissiveIntensity: 0.12,
+      })
+    );
+    dome.position.y = 0.58;
+    this.body.add(dome);
+
+    // a little passenger seat so the empty pot still feels inhabited
+    const seat = blob(0.16, pot, 1);
+    seat.position.set(0, 0.7, 0.04);
+    seat.scale.set(0.85, 1.1, 0.75);
+    this.body.add(seat);
+    const eyeMat = clay(0x30303c, { roughness: 0.5 });
+    for (const sx of [-1, 1]) {
+      const eye = ball(0.035, eyeMat, 8);
+      eye.position.set(sx * 0.055, 0.74, 0.16);
+      this.body.add(eye);
+    }
+
+    // stubby landing legs
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + 0.4;
+      const leg = cyl(0.045, 0.07, 0.32, potDark, 8);
+      leg.position.set(Math.cos(a) * 0.78, 0.08, Math.sin(a) * 0.78);
+      leg.rotation.z = Math.cos(a) * 0.45;
+      leg.rotation.x = -Math.sin(a) * 0.45;
+      this.body.add(leg);
+      const foot = ball(0.09, pot, 10);
+      foot.position.set(Math.cos(a) * 0.92, -0.04, Math.sin(a) * 0.92);
+      this.body.add(foot);
+    }
+
+    // tiny antenna
+    const ant = cyl(0.02, 0.02, 0.38, clay(0x9aa0a6), 6);
+    ant.position.set(0.22, 1.05, -0.08);
+    this.body.add(ant);
+    const tip = ball(0.055, clay(0xff9a76, { emissive: 0xff9a76, emissiveIntensity: 0.45 }), 8);
+    tip.position.set(0.22, 1.26, -0.08);
+    this.body.add(tip);
+
+    shade(this.group, true, false);
+  }
+}
