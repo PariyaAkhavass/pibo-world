@@ -20,7 +20,9 @@ export class UI {
       factEmoji: document.getElementById("fact-emoji"),
       factName: document.getElementById("fact-name"),
       factText: document.getElementById("fact-text"),
+      factFrom: document.getElementById("fact-from"),
       factFoot: document.querySelector("#fact-card .fact-foot"),
+      beyond: document.getElementById("beyond"),
       collectionBtn: document.getElementById("collection-btn"),
       collection: document.getElementById("collection"),
       collectionList: document.getElementById("collection-list"),
@@ -36,6 +38,7 @@ export class UI {
     this.input = null;
     this.joystick = null;
     this._onPick = null;
+    this._onLetterClose = null;
     this._collected = new Map(); // id -> count
     this._toastTimer = null;
     this._touchUi = false;
@@ -186,16 +189,40 @@ export class UI {
 
   /* fact card ------------------------------------------------------ */
   showFact(plant) {
+    this.el.fact.classList.remove("letter");
     this.el.factEmoji.textContent = plant.emoji;
     this.el.factName.textContent = plant.name;
     this.el.factText.textContent = plant.fact;
+    this.el.factFrom.textContent = "";
     this.el.fact.classList.remove("hidden");
     this.hidePrompt();
     this._syncActionBtn();
   }
+
+  showLetter({ emoji = "💌", name = "", text, from = "", onClose } = {}) {
+    this._onLetterClose = onClose || null;
+    this.el.fact.classList.add("letter");
+    this.el.factEmoji.textContent = emoji;
+    this.el.factName.textContent = name;
+    this.el.factText.textContent = text;
+    this.el.factFrom.textContent = from;
+    this.el.fact.classList.remove("hidden");
+    this.hidePrompt();
+    this._syncActionBtn();
+  }
+
   closeFact() {
     this.el.fact.classList.add("hidden");
+    this.el.fact.classList.remove("letter");
     this._syncActionBtn();
+    const cb = this._onLetterClose;
+    this._onLetterClose = null;
+    if (cb) cb();
+  }
+
+  showBeyond() {
+    this.el.beyond.classList.remove("hidden");
+    requestAnimationFrame(() => this.el.beyond.classList.add("show"));
   }
 
   closeModals() {

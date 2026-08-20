@@ -66,6 +66,7 @@ src/
   entities/
     Pibo.js         the player creature (walks, idles, faces movement)
     Ufo.js          pot-shaped ship you can board and fly
+    Galaxy.js       stars + hard clay planets for the family voyage
   systems/
     GardenSystem.js the plant → grow → inspect → reward loop
   data/

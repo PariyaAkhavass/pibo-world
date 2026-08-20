@@ -9,6 +9,7 @@ import { Ambient } from "../world/Ambient.js";
 import { GardenSystem } from "../systems/GardenSystem.js";
 import { Pibo } from "../entities/Pibo.js";
 import { Ufo } from "../entities/Ufo.js";
+import { Galaxy } from "../world/Galaxy.js";
 import { LAYOUT, dirOf, collidersOf } from "../world/layout.js";
 import { getPlant } from "../data/plants.js";
 import { UI } from "../ui/UI.js";
@@ -78,6 +79,7 @@ export class Game {
     this.garden.onAllGrown = () => this._reward();
 
     this.ambient = new Ambient(this.scene, 10);
+    this.galaxy = new Galaxy(this.scene);
     this.collision = new Collision(this.planet.radius, collidersOf(LAYOUT));
     if (this.props.landingBeacon) this.props.landingBeacon.visible = false;
   }
@@ -89,6 +91,43 @@ export class Game {
 
     const pad = dirOf(LAYOUT.ufo);
     this.ufo = new Ufo(this.planet, pad, tangentToward(pad, start));
+
+    const friendDir = dirOf(LAYOUT.companion);
+    const pinoDir = dirOf(LAYOUT.pino);
+    this.companion = new Pibo(this.planet, friendDir, tangentToward(friendDir, start), {
+      controllable: false,
+      palette: {
+        pot: 0x7eb6f5,
+        potDark: 0x5a94d6,
+        smile: 0x4a6a8a,
+        leaves: [0x5fae55, 0x74c266, 0x6ab85e],
+        leafTall: 0x6fbf5f,
+      },
+    });
+    this.pino = new Pibo(this.planet, pinoDir, tangentToward(pinoDir, friendDir), {
+      controllable: false,
+      scale: 0.38,
+      palette: {
+        pot: 0xfff6ea,
+        potDark: 0xe8dcc8,
+        smile: 0xc4b8a8,
+        leaves: [0xc6e8b8, 0xd4f0c4, 0xb8dca8],
+        leafTall: 0xd8f2c8,
+      },
+    });
+
+    const shipDir = dirOf(LAYOUT.familyShip);
+    this.familyShip = new Ufo(this.planet, shipDir, tangentToward(shipDir, friendDir), {
+      scale: 1.85,
+      hidden: true,
+      voyage: true,
+      canLand: false,
+      crew: true,
+      boardLabel: "Hop on together",
+      interactRange: 3.8,
+    });
+    this.letterRead = false;
+    this.voyaging = false;
   }
 
   _initCamera() {
@@ -117,7 +156,13 @@ export class Game {
     const dt = Math.min(this.clock.getDelta(), 0.05);
 
     const frozen = this.ui.isModalOpen;
-    if (this.ufo.riding) {
+    this.companion.update(dt, null, { frozen: true });
+    this.pino.update(dt, null, { frozen: true });
+    this.familyShip.update(dt, null, { frozen });
+
+    if (this.familyShip.riding) {
+      this.ufo.update(dt, null, { frozen });
+    } else if (this.ufo.riding) {
       this.ufo.update(dt, this.input, { frozen });
     } else {
       this.pibo.update(dt, this.input, { frozen, collision: this.collision });
@@ -136,6 +181,7 @@ export class Game {
     this.props.update(dt);
     this.garden.update(dt);
     this.ambient.update(dt);
+    this.galaxy.update(dt);
 
     this.input.endFrame();
     this.renderer.render(this.scene, this.camera);
@@ -143,36 +189,59 @@ export class Game {
 
   _updateCamera(dt) {
     const k = 1 - Math.exp(-6 * dt); // smoothing factor
-    const flying = this.ufo.riding;
-    const subject = flying ? this.ufo : this.pibo;
+    const ship = this.familyShip.riding ? this.familyShip : this.ufo.riding ? this.ufo : null;
+    const flying = !!ship;
+    const subject = ship || this.pibo;
     const p = subject.worldPosition();
-    const up = flying ? this.ufo.dir : this.pibo.dir;
-    const fwd = flying ? this.ufo.forward : this.pibo.forward;
+    const up = ship ? ship.dir : this.pibo.dir;
+    const fwd = ship ? ship.forward : this.pibo.forward;
+    const voyaging = ship && ship.mode === "voyage";
 
     this._camUp.lerp(up, k).normalize();
     this._camForward.lerp(fwd, k * (flying ? 0.85 : 0.6)).normalize();
 
-    const alt = flying ? this.ufo.altitude : 0;
+    const alt = ship ? ship.altitude : 0;
     const space = THREE.MathUtils.smoothstep(alt, 10, 26);
     const height = flying ? 4.2 + alt * 0.22 : this.camHeight;
     const back = flying ? 11 + alt * (0.85 + space * 0.55) : this.camBack;
 
-    const desired = p.clone()
-      .add(this._camUp.clone().multiplyScalar(height))
-      .add(this._camForward.clone().multiplyScalar(-back));
+    let desired;
+    if (voyaging && ship.heading && alt >= 36) {
+      const away = ship.heading.clone();
+      const side = new THREE.Vector3(0, 1, 0).cross(away);
+      if (side.lengthSq() < 1e-6) side.set(1, 0, 0);
+      side.normalize();
+      const camUp = new THREE.Vector3().crossVectors(away, side).normalize();
+      this._camUp.lerp(camUp, k).normalize();
+      this._camForward.lerp(away, k).normalize();
+      desired = p.clone()
+        .add(away.clone().multiplyScalar(-18 - (alt - 36) * 0.4))
+        .add(camUp.multiplyScalar(6));
+    } else {
+      desired = p.clone()
+        .add(this._camUp.clone().multiplyScalar(height))
+        .add(this._camForward.clone().multiplyScalar(-back));
+    }
 
     this.camera.position.lerp(desired, flying ? k * 0.85 : k);
     this.camera.up.copy(this._camUp);
 
-    const lookShip = p.clone()
-      .add(this._camUp.clone().multiplyScalar(flying ? 0.4 : 1.6))
-      .add(this._camForward.clone().multiplyScalar(flying ? 2.2 : 1.4));
-    const lookPlanet = new THREE.Vector3(0, 0, 0);
-    const lookAt = lookShip.lerp(lookPlanet, space * 0.55);
+    let lookAt;
+    if (voyaging && alt >= 36) {
+      lookAt = p.clone().add(this._camForward.clone().multiplyScalar(16));
+    } else {
+      const lookShip = p.clone()
+        .add(this._camUp.clone().multiplyScalar(flying ? 0.4 : 1.6))
+        .add(this._camForward.clone().multiplyScalar(flying ? 2.2 : 1.4));
+      const lookPlanet = new THREE.Vector3(0, 0, 0);
+      lookAt = lookShip.lerp(lookPlanet, space * 0.55);
+    }
     this._camTarget.lerp(lookAt, k);
     this.camera.lookAt(this._camTarget);
 
-    const wantFov = flying ? THREE.MathUtils.lerp(36, 50, THREE.MathUtils.clamp(alt / 34, 0, 1)) : 34;
+    const wantFov = voyaging ? 52
+      : flying ? THREE.MathUtils.lerp(36, 50, THREE.MathUtils.clamp(alt / 34, 0, 1))
+      : 34;
     if (Math.abs(this.camera.fov - wantFov) > 0.05) {
       this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, wantFov, k);
       this.camera.updateProjectionMatrix();
@@ -196,6 +265,11 @@ export class Game {
       return;
     }
 
+    if (this.familyShip.riding) {
+      ui.hidePrompt();
+      return;
+    }
+
     if (this.ufo.riding) {
       ui.setPrompt("Land");
       if (this.input.consume("KeyE", "Enter")) this._landShip();
@@ -203,6 +277,19 @@ export class Game {
     }
 
     const p = this.pibo.worldPosition();
+    const family = this.familyShip.getInteractable(p);
+    if (family) {
+      ui.setPrompt(family.label);
+      if (this.input.consume("KeyE", "Enter")) this._boardFamily();
+      return;
+    }
+
+    if (p.distanceTo(this.companion.worldPosition()) < 2.6) {
+      ui.setPrompt("Talk");
+      if (this.input.consume("KeyE", "Enter")) this._talkToCompanion();
+      return;
+    }
+
     const ship = this.ufo.getInteractable(p);
     if (ship) {
       ui.setPrompt(ship.label);
@@ -228,6 +315,40 @@ export class Game {
         ui.showFact(plant);
       }
     }
+  }
+
+  _talkToCompanion() {
+    this.ui.showLetter({
+      emoji: "💌",
+      name: "",
+      text: "I love you so much. I cannot wait to travel the world with you and beyond.\nMe + you + Pino always..",
+      from: "— R",
+      onClose: () => this._revealFamilyShip(),
+    });
+  }
+
+  _revealFamilyShip() {
+    if (this.letterRead) return;
+    this.letterRead = true;
+    this.familyShip.reveal();
+    this.ui.toast("A bigger pot-ship appears ✨", 2800);
+  }
+
+  _boardFamily() {
+    this.pibo.setVisible(false);
+    this.companion.setVisible(false);
+    this.pino.setVisible(false);
+    this.familyShip.board();
+    this.voyaging = true;
+    this.galaxy.begin(this.familyShip.dir);
+    document.documentElement.classList.add("galaxy");
+    this.camera.far = 2500;
+    this.camera.updateProjectionMatrix();
+    this.ui.setFlying(false);
+    this.ui.hideIntro();
+    this.started = true;
+    this.ui.toast("Me + you + Pino ✨", 2600);
+    setTimeout(() => this.ui.showBeyond(), 8500);
   }
 
   _boardShip() {

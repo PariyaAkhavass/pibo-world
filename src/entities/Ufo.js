@@ -17,20 +17,31 @@ const TURN_SPEED = 2.1;
  * the same math as walking, just higher up.
  */
 export class Ufo {
-  constructor(planet, startDir, startForward) {
+  constructor(planet, startDir, startForward, opts = {}) {
     this.planet = planet;
     this.dir = startDir.clone().normalize();
     this.forward = startForward
       ? startForward.clone().normalize()
       : tangentAt(this.dir);
+    this.size = opts.scale ?? 1;
+    this.autoVoyage = !!opts.voyage;
+    this.canLand = opts.canLand !== false;
+    this.boardLabel = opts.boardLabel ?? "Board the pot-ship";
+    this.interactRange = opts.interactRange ?? 2.9;
+    this.revealed = opts.hidden ? false : true;
+    this.grow = this.revealed ? 1 : 0;
+    this.heading = this.dir.clone();
     this.altitude = PARKED_ALT;
-    this.mode = "parked"; // parked | takingOff | flying | landing
+    this.mode = "parked"; // parked | takingOff | flying | landing | voyage
     this.t = 0;
     this.phaseT = 0;
     this.onLanded = null;
 
     this.group = new THREE.Group();
     this._buildModel();
+    if (opts.crew) this._buildCrew();
+    this.group.scale.setScalar(this.size);
+    this.group.visible = this.revealed;
     planet.group.add(this.group);
     this._applyTransform();
   }
@@ -48,13 +59,23 @@ export class Ufo {
   }
 
   getInteractable(piboPos) {
+    if (!this.revealed || !this.group.visible) return null;
+    if (this.mode === "voyage") return null;
     if (this.riding) {
-      return { kind: "land", label: "Land" };
+      return this.canLand ? { kind: "land", label: "Land" } : null;
     }
-    if (piboPos.distanceTo(this.worldPosition()) < 2.9) {
-      return { kind: "board", label: "Board the pot-ship" };
+    if (piboPos.distanceTo(this.worldPosition()) < this.interactRange) {
+      return { kind: "board", label: this.boardLabel };
     }
     return null;
+  }
+
+  reveal() {
+    if (this.revealed) return;
+    this.revealed = true;
+    this.group.visible = true;
+    this.grow = 0.02;
+    this.group.scale.setScalar(0.02);
   }
 
   board() {
@@ -62,6 +83,7 @@ export class Ufo {
     this.mode = "takingOff";
     this.phaseT = 0;
     this._setPilotVisible(true);
+    if (this.crew) this.crew.visible = true;
     this._setGlow(1.6);
   }
 
@@ -89,6 +111,7 @@ export class Ufo {
       this._spin(dt, 0.8);
       this._setGlow(0.55 + Math.sin(this.t * 2.2) * 0.2);
       this._animate(dt, 0, 0);
+      if (this.grow < 1) this._growIn(dt);
       return;
     }
 
@@ -101,7 +124,35 @@ export class Ufo {
       this._setGlow(0.7 + e * 1.4);
       this._applyTransform();
       this._animate(dt, 0, 0.4);
-      if (u >= 1) this.mode = "flying";
+      if (u >= 1) {
+        if (this.autoVoyage) {
+          this.mode = "voyage";
+          this.heading = this.dir.clone().multiplyScalar(0.55).add(this.forward).normalize();
+        } else {
+          this.mode = "flying";
+        }
+      }
+      return;
+    }
+
+    if (this.mode === "voyage") {
+      this.phaseT += dt;
+      this._spin(dt, 3.4);
+      this._setGlow(2.1);
+      if (this.altitude < 36) {
+        this.altitude += 11 * dt;
+        const right = new THREE.Vector3().crossVectors(this.dir, this.forward).normalize();
+        this.dir.applyAxisAngle(right, 0.12 * dt).normalize();
+        this.forward.applyAxisAngle(right, 0.12 * dt);
+        this.forward.sub(this.dir.clone().multiplyScalar(this.forward.dot(this.dir))).normalize();
+        this._applyTransform();
+      } else {
+        this.group.position.add(this.heading.clone().multiplyScalar(22 * dt));
+        this.group.lookAt(this.group.position.clone().add(this.heading));
+        this.group.up.copy(this.heading);
+      }
+      this._animate(dt, 0.15, 0.7);
+      if (this.grow < 1) this._growIn(dt);
       return;
     }
 
@@ -157,6 +208,14 @@ export class Ufo {
     this._setGlow(1.3 + Math.abs(move) * 0.7 + Math.max(0, climb) * 0.5);
     this._applyTransform();
     this._animate(dt, turn, move);
+    if (this.grow < 1) this._growIn(dt);
+  }
+
+  _growIn(dt) {
+    this.grow = Math.min(1, this.grow + dt * 1.35);
+    const e = 1 - (1 - this.grow) ** 3;
+    const pop = e < 1 ? e + Math.sin(e * Math.PI) * 0.08 : 1;
+    this.group.scale.setScalar(pop * this.size);
   }
 
   _applyTransform() {
@@ -327,5 +386,34 @@ export class Ufo {
     this.body.add(tip);
 
     shade(this.group, true, false);
+  }
+
+  /** Three little passengers — yellow, blue, and tiny white Pino. */
+  _buildCrew() {
+    this.crew = new THREE.Group();
+    this.crew.visible = false;
+    this.crew.position.set(0, 1.02, 0.06);
+    this.body.add(this.crew);
+
+    const pals = [
+      { color: 0xffe27a, dark: 0xefc65c, x: -0.22, s: 0.38 },
+      { color: 0x7eb6f5, dark: 0x5a94d6, x: 0.22, s: 0.38 },
+      { color: 0xfff6ea, dark: 0xe8dcc8, x: 0, s: 0.24 },
+    ];
+    for (const p of pals) {
+      const g = new THREE.Group();
+      g.position.set(p.x, p.s === 0.24 ? -0.02 : 0, 0.08);
+      g.scale.setScalar(p.s);
+      const body = blob(0.38, clay(p.color), 1);
+      body.scale.set(1, 1.05, 0.9);
+      g.add(body);
+      const eyeMat = clay(0x30303c, { roughness: 0.5 });
+      for (const sx of [-1, 1]) {
+        const eye = ball(0.05, eyeMat, 8);
+        eye.position.set(sx * 0.1, 0.06, 0.32);
+        g.add(eye);
+      }
+      this.crew.add(g);
+    }
   }
 }
