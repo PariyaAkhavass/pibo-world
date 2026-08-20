@@ -14,17 +14,29 @@ import { surfaceQuaternion, tangentAt } from "../core/SphereMath.js";
  * It lives on the planet surface, storing a direction (position) and a forward
  * tangent, and is oriented every frame to stand upright on the sphere.
  */
+const DEFAULT_PALETTE = {
+  pot: 0xffe27a,
+  potDark: 0xefc65c,
+  smile: 0xc4a05a,
+  leaves: [0x5fae55, 0x74c266, 0x6ab85e],
+  leafTall: 0x6fbf5f,
+};
+
 export class Pibo {
-  constructor(planet, startDir, startForward) {
+  constructor(planet, startDir, startForward, opts = {}) {
     this.planet = planet;
     this.dir = startDir.clone().normalize();
     this.forward = startForward
       ? startForward.clone().normalize()
       : tangentAt(this.dir);
 
+    this.palette = { ...DEFAULT_PALETTE, ...opts.palette };
+    this.charScale = opts.scale ?? 1;
+    this.controllable = opts.controllable !== false;
+
     this.linSpeed = 4.2; // units/sec along surface
     this.turnSpeed = 2.6; // rad/sec
-    this.radius = 0.5; // collision padding — about half the pot's width
+    this.radius = 0.5 * this.charScale; // collision padding — about half the pot's width
     this.moving = false;
     this.walkPhase = 0;
     this.idleT = Math.random() * 10;
@@ -33,6 +45,7 @@ export class Pibo {
 
     this.group = new THREE.Group();
     this._buildModel();
+    this.group.scale.setScalar(this.charScale);
     planet.surface.add(this.group);
     this._applyTransform();
   }
@@ -42,8 +55,8 @@ export class Pibo {
     this.body = new THREE.Group();
     this.group.add(this.body);
 
-    const pot = clay(0xffe27a); // light pastel yellow pot
-    const potDark = clay(0xefc65c); // rim + feet, a softer butter shade
+    const pot = clay(this.palette.pot);
+    const potDark = clay(this.palette.potDark);
     const soilMat = clay(0x5a3f2c, { roughness: 1 });
 
     // --- planter-pot body (rounded cube, like the reference creatures) ---
@@ -93,7 +106,7 @@ export class Pibo {
 
     const smile = new THREE.Mesh(
       new THREE.TorusGeometry(0.09, 0.022, 8, 16, Math.PI),
-      clay(0xc4a05a, { roughness: 0.6 })
+      clay(this.palette.smile, { roughness: 0.6 })
     );
     smile.rotation.z = Math.PI; // flip the half-arc into an upward "u" smile
     smile.position.set(0, 0.52, 0.48);
@@ -102,7 +115,7 @@ export class Pibo {
     // --- the plant on top: upright, snake-plant-style blades ---
     this.sprout = new THREE.Group();
     this.sprout.position.y = 1.14;
-    const leafGreens = [0x5fae55, 0x74c266, 0x6ab85e];
+    const leafGreens = this.palette.leaves;
     const ring = 7;
     for (let i = 0; i < ring; i++) {
       const a = (i / ring) * Math.PI * 2;
@@ -119,7 +132,7 @@ export class Pibo {
     // two taller central blades for a strong silhouette
     for (const sx of [-1, 1]) {
       const h = 0.92;
-      const blade = cone(0.095, h, clay(0x6fbf5f), 8);
+      const blade = cone(0.095, h, clay(this.palette.leafTall), 8);
       blade.scale.z = 0.3;
       blade.position.set(sx * 0.07, h / 2, 0);
       blade.rotation.z = -sx * 0.12;
@@ -181,7 +194,7 @@ export class Pibo {
   /** Freeze movement (e.g. while a UI panel is open) but keep it breathing. */
   update(dt, input, { frozen = false, collision = null } = {}) {
     let move = 0, turn = 0;
-    if (input && !frozen) {
+    if (this.controllable && input && !frozen) {
       move = input.moveForward;
       turn = input.turn;
     }

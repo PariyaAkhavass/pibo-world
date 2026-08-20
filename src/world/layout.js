@@ -22,6 +22,11 @@ export const LAYOUT = {
   landing: { lat: 36, lon: 66 },
   ufo: { lat: 36, lon: 66 },
 
+  // far green side — a quiet meadow opposite the starting village
+  companion: { lat: 122, lon: 204 },
+  pino: { lat: 119, lon: 211 },
+  familyShip: { lat: 125, lon: 196 },
+
   // three planting spots in the garden patch, spread so they never overlap
   // (longitude compresses toward the pole, so spacing mostly uses latitude)
   garden: [
@@ -52,6 +57,7 @@ export const LAYOUT = {
     { lat: 24, lon: -90 }, { lat: 40, lon: 96 }, { lat: 12, lon: 90 },
     { lat: 54, lon: -18 }, { lat: 58, lon: 32 }, { lat: 60, lon: 118 },
     { lat: 48, lon: -206 }, { lat: 20, lon: -172 },
+    { lat: 117, lon: 200 }, { lat: 120, lon: 208 }, { lat: 124, lon: 212 },
   ],
   lanterns: [
     { lat: 39, lon: -100 }, { lat: 50, lon: -118 }, { lat: 43, lon: 36 },
