@@ -25,7 +25,7 @@ export const LAYOUT = {
   // far green side — a quiet meadow opposite the starting village
   companion: { lat: 122, lon: 204 },
   pino: { lat: 119, lon: 211 },
-  familyShip: { lat: 125, lon: 196 },
+  familyShip: { lat: 136, lon: 168 },
 
   // three planting spots in the garden patch, spread so they never overlap
   // (longitude compresses toward the pole, so spacing mostly uses latitude)

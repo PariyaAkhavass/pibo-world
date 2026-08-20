@@ -208,15 +208,15 @@ export class Game {
     let desired;
     if (voyaging && ship.heading && alt >= 36) {
       const away = ship.heading.clone();
-      const side = new THREE.Vector3(0, 1, 0).cross(away);
-      if (side.lengthSq() < 1e-6) side.set(1, 0, 0);
-      side.normalize();
-      const camUp = new THREE.Vector3().crossVectors(away, side).normalize();
+      const camUp = (ship.voyageUp || ship.dir).clone();
+      camUp.sub(away.clone().multiplyScalar(camUp.dot(away)));
+      if (camUp.lengthSq() < 1e-6) camUp.set(0, 1, 0);
+      camUp.normalize();
       this._camUp.lerp(camUp, k).normalize();
       this._camForward.lerp(away, k).normalize();
       desired = p.clone()
         .add(away.clone().multiplyScalar(-18 - (alt - 36) * 0.4))
-        .add(camUp.multiplyScalar(6));
+        .add(camUp.clone().multiplyScalar(6));
     } else {
       desired = p.clone()
         .add(this._camUp.clone().multiplyScalar(height))
