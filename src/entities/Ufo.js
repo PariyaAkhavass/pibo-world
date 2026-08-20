@@ -128,6 +128,7 @@ export class Ufo {
         if (this.autoVoyage) {
           this.mode = "voyage";
           this.heading = this.dir.clone().multiplyScalar(0.55).add(this.forward).normalize();
+          this.voyageUp = this.dir.clone();
         } else {
           this.mode = "flying";
         }
@@ -148,8 +149,13 @@ export class Ufo {
         this._applyTransform();
       } else {
         this.group.position.add(this.heading.clone().multiplyScalar(22 * dt));
-        this.group.lookAt(this.group.position.clone().add(this.heading));
-        this.group.up.copy(this.heading);
+        // Keep the pot upright — lookAt + heading-as-up was flipping it.
+        let up = (this.voyageUp || this.dir).clone();
+        up.sub(this.heading.clone().multiplyScalar(up.dot(this.heading)));
+        if (up.lengthSq() < 1e-6) up = tangentAt(this.heading);
+        up.normalize();
+        this.voyageUp = up;
+        surfaceQuaternion(up, this.heading, this.group.quaternion);
       }
       this._animate(dt, 0.15, 0.7);
       if (this.grow < 1) this._growIn(dt);
