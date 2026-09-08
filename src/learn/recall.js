@@ -3,7 +3,7 @@
  * Kept free of DOM / Three.js so thesis experiments can unit-test item
  * selection and later swap in bigger word banks or spaced schedules.
  */
-import { PLANTS } from "../data/plants.js";
+import { PLANTS, getPlant } from "../data/plants.js";
 import { wordOf } from "../data/vocab.js";
 
 export function shuffle(list, rng = Math.random) {
@@ -20,11 +20,13 @@ export function shuffle(list, rng = Math.random) {
  * The correct L2 word is always included; remaining options are other
  * garden plants (same lesson), shuffled.
  */
-export function recallChoices(targetPlantId, { count = 3, lang, rng = Math.random } = {}) {
-  const target = PLANTS.find((p) => p.id === targetPlantId);
+export function recallChoices(targetPlantId, { count = 3, lang, rng = Math.random, plantIds } = {}) {
+  const poolIds = plantIds && plantIds.length ? plantIds : PLANTS.map((p) => p.id);
+  const pool = poolIds.map((id) => getPlant(id)).filter(Boolean);
+  const target = getPlant(targetPlantId) || pool.find((p) => p.id === targetPlantId);
   if (!target) return [];
 
-  const others = PLANTS.filter((p) => p.id !== targetPlantId);
+  const others = pool.filter((p) => p.id !== targetPlantId);
   const distractors = shuffle(others, rng).slice(0, Math.max(0, count - 1));
   const selected = shuffle([target, ...distractors], rng);
 

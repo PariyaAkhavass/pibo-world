@@ -11,9 +11,10 @@ You wake up on a handcrafted **cozy learning garden planet**. Walk around it, pl
 things in the garden, watch them grow, learn a little **word** for each, and your world quietly
 changes in return.
 
-This fork is Paria’s thesis game: a language-learning experience grown out of the
-pocket-planet prototype. See [THESIS.md](./THESIS.md) for the first learning slice,
-how to swap word lists, and suggested experiments.
+This fork is Paria’s thesis game: a Pocket Planet world she designs, that
+teachers can constrain, and that students play (and later create) together.
+See [THESIS.md](./THESIS.md) for the triple-helix data model, the first
+learn beat, and suggested experiments.
 
 ## Run it
 
@@ -60,6 +61,7 @@ Playtest helpers (optional query flags):
 
 - `?fast=1` — plants bloom in about a second
 - `?lang=fr` — French word list (`es` Spanish default, `en` English)
+- `?class=night` — teacher pack that only allows the moon plant
 
 ## Architecture
 
@@ -89,8 +91,12 @@ src/
     recall.js       quiz choices + grading (no DOM)
   data/
     plants.js       the three plants (visuals / growth only)
+    world.js        designer world/platform stub (helix layer 1)
+    constraints.js  teacher class packs (helix layer 2)
+    session.js      student play log + creation stub (helix layer 3)
+    helix.js        composes World → Constraints → Session
     vocab.js        L2 word cards keyed by plant + language
-    lesson.js       active language pair + learn-beat copy
+    lesson.js       HUD copy + query helpers (`lang`, `class`, `fast`)
   ui/
     UI.js           overlay: prompt, plant panel, vocab cards, quiz, collection
     Joystick.js     on-screen analog stick for phones and tablets
@@ -106,7 +112,10 @@ The seams are already in place for the real game, but intentionally not built ye
   a discrete unit ready to carry an owner id and guests.
 - **Placeable buildings** — `Props` builders are pure factories; a placement system can reuse
   `planet.placeOnSurface`.
-- **More educational systems** — `GardenSystem` plus the vocab/recall beat in `data/`
-  and `learn/`; more systems can slot in the same way. Word lists are data, not code.
+- **Triple-helix co-design** — designer world, teacher constraints, student
+  session are separate JSON-shaped modules composed in `helix.js`. Word lists
+  and class packs are data, not code.
+- **More educational systems** — `GardenSystem` plus the vocab/recall beat;
+  more systems can slot in the same way.
 - **Inventory / NPCs / world events** — slot in as new `systems/` + `entities/`, wired
   through `Game`.

@@ -14,6 +14,8 @@ import { LAYOUT, dirOf, collidersOf } from "../world/layout.js";
 import { getPlant } from "../data/plants.js";
 import { LESSON, fill } from "../data/lesson.js";
 import { vocabFor } from "../data/vocab.js";
+import { HELIX, distractorPlantIds } from "../data/helix.js";
+import { recordPlanting, recordRecall } from "../data/session.js";
 import { recallChoices } from "../learn/recall.js";
 import { UI } from "../ui/UI.js";
 
@@ -21,6 +23,7 @@ import { UI } from "../ui/UI.js";
  * Top-level orchestrator. Owns the renderer, the planet and its systems, the
  * player, and the update loop, and mediates the tiny interaction contract
  * between Pibo, the garden, the language beat (vocab + recall), and the UI.
+ * `this.helix` is the composed World → Constraints → Session config.
  * Deliberately small: each subsystem is self-contained so future planets,
  * entities, and systems slot in here.
  */
@@ -28,6 +31,7 @@ export class Game {
   constructor(canvas, ui) {
     this.canvas = canvas;
     this.ui = ui;
+    this.helix = HELIX;
     this.clock = new THREE.Clock();
     this.started = false;
 
@@ -322,7 +326,10 @@ export class Game {
 
     if (this.input.consume("KeyE", "Enter")) {
       if (it.kind === "plant") {
-        ui.openPlantPanel((plantId) => this.garden.plant(it.spot, plantId));
+        ui.openPlantPanel((plantId) => {
+          this.garden.plant(it.spot, plantId);
+          recordPlanting(this.helix.session, { spotIndex: it.spot.index, plantId });
+        });
       } else if (it.kind === "inspect") {
         this._inspectPlant(it.spot);
       }
@@ -337,8 +344,14 @@ export class Game {
         if (spot.learned) return;
         this.ui.showQuiz({
           plant,
-          choices: recallChoices(plant.id),
-          onResult: ({ correct, word }) => {
+          choices: recallChoices(plant.id, { plantIds: distractorPlantIds(this.helix) }),
+          onResult: ({ correct, skipped, word }) => {
+            recordRecall(this.helix.session, {
+              plantId: plant.id,
+              correct,
+              skipped,
+              word: word || vocab?.word || "",
+            });
             if (!correct) return;
             this.garden.markLearned(spot);
             this.ui.markLearned(plant.id);

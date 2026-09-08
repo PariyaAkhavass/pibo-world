@@ -8,9 +8,9 @@
  *   phraseGloss — L1 gloss of that sentence
  *
  * Add a new language by copying an `es` block under a new code (`de`, `ja`, …)
- * and pointing LESSON at it (`?lang=de` or DEFAULT_TARGET in lesson.js).
+ * and pointing the teacher pack / `?lang=` at it.
  */
-import { LESSON } from "./lesson.js";
+import { HELIX } from "./helix.js";
 
 export const VOCAB = {
   sunpetal: {
@@ -79,13 +79,13 @@ export const VOCAB = {
  * Vocab card for a plant in the active (or given) target language.
  * Falls back to the native language, then to any available entry.
  */
-export function vocabFor(plantId, lang = LESSON.target.code) {
+export function vocabFor(plantId, lang = HELIX.target.code) {
   const entry = VOCAB[plantId];
   if (!entry) return null;
-  return entry[lang] || entry[LESSON.native.code] || Object.values(entry)[0] || null;
+  return entry[lang] || entry[HELIX.native.code] || Object.values(entry)[0] || null;
 }
 
-export function wordOf(plantId, lang = LESSON.target.code) {
+export function wordOf(plantId, lang = HELIX.target.code) {
   return vocabFor(plantId, lang)?.word ?? "";
 }
 

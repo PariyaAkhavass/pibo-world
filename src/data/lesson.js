@@ -1,12 +1,12 @@
 /**
  * Active language-learning lesson for the starter garden.
  *
- * Swap the target language by changing `DEFAULT_TARGET` or appending
- * `?lang=fr` (or `es` / `en`) to the URL. Vocab lives in `vocab.js` so
- * thesis experiments can change word lists without touching gameplay.
+ * Swap the target language with `?lang=fr` (or `es` / `en`). The teacher
+ * pack in `constraints.js` owns the default; this file is HUD copy plus
+ * query helpers. Vocab lives in `vocab.js`.
  *
  * Playtest helper: `?fast=1` speeds plant growth so a full learn beat
- * can be walked through quickly.
+ * can be walked through quickly. `?class=night` applies a tighter teacher pack.
  */
 const LANG_NAMES = {
   es: "Spanish",
@@ -34,7 +34,7 @@ export function queryFlag(name) {
   }
 }
 
-function resolveLang(raw, fallback) {
+export function resolveLang(raw, fallback) {
   if (raw && LANG_NAMES[raw]) return raw;
   return fallback;
 }

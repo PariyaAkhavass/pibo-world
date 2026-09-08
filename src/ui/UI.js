@@ -1,6 +1,7 @@
 import { PLANTS } from "../data/plants.js";
 import { LESSON } from "../data/lesson.js";
 import { vocabFor } from "../data/vocab.js";
+import { HELIX, playablePlants } from "../data/helix.js";
 import { Joystick } from "./Joystick.js";
 
 /**
@@ -37,6 +38,7 @@ export class UI {
       collectionBtn: document.getElementById("collection-btn"),
       collection: document.getElementById("collection"),
       collectionTitle: document.querySelector("#collection .collection-title"),
+      collectionKicker: document.getElementById("collection-kicker"),
       collectionList: document.getElementById("collection-list"),
       toast: document.getElementById("toast"),
       mobileControls: document.getElementById("mobile-controls"),
@@ -61,6 +63,9 @@ export class UI {
 
     if (this.el.panelTitle) this.el.panelTitle.textContent = LESSON.ui.plantTitle;
     if (this.el.collectionTitle) this.el.collectionTitle.textContent = LESSON.ui.collectionTitle;
+    if (this.el.collectionKicker) {
+      this.el.collectionKicker.textContent = `${HELIX.constraints.title} · ${HELIX.target.name}`;
+    }
 
     this._buildCards();
     this._renderCollection();
@@ -148,7 +153,7 @@ export class UI {
 
   _buildCards() {
     this.el.cards.innerHTML = "";
-    PLANTS.forEach((plant, i) => {
+    playablePlants(HELIX).forEach((plant, i) => {
       const vocab = vocabFor(plant.id);
       const card = document.createElement("div");
       card.className = "card";
@@ -208,7 +213,7 @@ export class UI {
     if (cb) cb(id);
   }
   pickByIndex(i) {
-    const plant = PLANTS[i];
+    const plant = playablePlants(HELIX)[i];
     if (plant) this.pick(plant.id);
   }
   closePanel() {
@@ -222,7 +227,7 @@ export class UI {
     this._onCardClose = onClose || null;
     this.el.fact.classList.remove("letter");
     this.el.fact.classList.add("vocab");
-    this.el.factLang.textContent = LESSON.target.name;
+    this.el.factLang.textContent = HELIX.target.name;
     this.el.factEmoji.textContent = plant.emoji;
     this.el.factName.textContent = vocab?.word ?? plant.name;
     this.el.factGloss.textContent = vocab?.gloss ?? "";
@@ -307,6 +312,13 @@ export class UI {
       btn.classList.add("wrong");
       btn.disabled = true;
       this.el.quizPrompt.textContent = "Not quite — try another?";
+      this._onQuiz?.({
+        correct: false,
+        skipped: false,
+        plantId: choice.plantId,
+        word: choice.word,
+        attempt: true,
+      });
     }
   }
 

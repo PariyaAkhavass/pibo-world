@@ -1,88 +1,139 @@
-# Thesis notes — language learning on the pocket planet
+# Thesis notes — triple-helix co-design
 
-Pibo World is being evolved as **Paria’s educational game** for a thesis on
-language learning. The long-term vision is player-made worlds; this slice is
-the first step: turn the existing garden loop into a learnable beat without
-rewriting the toy.
+Pibo World is **Paria’s thesis game**: a cozy Pocket Planet that becomes a
+language-learning place through **triple-helix co-design**.
 
-## What changed
+```
+World (designer)  →  Constraints (teacher)  →  Student creations / play
+     Paria                 class topic              peers learn together
+```
 
-The plant → grow → inspect loop is now a small **exposure → input → recall**
-cycle:
+1. **Game designer (Paria)** creates the Pocket Planet world and platform —
+   the clay-toy planet, the garden loop, and the inspect/recall beat.
+2. **Teachers** put constraints on a class: vocabulary theme, learning goals,
+   which plants are in bounds, target language.
+3. **Students** create and play with peers *inside* those constraints.
+
+This PR implements (1) as a playable loop, and (2)+(3) as a real data shape
+plus a tiny runtime hook — not a CMS, not accounts.
+
+Language is still flexible: teacher packs pick a default; `?lang=fr` swaps it.
+
+## What you can play now (designer-side loop)
+
+The plant → grow → inspect loop is a small **exposure → input → recall** cycle
+that students will eventually play inside a teacher’s assignment:
 
 1. **Plant** — the seed picker shows the L2 word and an L1 gloss (`sol` / sun).
+   A teacher pack can hide plants that are off-topic (`?class=night` → only
+   moonbell).
 2. **Grow** — same cozy wait as before (the world still rewards a full garden).
-3. **Inspect** — a vocabulary card replaces the old one-line “fact”: L2 word,
-   L1 gloss, and a short example sentence with a translation.
-4. **Recall** — closing the card opens a 3-choice quiz (“What was this called?”).
-   A correct answer marks the word remembered in the collection. Skipping is
-   allowed so the planet stays a toy, not a test.
+3. **Inspect** — a vocabulary card: L2 word, L1 gloss, example sentence.
+4. **Recall** — closing the card opens a 3-choice quiz. A correct answer marks
+   the word remembered. Skipping stays allowed so the planet is a toy, not a test.
+
+The 🪴 drawer shows the **teacher title + language** (`Garden words · Spanish`)
+above what the student has grown. Play is logged on `game.helix.session`
+(plantings, recalls). `creations` and `peers` are empty stubs for later.
 
 World rewards (bridge, meadow bloom, observatory light) still fire when all
 three beds bloom. Remembering every word is a separate, gentler toast.
 
-## Why this supports language learning
+## Data model — World → Constraints → Session
 
-- **Grounded in a scene.** Words are tied to something you grew, not a flashcard
-  stack. That is a first approximation of situated vocabulary learning.
-- **Input before output.** The word is seen at planting and again on the inspect
-  card before the quiz asks for it.
-- **Retrieval practice.** The quiz is a tiny recall prompt, which is more useful
-  than re-reading the card alone.
-- **Low affective filter.** Wrong answers stay on the card so you can try again;
-  Esc skips. The cozy controls and clay-toy look are unchanged.
+| Layer | Role | File | What it owns |
+| --- | --- | --- | --- |
+| **World** | Designer (Paria) | `src/data/world.js` | Platform identity, layout id, plant catalog, supported languages, learn-loop verbs |
+| **Constraints** | Teacher | `src/data/constraints.js` | Theme, goals, allow-list of plants, target/native language, foil policy |
+| **Session** | Student | `src/data/session.js` | This visit’s plantings, recall attempts, `creations[]`, `peers[]` |
+| **Compose** | Runtime | `src/data/helix.js` | `composeHelix()` → one object the game actually runs |
 
-This is a prototype of a mechanic, not a finished pedagogy. It is meant to be
-easy to measure and swap.
+Sketch (the running objects match this):
 
-## Data-driven content (how to run experiments)
+```
+World {
+  id, role: "designer",
+  layoutId, systems: ["garden"],
+  plantCatalog: ["sunpetal", "moonbell", "fernling"],
+  languagesSupported: ["es", "fr", "en"]
+}
 
-Language lives in `src/data/`, not in the mesh builders.
+Constraints {
+  id, role: "teacher", worldId,
+  title, theme, goals[],
+  targetLang, nativeLang,          // still swappable
+  allowedPlantIds[],               // subset of world.plantCatalog
+  distractors: "allowed" | "world",
+  requireRecall, allowStudentCreations
+}
+
+Session {
+  id, role: "student", worldId, constraintId,
+  plantings: [{ spotIndex, plantId, at }],
+  recalls:   [{ plantId, correct, skipped, word, at }],
+  creations: [{ kind: "vocab", plantId, lang, word, gloss, … }],  // stub
+  peers: []                                                      // stub
+}
+```
+
+`composeHelix({ classId, lang })` intersects the allow-list with the catalog,
+applies the language, and starts a session. `Game.helix` is that object.
+
+Teacher packs in this build (no teacher UI yet):
+
+- `?class=garden` (default) — Garden words, all three plants
+- `?class=night` — Night words, moonbell only (quiz foils still come from the
+  designer catalog so a 3-choice recall still works)
+
+## Why the learn beat supports language learning
+
+- **Grounded in a scene.** Words are tied to something you grew.
+- **Input before output.** Seen at planting and on the inspect card before the quiz.
+- **Retrieval practice.** A tiny recall prompt, skippable.
+- **Constrained creation (next).** Students will add words/plants only inside
+  the teacher’s theme — that is the helix, not an open sandbox.
+
+## How to run experiments
 
 | File | Role |
 | --- | --- |
-| `src/data/lesson.js` | Active language pair + UI copy for the learn beat |
-| `src/data/vocab.js` | Word cards keyed by plant id → language code |
-| `src/data/plants.js` | Visual / gameplay identity only (palette, stages) |
-| `src/learn/recall.js` | Pure quiz helpers (choices, shuffle, grade) |
+| `src/data/world.js` | Designer world stub |
+| `src/data/constraints.js` | Teacher packs |
+| `src/data/session.js` | Student log + vocab-creation merge |
+| `src/data/helix.js` | Compose the three layers |
+| `src/data/vocab.js` | Word cards keyed by plant id → language |
+| `src/data/plants.js` | Visual / gameplay identity only |
+| `src/data/lesson.js` | HUD copy + `?lang=` / `?fast=` / `?class=` helpers |
+| `src/learn/recall.js` | Quiz choices + grading (no DOM) |
 
-**Swap the target language**
+```bash
+http://localhost:8000/?fast=1
+http://localhost:8000/?class=night&fast=1
+http://localhost:8000/?lang=fr&fast=1
+```
 
-- Edit `DEFAULT_TARGET` in `src/data/lesson.js`, or
-- Open the game with `?lang=fr` (Spanish `es`, French `fr`, English `en`).
+Add a language by copying an `es` block in `vocab.js`. Add a class by copying
+a pack in `constraints.js`. Dump the student log from the console:
+`window.pibo.helix.session`.
 
-Add a new language by copying an `es` block in `vocab.js` under a new code.
+**Tests:** `npm test` checks helix compose, teacher filtering, language swap,
+session events, and that a student vocab creation can merge into the bank.
 
-**Faster playtests:** `?fast=1` shortens growth so a full inspect + quiz can be
-walked in a few seconds. Combine: `http://localhost:8000/?lang=fr&fast=1`.
+## Suggested next experiments (by helix layer)
 
-**Tests:** `npm test` (or `node --test src/learn/recall.test.js`) checks that
-every plant has es/fr/en cards and that recall choices always include the
-target word.
+**Designer (world / platform)**
+- Audio on the vocab card; library as a review room; more systems than garden.
 
-## Suggested next experiments
+**Teacher (constraints)**
+- A tiny local “class sheet” JSON (theme, goals, allow-list) dropped in `data/`.
+- Hide L2 at planting as a constraint flag; required vs optional recall.
+- Bigger word banks so foils are not always the other two garden plants.
 
-These stay inside the current architecture (`data/` + `systems/` + `ui/`):
-
-1. **Hide L2 at planting.** Picker shows only the emoji; the word appears first
-   on inspect. Compare recall against the current “see it twice” condition.
-2. **Bigger word bank / extra distractors.** `recallChoices` already takes
-   `count`; add unused vocab entries so foils are not always the other two
-   garden plants.
-3. **Spaced re-inspect.** After a delay (or a lap around the planet), prompt
-   “what was this called?” again. Log first-try accuracy per item.
-4. **Production instead of recognition.** Type or speak the L2 word; keep the
-   3-choice quiz as a fallback.
-5. **Audio.** Attach a short pronunciation clip (or browser speechSynthesis)
-   on the vocab card. Crucial for languages where spelling ≠ sound.
-6. **Library as a review room.** The existing library prop is a natural place
-   to reopen learned cards without growing a new plant.
-7. **Local-only session log.** Write `{plantId, lang, correct, skipped, ms}` to
-   `localStorage` for thesis playtests. Still no backend.
-8. **Learner-authored lists.** A JSON drop-in (or a simple textarea later)
-   that replaces `VOCAB` — a sketch of the “make your own world” vision.
-9. **UI language vs. target language.** Chrome copy is still English; try a
-   fully L2 HUD as a later condition.
+**Student (play / create / peers)**
+- Persist `helix.session` as a thesis log (`localStorage` already snapshots).
+- Production (type/speak) instead of 3-choice recognition.
+- First creation tool: add a vocab card that respects `allowedPlantIds`.
+- Later: place a student-made plant; visit a peer’s planet (still no backend).
 
 Out of scope for now (on purpose): accounts, multiplayer, a content CMS, or a
 new engine.
