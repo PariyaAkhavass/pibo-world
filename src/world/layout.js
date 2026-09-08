@@ -22,7 +22,7 @@ export const LAYOUT = {
   landing: { lat: 36, lon: 66 },
   ufo: { lat: 36, lon: 66 },
   // first hub zone — TV tower / screen studio, on the walk from spawn toward the garden
-  tvTower: { lat: 20, lon: 80, yaw: 0.55 },
+  tvTower: { lat: 20, lon: 80, yaw: 2.15 },
 
   // far green side — a quiet meadow opposite the starting village
   companion: { lat: 122, lon: 204 },

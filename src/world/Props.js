@@ -58,10 +58,12 @@ export class Props {
     this.tvScreen = tower.userData.screen;
     this.tvBeacon = tower.userData.beacon;
     P.placeOnSurface(shade(tower), dirOf(LAYOUT.tvTower), { yaw: LAYOUT.tvTower.yaw });
-    if (this.tvScreen) {
-      this.tvScreen.castShadow = false;
-      this.tvScreen.receiveShadow = false;
-    }
+    tower.traverse((o) => {
+      if (o.isMesh && o.material === this.tvScreen?.material) {
+        o.castShadow = false;
+        o.receiveShadow = false;
+      }
+    });
 
     // nature
     for (const t of LAYOUT.trees) {
@@ -664,6 +666,13 @@ function buildTvTower() {
   screen.receiveShadow = false;
   g.add(screen);
   g.userData.screen = screen;
+
+  const screenBack = new THREE.Mesh(new THREE.PlaneGeometry(1.38, 0.88), screenMat);
+  screenBack.position.set(0, 2.55, -0.76);
+  screenBack.rotation.y = Math.PI;
+  screenBack.castShadow = false;
+  screenBack.receiveShadow = false;
+  g.add(screenBack);
 
   const dish = new THREE.Mesh(
     new THREE.SphereGeometry(0.42, 12, 10, 0, Math.PI * 2, 0, Math.PI / 2),
