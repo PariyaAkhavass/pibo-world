@@ -7,6 +7,7 @@ import { Environment } from "../world/Environment.js";
 import { Props } from "../world/Props.js";
 import { Ambient } from "../world/Ambient.js";
 import { GardenSystem } from "../systems/GardenSystem.js";
+import { TvStudio } from "../systems/TvStudio.js";
 import { Pibo } from "../entities/Pibo.js";
 import { Ufo } from "../entities/Ufo.js";
 import { Galaxy } from "../world/Galaxy.js";
@@ -80,6 +81,7 @@ export class Game {
 
     this.ambient = new Ambient(this.scene, 10);
     this.galaxy = new Galaxy(this.scene);
+    this.studio = new TvStudio(this.planet, { outdoorScreen: this.props.tvScreen });
     this.collision = new Collision(this.planet.radius, collidersOf(LAYOUT));
     if (this.props.landingBeacon) this.props.landingBeacon.visible = false;
   }
@@ -150,10 +152,31 @@ export class Game {
 
   start() {
     this.renderer.setAnimationLoop(() => this._frame());
+    this._maybeBootStudio();
+  }
+
+  _maybeBootStudio() {
+    try {
+      if (!new URLSearchParams(window.location.search).has("studio")) return;
+    } catch {
+      return;
+    }
+    const here = dirOf(LAYOUT.tvTower);
+    this.pibo.placeAt(here, tangentToward(here, dirOf(LAYOUT.start)), this.collision);
+    this._frameCameraOnPibo();
+    this._enterStudio();
   }
 
   _frame() {
     const dt = Math.min(this.clock.getDelta(), 0.05);
+
+    if (this.studio.active) {
+      this.studio.update(dt);
+      this._handleStudioInteraction();
+      this.input.endFrame();
+      this.renderer.render(this.studio.scene, this.studio.camera);
+      return;
+    }
 
     const frozen = this.ui.isModalOpen;
     this.companion.update(dt, null, { frozen: true });
@@ -277,6 +300,13 @@ export class Game {
     }
 
     const p = this.pibo.worldPosition();
+    const tower = this.studio.getInteractable(p);
+    if (tower) {
+      ui.setPrompt(tower.label);
+      if (this.input.consume("KeyE", "Enter")) this._enterStudio();
+      return;
+    }
+
     const family = this.familyShip.getInteractable(p);
     if (family) {
       ui.setPrompt(family.label);
@@ -351,6 +381,59 @@ export class Game {
     setTimeout(() => this.ui.showBeyond(), 8500);
   }
 
+  _handleStudioInteraction() {
+    const typing = this.ui.isStudioTyping;
+    if (this.input.consume("Escape")) {
+      this._leaveStudio();
+      return;
+    }
+    if (!typing && this.input.consume("KeyE")) this._leaveStudio();
+  }
+
+  _enterStudio() {
+    this.started = true;
+    this.ui.hideIntro();
+    this.ui.closeModals();
+    this.ui.closeCollection();
+    this.studio.enter();
+    this.ui.openStudio({
+      onGenerate: (prompt) => this._generateStudioClip(prompt),
+      onLeave: () => this._leaveStudio(),
+    });
+    this.renderer.setClearColor(0x1c1730, 1);
+    this.ui.toast("Lights, camera, English 📺", 2400);
+  }
+
+  async _generateStudioClip(prompt) {
+    this.ui.setStudioBusy(true);
+    this.ui.setStudioStatus("Making your little show…");
+    const clip = await this.studio.generate(prompt);
+    if (!this.studio.active || !clip) {
+      this.ui.setStudioBusy(false);
+      return;
+    }
+    this.ui.setStudioBusy(false);
+    if (clip.demo && clip.fallbackReason) {
+      this.ui.setStudioStatus("Demo clip — hook a video API later");
+      this.ui.toast("Playing a toy demo on the screen ✨", 2400);
+    } else if (clip.demo) {
+      this.ui.setStudioStatus("Demo show playing on the screen");
+      this.ui.toast("Your sentence is on the air ✨", 2200);
+    } else {
+      this.ui.setStudioStatus("On the air");
+      this.ui.toast("Your show is on the screen ✨", 2200);
+    }
+  }
+
+  _leaveStudio() {
+    if (!this.studio.active) return;
+    this.studio.leave();
+    this.ui.closeStudio();
+    this.renderer.setClearColor(0x000000, 0);
+    this._frameCameraOnPibo();
+    this.ui.toast("Back on your planet 🌍", 2000);
+  }
+
   _boardShip() {
     this.pibo.setVisible(false);
     this.ufo.board();
@@ -402,8 +485,11 @@ export class Game {
   }
 
   _onResize() {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(w, h);
+    this.studio?.resize(w, h);
   }
 }
