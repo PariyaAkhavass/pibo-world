@@ -43,9 +43,9 @@ export class TvStudio {
   enter() {
     this.active = true;
     this.t = 0;
-    this.camera.position.set(1.15, 1.62, 6.1);
+    this.camera.position.set(2.35, 1.68, 5.9);
     this.camera.up.set(0, 1, 0);
-    this.camera.lookAt(0.1, 1.85, -3.2);
+    this.camera.lookAt(-0.2, 2.08, -4.1);
   }
 
   leave() {
@@ -165,10 +165,10 @@ export class TvStudio {
 
   update(dt) {
     this.t += dt;
-    const sway = Math.sin(this.t * 0.35) * 0.12;
-    this.camera.position.x = 1.15 + sway;
-    this.camera.position.y = 1.62 + Math.sin(this.t * 0.5) * 0.04;
-    this.camera.lookAt(0.1, 1.85, -3.2);
+    const sway = Math.sin(this.t * 0.35) * 0.1;
+    this.camera.position.x = 2.35 + sway;
+    this.camera.position.y = 1.68 + Math.sin(this.t * 0.5) * 0.04;
+    this.camera.lookAt(-0.2, 2.08, -4.1);
 
     if (this.spot) {
       this.spot.intensity = 1.15 + Math.sin(this.t * 1.6) * 0.12;

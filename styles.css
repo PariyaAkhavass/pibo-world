@@ -239,17 +239,20 @@ html, body {
 
 .studio-hud {
   position: absolute;
-  left: 50%;
+  left: max(16px, env(safe-area-inset-left));
   bottom: 5%;
-  transform: translateX(-50%);
-  width: min(480px, 92vw);
-  text-align: center;
-  animation: rise 0.24s ease;
+  width: min(340px, 44vw);
+  text-align: left;
+  animation: studio-rise 0.24s ease;
   user-select: text;
   touch-action: auto;
 }
+@keyframes studio-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .studio-card {
-  padding: 16px 16px 14px;
+  padding: 14px 14px 12px;
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -261,11 +264,11 @@ html, body {
   text-transform: uppercase;
   color: var(--coral);
 }
-.studio-title { font-weight: 700; font-size: 20px; margin-top: 2px; }
+.studio-title { font-weight: 700; font-size: 18px; margin-top: 2px; }
 .studio-copy {
-  margin: 6px 0 10px;
-  font-size: 14px;
-  line-height: 1.4;
+  margin: 4px 0 8px;
+  font-size: 13px;
+  line-height: 1.35;
   color: var(--ink-soft);
 }
 .studio-hud textarea {
@@ -288,8 +291,8 @@ html, body {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  justify-content: center;
-  margin-top: 10px;
+  justify-content: flex-start;
+  margin-top: 8px;
 }
 .studio-chip {
   border: none;
@@ -308,8 +311,8 @@ html, body {
 .studio-actions {
   display: flex;
   gap: 8px;
-  justify-content: center;
-  margin-top: 12px;
+  justify-content: flex-start;
+  margin-top: 10px;
 }
 .studio-go, .studio-out {
   border: none;
@@ -545,7 +548,15 @@ html, body {
 .touch-ui .panel { bottom: max(26%, calc(env(safe-area-inset-bottom) + 156px)); }
 .touch-ui .fact { bottom: max(26%, calc(env(safe-area-inset-bottom) + 156px)); }
 .touch-ui .toast { bottom: max(32%, calc(env(safe-area-inset-bottom) + 180px)); }
-.touch-ui .studio-hud { bottom: max(22%, calc(env(safe-area-inset-bottom) + 148px)); }
+.touch-ui .studio-hud {
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(480px, 92vw);
+  bottom: max(22%, calc(env(safe-area-inset-bottom) + 148px));
+  text-align: center;
+}
+.touch-ui .studio-chips,
+.touch-ui .studio-actions { justify-content: center; }
 .touch-ui .collection-btn {
   top: max(18px, env(safe-area-inset-top));
   right: max(18px, env(safe-area-inset-right));
