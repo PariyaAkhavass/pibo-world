@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { clay, blob, ball, box, cyl, cone, shade } from "./materials.js";
 import { LAYOUT, dirOf } from "./layout.js";
 import { mulberry32 } from "./Planet.js";
+import { surfaceQuaternion, tangentToward } from "../core/SphereMath.js";
 
 /**
  * Every handcrafted structure and piece of nature on the starter planet.
@@ -77,7 +78,14 @@ export class Props {
     const dock = buildLighthouseDock();
     this.dockRing = dock.userData.ring;
     this.dockBeacon = dock.userData.beacon;
-    P.placeOnSurface(shade(dock), dirOf(LAYOUT.lighthousePad), { yaw: LAYOUT.lighthouse.yaw });
+    const padDir = dirOf(LAYOUT.lighthousePad);
+    P.placeOnSurface(shade(dock), padDir);
+    // +Z of the pier faces the lighthouse so the planks read as a walkway
+    surfaceQuaternion(
+      padDir,
+      tangentToward(padDir, dirOf(LAYOUT.lighthouse)),
+      dock.quaternion
+    );
 
     for (const step of LAYOUT.lighthousePath ?? []) {
       const lamp = buildLantern(step.lon);
@@ -873,14 +881,17 @@ function buildLighthouseDock() {
   inner.position.y = 0.2;
   g.add(inner);
 
+  const walk = box(1.2, 0.12, 1.85, plank);
+  walk.position.set(0, 0.12, 1.85);
+  g.add(walk);
   for (let i = 0; i < 4; i++) {
-    const board = box(0.22, 0.05, 2.4, wood);
-    board.position.set(-0.45 + i * 0.3, 0.18, 1.35);
+    const board = box(0.22, 0.05, 2.15, wood);
+    board.position.set(-0.45 + i * 0.3, 0.18, 1.55);
     g.add(board);
   }
   for (const sx of [-0.7, 0.7]) {
     const post = cyl(0.06, 0.07, 0.55, wood, 8);
-    post.position.set(sx, 0.32, 2.15);
+    post.position.set(sx, 0.32, 2.45);
     g.add(post);
   }
 
