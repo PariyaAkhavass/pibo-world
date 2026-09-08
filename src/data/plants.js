@@ -1,9 +1,9 @@
 /**
  * The three plants a player can grow in the starter garden.
  *
- * Each entry is pure data: identity, palette, a single wondrous fact, and the
- * number of growth stages. Visuals are built procedurally by GardenSystem from
- * `type`, so adding a new plant later is just another object here.
+ * Each entry is pure gameplay/visual data: identity, palette, and growth
+ * stages. Language content lives in `vocab.js` so thesis experiments can
+ * swap word lists without retuning the clay models.
  */
 export const PLANTS = [
   {
@@ -15,7 +15,6 @@ export const PLANTS = [
     accent: 0x8a5a2b,
     leaf: 0x6fae5a,
     stages: 4,
-    fact: "Sunpetals turn their faces to follow the sun across the sky all day.",
   },
   {
     id: "moonbell",
@@ -26,7 +25,6 @@ export const PLANTS = [
     accent: 0x7d6bd6,
     leaf: 0x6fae5a,
     stages: 4,
-    fact: "Moonbells stay shut by day and only open at night to greet passing moths.",
   },
   {
     id: "fernling",
@@ -37,7 +35,6 @@ export const PLANTS = [
     accent: 0x3f8a54,
     leaf: 0x5fbf72,
     stages: 4,
-    fact: "Fernlings are ancient — their kind grew tall long before the first flower existed.",
   },
 ];
 

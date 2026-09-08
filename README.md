@@ -8,8 +8,13 @@ The goal of this build is one feeling, not a feature list:
 > **"I own this tiny world, it feels alive, and I want to keep shaping it."**
 
 You wake up on a handcrafted **cozy learning garden planet**. Walk around it, plant three
-things in the garden, watch them grow, learn a little about each, and your world quietly
+things in the garden, watch them grow, learn a little **word** for each, and your world quietly
 changes in return.
+
+This fork is Paria’s thesis game: a Pocket Planet world she designs, that
+teachers can constrain, and that students play (and later create) together.
+See [THESIS.md](./THESIS.md) for the triple-helix data model, the first
+learn beat, and suggested experiments.
 
 ## Run it
 
@@ -22,6 +27,12 @@ python3 -m http.server 8000
 # then open http://localhost:8000
 ```
 
+Optional checks for the language data (no extra packages):
+
+```bash
+npm test
+```
+
 Any static server works (`npx serve`, `php -S localhost:8000`, a Live Server extension, …).
 
 Three.js is loaded from a CDN via the import map in `index.html`, so you need an internet
@@ -31,9 +42,9 @@ connection the first time.
 
 - **WASD** / **arrow keys** — walk around your planet (Pibo turns to face where it's going)
 - **E** / **Enter** — interact (plant, then later inspect what you grew)
-- **1 / 2 / 3** — choose a plant
-- **Esc** — step back from a panel
-- **🪴** (top-right) — see the things you've grown
+- **1 / 2 / 3** — choose a plant (and later pick a quiz answer)
+- **Esc** — step back from a panel, vocab card, or quiz
+- **🪴** (top-right) — words you've grown (a check appears when you remember one)
 - **Phone / tablet** — a little joystick (bottom-left) steers Pibo; tap **E** (bottom-right) to interact. On-screen prompts and plant cards are tappable too.
 - Houses, the workshop, the observatory, trees, and rocks are solid — Pibo slides around them.
 - New landmarks fill out the walk: a little planetarium, mini café, tiny library,
@@ -42,8 +53,15 @@ connection the first time.
 - **Pot-ship** (landing pad) — press **E** to board. **WASD** flies around the world, **Space** climbs into the toy sky, **Shift** / **F** descends, **E** lands anywhere. On a phone, ↑ / ↓ sit above the E button.
 
 Walk to the three planter beds in the garden, plant a seed in each, wait a few seconds for
-them to grow, and inspect them to learn a tiny fact. Grow all three and watch what happens
-to the rest of the planet.
+them to grow, and inspect them to learn a vocabulary card (L2 word, L1 gloss, example
+sentence). Close the card and a tiny recall quiz asks “what was this called?” Grow all three
+and watch what happens to the rest of the planet.
+
+Playtest helpers (optional query flags):
+
+- `?fast=1` — plants bloom in about a second
+- `?lang=fr` — French word list (`es` Spanish default, `en` English)
+- `?class=night` — teacher pack that only allows the moon plant
 
 ## Architecture
 
@@ -68,11 +86,19 @@ src/
     Ufo.js          pot-shaped ship you can board and fly
     Galaxy.js       stars + hard clay planets for the family voyage
   systems/
-    GardenSystem.js the plant → grow → inspect → reward loop
+    GardenSystem.js the plant → grow → inspect → recall loop
+  learn/
+    recall.js       quiz choices + grading (no DOM)
   data/
-    plants.js       the three plants + their one-line facts
+    plants.js       the three plants (visuals / growth only)
+    world.js        designer world/platform stub (helix layer 1)
+    constraints.js  teacher class packs (helix layer 2)
+    session.js      student play log + creation stub (helix layer 3)
+    helix.js        composes World → Constraints → Session
+    vocab.js        L2 word cards keyed by plant + language
+    lesson.js       HUD copy + query helpers (`lang`, `class`, `fast`)
   ui/
-    UI.js           minimal overlay: prompt, plant panel, facts, collection
+    UI.js           overlay: prompt, plant panel, vocab cards, quiz, collection
     Joystick.js     on-screen analog stick for phones and tablets
 ```
 
@@ -86,7 +112,10 @@ The seams are already in place for the real game, but intentionally not built ye
   a discrete unit ready to carry an owner id and guests.
 - **Placeable buildings** — `Props` builders are pure factories; a placement system can reuse
   `planet.placeOnSurface`.
-- **More educational systems** — `GardenSystem` is one system among future ones; `data/`
-  holds content separate from mechanics.
+- **Triple-helix co-design** — designer world, teacher constraints, student
+  session are separate JSON-shaped modules composed in `helix.js`. Word lists
+  and class packs are data, not code.
+- **More educational systems** — `GardenSystem` plus the vocab/recall beat;
+  more systems can slot in the same way.
 - **Inventory / NPCs / world events** — slot in as new `systems/` + `entities/`, wired
   through `Game`.

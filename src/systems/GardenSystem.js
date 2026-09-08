@@ -2,14 +2,16 @@ import * as THREE from "three";
 import { clay, ball, box, cyl, cone, shade } from "../world/materials.js";
 import { LAYOUT, dirOf } from "../world/layout.js";
 import { getPlant } from "../data/plants.js";
+import { LESSON, queryFlag } from "../data/lesson.js";
 
-const STAGE_TIME = 2.6; // seconds per growth stage
+const STAGE_TIME = queryFlag("fast") ? 0.35 : 2.6; // seconds per growth stage
 const INTERACT_RANGE = 2.6; // world units from Pibo to a spot
 
 /**
  * The starter garden: three raised planter beds the player can plant in, watch
- * grow through stages, and inspect to learn a small fact. Growing all three
- * fires `onAllGrown` so the world can reward the player.
+ * grow through stages, and inspect to learn a vocabulary card. Growing all
+ * three fires `onAllGrown` so the world can reward the player. Recalling a
+ * word marks the spot `learned` (language beat, separate from bloom).
  *
  * Interaction is exposed through getInteractable(worldPos): the Game asks each
  * frame what (if anything) is in reach and what pressing E would do, so this
@@ -39,6 +41,7 @@ export class GardenSystem {
         stage: 0,
         timer: 0,
         inspected: false,
+        learned: false,
         plantMesh: null,
         popT: 0,
       });
@@ -48,6 +51,10 @@ export class GardenSystem {
 
   get grownCount() {
     return this.spots.filter((s) => s.state === "bloomed").length;
+  }
+
+  get learnedCount() {
+    return this.spots.filter((s) => s.learned).length;
   }
 
   /** What can Pibo do at the nearest spot right now? */
@@ -65,8 +72,11 @@ export class GardenSystem {
     if (best.state === "growing") {
       return { spot: best, kind: "wait", label: "Growing…", disabled: true };
     }
-    // bloomed
-    return { spot: best, kind: "inspect", label: best.inspected ? "Look again" : "What is it?" };
+    // bloomed — first look is a vocab card; later looks can review
+    const label = (best.inspected || best.learned)
+      ? LESSON.ui.inspectAgain
+      : LESSON.ui.inspectNew;
+    return { spot: best, kind: "inspect", label };
   }
 
   plant(spot, plantId) {
@@ -78,10 +88,14 @@ export class GardenSystem {
     this._setStageMesh(spot);
   }
 
-  factFor(spot) {
+  inspect(spot) {
     const p = getPlant(spot.plantId);
     if (p) spot.inspected = true;
     return p;
+  }
+
+  markLearned(spot) {
+    if (spot) spot.learned = true;
   }
 
   update(dt) {

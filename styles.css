@@ -185,6 +185,8 @@ html, body {
 }
 .card-emoji { font-size: 34px; line-height: 1; }
 .card-name { margin-top: 8px; font-weight: 600; font-size: 15px; }
+.card-gloss { margin-top: 2px; font-size: 12px; color: var(--ink-soft); font-weight: 500; }
+.card-gloss:empty { display: none; }
 .card-hint { margin-top: 2px; font-size: 12px; color: var(--ink-soft); }
 
 /* Fact card */
@@ -202,13 +204,89 @@ html, body {
   animation: rise 0.24s ease;
 }
 .fact-emoji { font-size: 42px; }
+.fact-lang {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--coral);
+  background: rgba(255, 154, 118, 0.16);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.fact-lang:empty { display: none; }
 .fact-name { font-weight: 700; font-size: 20px; margin-top: 4px; }
+.fact.vocab .fact-name { font-size: 28px; letter-spacing: 0.02em; }
 .fact-name:empty { display: none; }
+.fact-gloss { margin-top: 2px; font-size: 14px; color: var(--ink-soft); font-weight: 500; }
+.fact-gloss:empty { display: none; }
 .fact-text { margin-top: 8px; font-size: 15px; line-height: 1.45; color: var(--ink); white-space: pre-line; }
+.fact.vocab .fact-text { margin-top: 12px; font-weight: 600; }
+.fact-phrase-gloss { margin-top: 4px; font-size: 13px; color: var(--ink-soft); line-height: 1.4; }
+.fact-phrase-gloss:empty { display: none; }
 .fact-from { margin-top: 12px; font-weight: 600; color: var(--coral); }
 .fact-from:empty { display: none; }
 .fact.letter { width: min(420px, 92vw); padding: 26px 26px 18px; }
 .fact.letter .fact-text { font-size: 16px; line-height: 1.55; }
+
+.quiz { width: min(400px, 92vw); }
+.quiz-prompt { font-weight: 600; font-size: 16px; margin-bottom: 6px; }
+.quiz-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.quiz-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fffdf8;
+  border: 2px solid transparent;
+  box-shadow: 0 3px 0 rgba(90, 60, 40, 0.08);
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+.quiz-choice:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--leaf);
+}
+.quiz-choice:disabled { cursor: default; }
+.quiz-choice.correct {
+  border-color: var(--leaf);
+  background: #eefae8;
+}
+.quiz-choice.wrong {
+  border-color: var(--coral);
+  background: #fff0ea;
+  opacity: 0.75;
+}
+.quiz-choice.wrong .quiz-word { text-decoration: line-through; }
+.quiz-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff, #ffe6d3);
+  box-shadow: 0 2px 0 rgba(255, 154, 118, 0.45);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--coral);
+}
+.quiz-word { flex: 1; }
+
+.collection-row.learned { color: var(--ink); }
+.learned-mark { color: var(--leaf); font-weight: 700; margin-left: 2px; }
 
 .beyond {
   position: absolute;
@@ -260,7 +338,14 @@ html, body {
   box-shadow: var(--shadow);
   animation: rise 0.2s ease;
 }
-.collection-title { font-weight: 600; font-size: 15px; margin-bottom: 10px; }
+.collection-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+.collection-kicker {
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+.collection-kicker:empty { display: none; }
 .collection-list { display: flex; flex-direction: column; gap: 8px; }
 .collection-row {
   display: flex;
@@ -408,6 +493,7 @@ html, body {
 }
 .touch-ui .panel { bottom: max(26%, calc(env(safe-area-inset-bottom) + 156px)); }
 .touch-ui .fact { bottom: max(26%, calc(env(safe-area-inset-bottom) + 156px)); }
+.touch-ui .quiz { bottom: max(26%, calc(env(safe-area-inset-bottom) + 156px)); }
 .touch-ui .toast { bottom: max(32%, calc(env(safe-area-inset-bottom) + 180px)); }
 .touch-ui .collection-btn {
   top: max(18px, env(safe-area-inset-top));

@@ -12,18 +12,26 @@ import { Ufo } from "../entities/Ufo.js";
 import { Galaxy } from "../world/Galaxy.js";
 import { LAYOUT, dirOf, collidersOf } from "../world/layout.js";
 import { getPlant } from "../data/plants.js";
+import { LESSON, fill } from "../data/lesson.js";
+import { vocabFor } from "../data/vocab.js";
+import { HELIX, distractorPlantIds } from "../data/helix.js";
+import { recordPlanting, recordRecall } from "../data/session.js";
+import { recallChoices } from "../learn/recall.js";
 import { UI } from "../ui/UI.js";
 
 /**
  * Top-level orchestrator. Owns the renderer, the planet and its systems, the
  * player, and the update loop, and mediates the tiny interaction contract
- * between Pibo, the garden, and the UI. Deliberately small: each subsystem is
- * self-contained so future planets, entities, and systems slot in here.
+ * between Pibo, the garden, the language beat (vocab + recall), and the UI.
+ * `this.helix` is the composed World → Constraints → Session config.
+ * Deliberately small: each subsystem is self-contained so future planets,
+ * entities, and systems slot in here.
  */
 export class Game {
   constructor(canvas, ui) {
     this.canvas = canvas;
     this.ui = ui;
+    this.helix = HELIX;
     this.clock = new THREE.Clock();
     this.started = false;
 
@@ -73,8 +81,12 @@ export class Game {
     this.garden = new GardenSystem(this.planet).build();
     this.garden.onBloom = (spot) => {
       const plant = getPlant(spot.plantId);
+      const vocab = vocabFor(plant.id);
       this.ui.addGrown(plant);
-      this.ui.toast(`Your ${plant.name} bloomed ${plant.emoji}`, 2400);
+      this.ui.toast(fill(LESSON.ui.bloomToast, {
+        word: vocab?.word ?? plant.name,
+        emoji: plant.emoji,
+      }), 2400);
     };
     this.garden.onAllGrown = () => this._reward();
 
@@ -251,7 +263,7 @@ export class Game {
   _handleInteraction() {
     const ui = this.ui;
 
-    // While a panel/fact is open, route only modal keys.
+    // While a panel / vocab card / quiz is open, route only modal keys.
     if (ui.isModalOpen) {
       ui.hidePrompt();
       if (ui.isPanelOpen) {
@@ -259,6 +271,11 @@ export class Game {
         else if (this.input.consume("Digit2", "Numpad2")) ui.pickByIndex(1);
         else if (this.input.consume("Digit3", "Numpad3")) ui.pickByIndex(2);
         else if (this.input.consume("Escape")) ui.closePanel();
+      } else if (ui.isQuizOpen) {
+        if (this.input.consume("Digit1", "Numpad1")) ui.answerQuiz(0);
+        else if (this.input.consume("Digit2", "Numpad2")) ui.answerQuiz(1);
+        else if (this.input.consume("Digit3", "Numpad3")) ui.answerQuiz(2);
+        else if (this.input.consume("Escape", "KeyE", "Enter")) ui.skipQuiz();
       } else {
         if (this.input.consume("Escape", "KeyE", "Enter")) ui.closeFact();
       }
@@ -309,12 +326,43 @@ export class Game {
 
     if (this.input.consume("KeyE", "Enter")) {
       if (it.kind === "plant") {
-        ui.openPlantPanel((plantId) => this.garden.plant(it.spot, plantId));
+        ui.openPlantPanel((plantId) => {
+          this.garden.plant(it.spot, plantId);
+          recordPlanting(this.helix.session, { spotIndex: it.spot.index, plantId });
+        });
       } else if (it.kind === "inspect") {
-        const plant = this.garden.factFor(it.spot);
-        ui.showFact(plant);
+        this._inspectPlant(it.spot);
       }
     }
+  }
+
+  _inspectPlant(spot) {
+    const plant = this.garden.inspect(spot);
+    const vocab = vocabFor(plant.id);
+    this.ui.showVocab(plant, vocab, {
+      onClose: () => {
+        if (spot.learned) return;
+        this.ui.showQuiz({
+          plant,
+          choices: recallChoices(plant.id, { plantIds: distractorPlantIds(this.helix) }),
+          onResult: ({ correct, skipped, word }) => {
+            recordRecall(this.helix.session, {
+              plantId: plant.id,
+              correct,
+              skipped,
+              word: word || vocab?.word || "",
+            });
+            if (!correct) return;
+            this.garden.markLearned(spot);
+            this.ui.markLearned(plant.id);
+            this.ui.toast(fill(LESSON.ui.correctToast, { word: word || vocab?.word }), 2400);
+            if (this.garden.learnedCount === this.garden.spots.length) {
+              setTimeout(() => this.ui.toast(LESSON.ui.allLearnedToast, 2800), 900);
+            }
+          },
+        });
+      },
+    });
   }
 
   _talkToCompanion() {
