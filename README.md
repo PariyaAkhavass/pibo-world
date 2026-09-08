@@ -38,24 +38,24 @@ connection the first time.
 - Houses, the workshop, the observatory, trees, and rocks are solid — Pibo slides around them.
 - New landmarks fill out the walk: a little planetarium, mini café, tiny library,
   windmill, wishing well, picnic blanket, benches, lanterns, mailboxes, crystals,
-  mushrooms, star-stone paths, and a **TV tower** for the screen studio.
+  mushrooms, star-stone paths, and a **lighthouse** you can walk into.
 - **Pot-ship** (landing pad) — press **E** to board. **WASD** flies around the world, **Space** climbs into the toy sky, **Shift** / **F** descends, **E** lands anywhere. On a phone, ↑ / ↓ sit above the E button.
-- **TV tower / screen studio** — from spawn, walk toward the garden and look for the tall broadcast tower with a glowing screen. Press **E** to go inside. Type an English sentence, tap **Generate**, watch the clip on the studio screen, then **Esc** (or **E** when you're not typing) to step back onto the planet.
+- **Lighthouse studio** — you spawn facing a tall red-and-cream lighthouse with a spinning light. Follow the little lanterns, press **E** (**Enter lighthouse**), type an English sentence, tap **Generate**, watch the clip, then **Esc** to step back outside.
 
 Walk to the three planter beds in the garden, plant a seed in each, wait a few seconds for
 them to grow, and inspect them to learn a tiny fact. Grow all three and watch what happens
 to the rest of the planet.
 
-Or skip the walk with `?studio` on the URL to open the studio immediately (handy for testing).
+Or skip the walk with `?studio` on the URL to open the lighthouse studio immediately.
 
-Live build: [pibo.paria.ai](https://pibo.paria.ai). After this lands, walk to the TV tower
-there — or open [pibo.paria.ai/?studio](https://pibo.paria.ai/?studio).
+Live build: [pibo.paria.ai](https://pibo.paria.ai). After this lands, walk straight ahead
+into the lighthouse — or open [pibo.paria.ai/?studio](https://pibo.paria.ai/?studio).
 
 ## Screen studio (AI hook)
 
 The studio is playable without API keys. Prompt → generate → preview uses a built-in demo
 clip (a short clay-toy animation of the sentence, with the text as a caption for English
-practice). The outdoor tower screen shows the same broadcast.
+practice). The outdoor lighthouse lantern shows the same broadcast.
 
 To wire a real video / animation provider later (OpenAI, Replicate, a Vercel function, …)
 point the client at an endpoint **without putting secrets in the repo**:
@@ -108,7 +108,7 @@ src/
     Galaxy.js       stars + hard clay planets for the family voyage
   systems/
     GardenSystem.js the plant → grow → inspect → reward loop
-    TvStudio.js     TV-tower landmark interior + prompt → generate → preview
+    TvStudio.js     lighthouse interior + prompt → generate → preview
     videoGen.js     pluggable clip client (demo animation, optional API)
   data/
     plants.js       the three plants + their one-line facts

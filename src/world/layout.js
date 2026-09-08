@@ -21,8 +21,12 @@ export const LAYOUT = {
   pond: { lat: 33, lon: -158 },
   landing: { lat: 36, lon: 66 },
   ufo: { lat: 36, lon: 66 },
-  // first hub zone — TV tower / screen studio, on the walk from spawn toward the garden
-  tvTower: { lat: 20, lon: 80, yaw: 2.15 },
+  // first hub zone — striped lighthouse, close enough to dominate the spawn view
+  lighthouse: { lat: 17, lon: 55, yaw: 0.2 },
+  // stepping-stones of light from wake-up toward the lighthouse door
+  lighthousePath: [
+    { lat: 4, lon: 14 }, { lat: 8, lon: 28 }, { lat: 12, lon: 42 },
+  ],
 
   // far green side — a quiet meadow opposite the starting village
   companion: { lat: 122, lon: 204 },
@@ -116,7 +120,7 @@ export function collidersOf(layout = LAYOUT) {
   add(layout.library, 1.35);
   add(layout.windmill, 1.35);
   add(layout.well, 1.0);
-  add(layout.tvTower, 1.45);
+  add(layout.lighthouse, 1.75);
   for (const t of layout.trees ?? []) add(t, 0.72);
   for (const r of layout.rocks ?? []) add(r, 0.58);
   for (const b of layout.benches ?? []) add(b, 0.55);
