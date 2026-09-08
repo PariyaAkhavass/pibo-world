@@ -268,8 +268,9 @@ html, body {
 .quiz-choice.wrong {
   border-color: var(--coral);
   background: #fff0ea;
-  opacity: 0.7;
+  opacity: 0.75;
 }
+.quiz-choice.wrong .quiz-word { text-decoration: line-through; }
 .quiz-key {
   display: inline-grid;
   place-items: center;

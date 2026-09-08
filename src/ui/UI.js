@@ -306,6 +306,7 @@ export class UI {
     } else {
       btn.classList.add("wrong");
       btn.disabled = true;
+      this.el.quizPrompt.textContent = "Not quite — try another?";
     }
   }
 
