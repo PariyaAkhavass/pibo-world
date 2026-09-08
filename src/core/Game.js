@@ -88,7 +88,7 @@ export class Game {
 
   _initPlayer() {
     const start = dirOf(LAYOUT.start);
-    const forward = tangentToward(start, dirOf(LAYOUT.lighthouse));
+    const forward = tangentToward(start, dirOf(LAYOUT.ufo));
     this.pibo = new Pibo(this.planet, start, forward);
 
     const pad = dirOf(LAYOUT.ufo);
@@ -157,14 +157,15 @@ export class Game {
 
   _maybeBootStudio() {
     try {
-      if (!new URLSearchParams(window.location.search).has("studio")) return;
+      const q = new URLSearchParams(window.location.search);
+      if (!q.has("studio") && !q.has("dock")) return;
+      const here = dirOf(LAYOUT.lighthousePad);
+      this.pibo.placeAt(here, tangentToward(here, dirOf(LAYOUT.lighthouse)), this.collision);
+      this._frameCameraOnPibo();
+      if (q.has("studio")) this._enterStudio();
     } catch {
       return;
     }
-    const here = dirOf(LAYOUT.lighthouse);
-    this.pibo.placeAt(here, tangentToward(here, dirOf(LAYOUT.start)), this.collision);
-    this._frameCameraOnPibo();
-    this._enterStudio();
   }
 
   _frame() {
@@ -294,7 +295,9 @@ export class Game {
     }
 
     if (this.ufo.riding) {
-      ui.setPrompt("Land");
+      const pad = dirOf(LAYOUT.lighthousePad);
+      const nearDock = this.ufo.dir.angleTo(pad) * this.planet.radius < 4.4;
+      ui.setPrompt(nearDock ? "Land at lighthouse" : "Land");
       if (this.input.consume("KeyE", "Enter")) this._landShip();
       return;
     }
@@ -440,17 +443,23 @@ export class Game {
     this.ui.setFlying(true);
     this.ui.hideIntro();
     this.started = true;
-    this.ui.toast("The pot-ship hums to life 🛸", 2400);
+    this.ui.toast("Fly to the lighthouse across the water 🌊", 2600);
   }
 
   _landShip() {
+    const pad = dirOf(LAYOUT.lighthousePad);
+    const nearDock = this.ufo.dir.angleTo(pad) * this.planet.radius < 4.4;
+    if (nearDock) {
+      this.ufo.dir.copy(pad);
+      this.ufo.forward.copy(tangentToward(pad, dirOf(LAYOUT.lighthouse)));
+    }
     this.ufo.requestLand(() => {
       this.pibo.placeAt(this.ufo.dir, this.ufo.forward, this.collision);
       this.ufo.parkAt(this.pibo.dir, this.pibo.forward);
       this.pibo.setVisible(true);
       this.ui.setFlying(false);
       this._frameCameraOnPibo();
-      this.ui.toast("Back on your planet 🌍", 2000);
+      this.ui.toast(nearDock ? "Docked by the lighthouse 🌊" : "Back on your planet 🌍", 2000);
     });
   }
 

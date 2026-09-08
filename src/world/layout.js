@@ -19,13 +19,16 @@ export const LAYOUT = {
   well: { lat: 53, lon: -146, yaw: 0.25 },
   picnic: { lat: 39, lon: -12, yaw: -0.45 },
   pond: { lat: 33, lon: -158 },
+  // larger bay on the blue/pond side — lighthouse island sits in this water
+  bay: { lat: 30, lon: -192 },
   landing: { lat: 36, lon: 66 },
   ufo: { lat: 36, lon: 66 },
-  // first hub zone — striped lighthouse, close enough to dominate the spawn view
-  lighthouse: { lat: 17, lon: 55, yaw: 0.2 },
-  // stepping-stones of light from wake-up toward the lighthouse door
+  // first hub zone — striped lighthouse on a rocky islet in the bay
+  lighthouse: { lat: 28, lon: -202, yaw: 0.7 },
+  // walkable dock beside the islet; pot-ship can land here (no collider)
+  lighthousePad: { lat: 32, lon: -184 },
   lighthousePath: [
-    { lat: 4, lon: 14 }, { lat: 8, lon: 28 }, { lat: 12, lon: 42 },
+    { lat: 30, lon: -192 }, { lat: 31, lon: -188 },
   ],
 
   // far green side — a quiet meadow opposite the starting village
@@ -103,8 +106,8 @@ export function dirOf(entry) {
 
 /**
  * Solid footprints for surface collision. Radii are world units on the
- * planet (roughly half the building/tree width). Garden beds, the pond,
- * the landing pad, and flowers stay walkable so you can still reach them.
+ * Garden beds, the pond, landing pads, and flowers stay walkable so you
+ * can still reach them (including the lighthouse dock).
  */
 export function collidersOf(layout = LAYOUT) {
   const out = [];
