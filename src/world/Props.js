@@ -737,15 +737,17 @@ function buildLighthouse() {
   beamGroup.position.y = y + 0.72;
   const beamMat = clay(0xfff3a6, {
     emissive: 0xffe08a,
-    emissiveIntensity: 1.0,
+    emissiveIntensity: 1.25,
     transparent: true,
-    opacity: 0.32,
+    opacity: 0.48,
   });
-  const beam = cone(0.12, 9.2, beamMat, 18);
-  beam.rotation.z = Math.PI / 2;
-  beam.position.x = 4.4;
-  beam.userData.keepBright = true;
-  beamGroup.add(beam);
+  for (const sx of [1, -1]) {
+    const beam = cone(0.2, 9.4, beamMat, 18);
+    beam.rotation.z = Math.PI / 2;
+    beam.position.x = sx * 4.5;
+    beam.userData.keepBright = true;
+    beamGroup.add(beam);
+  }
   g.add(beamGroup);
   g.userData.beam = beamGroup;
 
