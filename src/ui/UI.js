@@ -1,4 +1,5 @@
 import { PLANTS } from "../data/plants.js";
+import { STUDIO_PROMPTS } from "../data/studioPrompts.js";
 import { Joystick } from "./Joystick.js";
 
 /**
@@ -33,12 +34,21 @@ export class UI {
       flightPad: document.getElementById("flight-pad"),
       climbUp: document.getElementById("climb-up"),
       climbDown: document.getElementById("climb-down"),
+      studio: document.getElementById("studio-hud"),
+      studioPrompt: document.getElementById("studio-prompt"),
+      studioChips: document.getElementById("studio-chips"),
+      studioGenerate: document.getElementById("studio-generate"),
+      studioLeave: document.getElementById("studio-leave"),
+      studioStatus: document.getElementById("studio-status"),
     };
 
     this.input = null;
     this.joystick = null;
     this._onPick = null;
     this._onLetterClose = null;
+    this._onStudioGenerate = null;
+    this._onStudioLeave = null;
+    this._studioBusy = false;
     this._collected = new Map(); // id -> count
     this._toastTimer = null;
     this._touchUi = false;
@@ -47,6 +57,7 @@ export class UI {
     this._renderCollection();
 
     this.el.collectionBtn.addEventListener("click", () => this.toggleCollection());
+    this._bindStudio();
   }
 
   /**
@@ -105,7 +116,8 @@ export class UI {
 
   _onAction() {
     if (!this.input) return;
-    if (this.isPanelOpen) this.closePanel();
+    if (this.isStudioOpen) this._onStudioLeave?.();
+    else if (this.isPanelOpen) this.closePanel();
     else if (this.isModalOpen) this.closeFact();
     else this.input.press("KeyE");
   }
@@ -113,7 +125,7 @@ export class UI {
   _syncActionBtn() {
     const btn = this.el.actionBtn;
     if (!btn) return;
-    if (this.isModalOpen) {
+    if (this.isStudioOpen || this.isModalOpen) {
       btn.textContent = "back";
       btn.classList.add("close-mode");
       btn.classList.remove("ready");
@@ -228,6 +240,87 @@ export class UI {
   closeModals() {
     this.closePanel();
     this.closeFact();
+  }
+
+  /* screen studio -------------------------------------------------- */
+  get isStudioOpen() {
+    return this.el.studio && !this.el.studio.classList.contains("hidden");
+  }
+  get isStudioTyping() {
+    return this.isStudioOpen && document.activeElement === this.el.studioPrompt;
+  }
+
+  _bindStudio() {
+    const hud = this.el.studio;
+    if (!hud) return;
+    this._renderStudioChips();
+    this.el.studioGenerate.addEventListener("click", () => this.submitStudio());
+    this.el.studioLeave.addEventListener("click", () => this._onStudioLeave?.());
+    this.el.studioPrompt.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        this.submitStudio();
+      }
+    });
+  }
+
+  _renderStudioChips() {
+    const wrap = this.el.studioChips;
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    for (const item of STUDIO_PROMPTS) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "studio-chip";
+      chip.textContent = item.label;
+      chip.addEventListener("click", () => {
+        this.el.studioPrompt.value = item.text;
+        this.el.studioPrompt.focus();
+      });
+      wrap.appendChild(chip);
+    }
+  }
+
+  openStudio({ onGenerate, onLeave } = {}) {
+    this._onStudioGenerate = onGenerate || null;
+    this._onStudioLeave = onLeave || null;
+    this._studioBusy = false;
+    this.el.studio.classList.remove("hidden");
+    this.el.studioGenerate.disabled = false;
+    this.setStudioStatus("Type a sentence, then generate");
+    document.documentElement.classList.add("in-studio");
+    this.hidePrompt();
+    this._syncActionBtn();
+  }
+
+  closeStudio() {
+    this.el.studio.classList.add("hidden");
+    this._onStudioGenerate = null;
+    this._onStudioLeave = null;
+    this._studioBusy = false;
+    document.documentElement.classList.remove("in-studio");
+    this._syncActionBtn();
+  }
+
+  submitStudio() {
+    if (!this.isStudioOpen || this._studioBusy) return;
+    const prompt = (this.el.studioPrompt.value || "").trim();
+    if (!prompt) {
+      this.setStudioStatus("Type a little English sentence first");
+      this.el.studioPrompt.focus();
+      return;
+    }
+    this._onStudioGenerate?.(prompt);
+  }
+
+  setStudioBusy(on) {
+    this._studioBusy = !!on;
+    if (this.el.studioGenerate) this.el.studioGenerate.disabled = !!on;
+    this.el.studioGenerate.textContent = on ? "Making…" : "Generate";
+  }
+
+  setStudioStatus(msg) {
+    if (this.el.studioStatus) this.el.studioStatus.textContent = msg || "";
   }
 
   /* collection ----------------------------------------------------- */
