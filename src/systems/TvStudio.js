@@ -3,13 +3,13 @@ import { clay, blob, ball, box, cyl, cone, shade } from "../world/materials.js";
 import { LAYOUT, dirOf } from "../world/layout.js";
 import { generateClip, createMockClip } from "./videoGen.js";
 
-const INTERACT_RANGE = 3.4;
+const INTERACT_RANGE = 4.6;
 
 /**
- * First hub zone: the screen studio. Out on the planet it is a TV-tower
- * landmark; pressing E swaps the outdoor camera for this interior scene,
- * where a student types a sentence and watches a short clip play on the
- * big screen. Leaving (Esc / E) restores the pocket planet.
+ * First hub zone: the lighthouse studio. Out on the planet it is a tall
+ * striped lighthouse; pressing E swaps the outdoor camera for this interior
+ * scene, where a student types a sentence and watches a short clip play on
+ * the screen. Leaving (Esc / E) restores the pocket planet.
  */
 export class TvStudio {
   constructor(planet, { outdoorScreen = null } = {}) {
@@ -29,13 +29,13 @@ export class TvStudio {
   }
 
   worldAnchor() {
-    return this.planet.pointAt(dirOf(LAYOUT.tvTower), 0.9);
+    return this.planet.pointAt(dirOf(LAYOUT.lighthouse), 0.9);
   }
 
   getInteractable(piboPos) {
-    if (this.active) return { kind: "leave", label: "Leave the studio" };
+    if (this.active) return { kind: "leave", label: "Leave the lighthouse" };
     if (piboPos.distanceTo(this.worldAnchor()) < INTERACT_RANGE) {
-      return { kind: "enter", label: "Enter the screen studio" };
+      return { kind: "enter", label: "Enter lighthouse" };
     }
     return null;
   }

@@ -88,7 +88,7 @@ export class Game {
 
   _initPlayer() {
     const start = dirOf(LAYOUT.start);
-    const forward = tangentToward(start, dirOf(LAYOUT.garden[1]));
+    const forward = tangentToward(start, dirOf(LAYOUT.lighthouse));
     this.pibo = new Pibo(this.planet, start, forward);
 
     const pad = dirOf(LAYOUT.ufo);
@@ -161,7 +161,7 @@ export class Game {
     } catch {
       return;
     }
-    const here = dirOf(LAYOUT.tvTower);
+    const here = dirOf(LAYOUT.lighthouse);
     this.pibo.placeAt(here, tangentToward(here, dirOf(LAYOUT.start)), this.collision);
     this._frameCameraOnPibo();
     this._enterStudio();
@@ -401,7 +401,7 @@ export class Game {
       onLeave: () => this._leaveStudio(),
     });
     this.renderer.setClearColor(0x1c1730, 1);
-    this.ui.toast("Lights, camera, English 📺", 2400);
+    this.ui.toast("The lighthouse welcomes you ✨", 2400);
   }
 
   async _generateStudioClip(prompt) {

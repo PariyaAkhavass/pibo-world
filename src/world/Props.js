@@ -20,6 +20,7 @@ export class Props {
     this.landingRing = null;
     this.tvScreen = null;
     this.tvBeacon = null;
+    this.lighthouseBeam = null;
     this.pondWater = null;
     this.bridge = null;
     this.rewardBloom = null;
@@ -54,16 +55,23 @@ export class Props {
     this.landingBeacon = pad.userData.beacon;
     P.placeOnSurface(shade(pad), dirOf(LAYOUT.landing));
 
-    const tower = buildTvTower();
-    this.tvScreen = tower.userData.screen;
-    this.tvBeacon = tower.userData.beacon;
-    P.placeOnSurface(shade(tower), dirOf(LAYOUT.tvTower), { yaw: LAYOUT.tvTower.yaw });
-    tower.traverse((o) => {
-      if (o.isMesh && o.material === this.tvScreen?.material) {
+    const lighthouse = buildLighthouse();
+    this.tvScreen = lighthouse.userData.screen;
+    this.tvBeacon = lighthouse.userData.beacon;
+    this.lighthouseBeam = lighthouse.userData.beam;
+    P.placeOnSurface(shade(lighthouse), dirOf(LAYOUT.lighthouse), { yaw: LAYOUT.lighthouse.yaw });
+    lighthouse.traverse((o) => {
+      if (o.userData.keepBright) {
         o.castShadow = false;
         o.receiveShadow = false;
       }
     });
+
+    for (const step of LAYOUT.lighthousePath ?? []) {
+      const lamp = buildLantern(step.lon);
+      P.placeOnSurface(shade(lamp), dirOf(step), { yaw: step.lon });
+      this._collectTwinkles(lamp);
+    }
 
     // nature
     for (const t of LAYOUT.trees) {
@@ -173,8 +181,9 @@ export class Props {
 
     if (this.tvBeacon) {
       const p = (Math.sin(t * 3.1) + 1) * 0.5;
-      this.tvBeacon.material.emissiveIntensity = 0.5 + p * 1.2;
+      this.tvBeacon.material.emissiveIntensity = 0.9 + p * 1.1;
     }
+    if (this.lighthouseBeam) this.lighthouseBeam.rotation.y += dt * 0.85;
 
     // landing beacon pulse
     if (this.landingBeacon) {
@@ -627,78 +636,124 @@ function buildPond() {
   return g;
 }
 
-function buildTvTower() {
+function buildLighthouse() {
   const g = new THREE.Group();
+  const cream = clay(0xfff6ea);
+  const red = clay(0xf26f6f);
+  const stone = clay(0xd8d2c4, { roughness: 1 });
 
-  const plaza = cyl(1.55, 1.65, 0.12, clay(0xd8d2c4), 10);
-  plaza.position.y = 0.06;
+  const hill = new THREE.Mesh(
+    new THREE.SphereGeometry(2.05, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+    clay(0x9aa0a6, { roughness: 1 })
+  );
+  hill.scale.y = 0.42;
+  g.add(hill);
+
+  const plaza = cyl(1.55, 1.68, 0.18, stone, 16);
+  plaza.position.y = 0.2;
   g.add(plaza);
 
-  const hut = box(1.45, 1.15, 1.2, clay(0x4a3f68));
-  hut.position.set(0, 0.68, 0.15);
-  g.add(hut);
-  const roof = box(1.7, 0.16, 1.42, clay(0x2a2438));
-  roof.position.set(0, 1.32, 0.15);
-  g.add(roof);
-  const door = box(0.42, 0.72, 0.08, clay(0xfff0c7, { emissive: 0xffd889, emissiveIntensity: 0.22 }));
-  door.position.set(0, 0.42, 0.78);
+  // tall candy-stripe shaft — the silhouette that should read from spawn
+  const bands = 6;
+  const bandH = 0.92;
+  let y = 0.28;
+  for (let i = 0; i < bands; i++) {
+    const t0 = i / bands;
+    const t1 = (i + 1) / bands;
+    const rBot = 1.12 - t0 * 0.32;
+    const rTop = 1.12 - t1 * 0.32;
+    const band = cyl(rTop, rBot, bandH, i % 2 === 0 ? red : cream, 18);
+    band.position.y = y + bandH / 2;
+    g.add(band);
+    y += bandH;
+  }
+
+  const door = box(0.48, 0.88, 0.12, clay(0xfff0c7, { emissive: 0xffd889, emissiveIntensity: 0.45 }));
+  door.position.set(0, 0.72, 1.12);
   g.add(door);
+  const knob = ball(0.05, clay(0xf5d06f, { emissive: 0xffd166, emissiveIntensity: 0.4 }), 8);
+  knob.position.set(0.14, 0.7, 1.2);
+  g.add(knob);
 
-  const mast = cyl(0.14, 0.22, 3.4, clay(0x9aa0a6), 8);
-  mast.position.set(0, 3.05, -0.22);
-  g.add(mast);
-  const mast2 = cyl(0.07, 0.1, 1.15, clay(0xb0b6bb), 8);
-  mast2.position.set(0, 5.25, -0.22);
-  g.add(mast2);
+  // a couple of glowing windows so it reads as inhabited, not a mast
+  for (const [wy, wa] of [[1.85, 0.55], [2.85, -0.7], [3.85, 2.2]]) {
+    const win = box(0.28, 0.38, 0.08, clay(0xfff3a6, { emissive: 0xffdc5a, emissiveIntensity: 0.7 }));
+    win.position.set(Math.sin(wa) * 0.98, wy, Math.cos(wa) * 0.98);
+    win.lookAt(win.position.x * 2, wy, win.position.z * 2);
+    g.add(win);
+  }
 
-  const frame = box(1.55, 1.05, 0.16, clay(0x2a2438));
-  frame.position.set(0, 2.55, 0.22);
-  g.add(frame);
+  const gallery = cyl(1.02, 1.02, 0.12, clay(0xfff0c7), 16);
+  gallery.position.y = y + 0.04;
+  g.add(gallery);
+  const rail = new THREE.Mesh(new THREE.TorusGeometry(0.98, 0.045, 8, 22), clay(0xf5d06f));
+  rail.rotation.x = Math.PI / 2;
+  rail.position.y = y + 0.28;
+  g.add(rail);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const post = cyl(0.03, 0.03, 0.28, clay(0xfff0c7), 6);
+    post.position.set(Math.cos(a) * 0.98, y + 0.2, Math.sin(a) * 0.98);
+    g.add(post);
+  }
 
   const screenMat = clay(0xffffff, {
     emissive: 0xffffff,
-    emissiveIntensity: 0.7,
-    roughness: 0.35,
+    emissiveIntensity: 0.9,
+    roughness: 0.28,
   });
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.38, 0.88), screenMat);
-  screen.position.set(0, 2.55, 0.32);
-  screen.castShadow = false;
-  screen.receiveShadow = false;
-  g.add(screen);
-  g.userData.screen = screen;
-
-  const screenBack = new THREE.Mesh(new THREE.PlaneGeometry(1.38, 0.88), screenMat);
-  screenBack.position.set(0, 2.55, -0.76);
-  screenBack.rotation.y = Math.PI;
-  screenBack.castShadow = false;
-  screenBack.receiveShadow = false;
-  g.add(screenBack);
-
-  const dish = new THREE.Mesh(
-    new THREE.SphereGeometry(0.42, 12, 10, 0, Math.PI * 2, 0, Math.PI / 2),
-    clay(0xdfe6ef)
+  const lantern = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.58, 0.58, 0.95, 22, 1, true),
+    screenMat
   );
-  dish.position.set(0.62, 3.55, -0.15);
-  dish.rotation.x = 0.9;
-  dish.rotation.y = -0.5;
-  g.add(dish);
-  const arm = cyl(0.03, 0.03, 0.45, clay(0x6b7280), 6);
-  arm.position.set(0.42, 3.25, -0.18);
-  arm.rotation.z = 0.7;
-  g.add(arm);
+  lantern.position.y = y + 0.72;
+  lantern.userData.keepBright = true;
+  g.add(lantern);
+  g.userData.screen = lantern;
 
-  const beacon = ball(0.1, clay(0xf26f6f, { emissive: 0xf26f6f, emissiveIntensity: 0.9 }), 10);
-  beacon.position.set(0, 5.9, -0.22);
-  g.add(beacon);
-  g.userData.beacon = beacon;
-
-  const ringMat = clay(0x8fd7ff, { emissive: 0x66c6ff, emissiveIntensity: 0.55, roughness: 0.4 });
-  for (let i = 0; i < 2; i++) {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.38 + i * 0.18, 0.025, 8, 24), ringMat);
-    ring.position.set(0, 4.55 + i * 0.22, -0.22);
-    ring.rotation.x = Math.PI / 2;
-    g.add(ring);
+  for (const a of [0, Math.PI * 0.72, Math.PI * 1.28]) {
+    const hole = new THREE.Mesh(new THREE.CircleGeometry(0.36, 18), screenMat);
+    hole.position.set(Math.sin(a) * 0.86, y - 0.55, Math.cos(a) * 0.86);
+    hole.lookAt(hole.position.x * 3, hole.position.y, hole.position.z * 3);
+    hole.userData.keepBright = true;
+    g.add(hole);
   }
+
+  const glow = ball(0.36, clay(0xfff3a6, { emissive: 0xffdc5a, emissiveIntensity: 1.5 }), 14);
+  glow.position.y = y + 0.72;
+  glow.userData.keepBright = true;
+  g.add(glow);
+  g.userData.beacon = glow;
+
+  const cap = cone(0.72, 0.55, red, 12);
+  cap.position.y = y + 1.38;
+  g.add(cap);
+  const tip = ball(0.12, clay(0xffe27a, { emissive: 0xffd166, emissiveIntensity: 1.0 }), 10);
+  tip.position.y = y + 1.72;
+  tip.userData.keepBright = true;
+  g.add(tip);
+
+  const beamGroup = new THREE.Group();
+  beamGroup.position.y = y + 0.72;
+  const beamMat = clay(0xfff3a6, {
+    emissive: 0xffe08a,
+    emissiveIntensity: 1.25,
+    transparent: true,
+    opacity: 0.48,
+  });
+  for (const sx of [1, -1]) {
+    const beam = cone(0.2, 9.4, beamMat, 18);
+    beam.rotation.z = Math.PI / 2;
+    beam.position.x = sx * 4.5;
+    beam.userData.keepBright = true;
+    beamGroup.add(beam);
+  }
+  g.add(beamGroup);
+  g.userData.beam = beamGroup;
+
+  const lamp = new THREE.PointLight(0xffe08a, 2.4, 18, 1.15);
+  lamp.position.y = y + 0.72;
+  g.add(lamp);
 
   return g;
 }
