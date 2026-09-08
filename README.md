@@ -38,18 +38,18 @@ connection the first time.
 - Houses, the workshop, the observatory, trees, and rocks are solid — Pibo slides around them.
 - New landmarks fill out the walk: a little planetarium, mini café, tiny library,
   windmill, wishing well, picnic blanket, benches, lanterns, mailboxes, crystals,
-  mushrooms, star-stone paths, and a **lighthouse** you can walk into.
-- **Pot-ship** (landing pad) — press **E** to board. **WASD** flies around the world, **Space** climbs into the toy sky, **Shift** / **F** descends, **E** lands anywhere. On a phone, ↑ / ↓ sit above the E button.
-- **Lighthouse studio** — you spawn facing a tall red-and-cream lighthouse with a spinning light. Follow the little lanterns, press **E** (**Enter lighthouse**), type an English sentence, tap **Generate**, watch the clip, then **Esc** to step back outside.
+  mushrooms, star-stone paths, and a **lighthouse** out on the water.
+- **Pot-ship** (village landing pad) — press **E** to board. **WASD** flies around the world, **Space** climbs into the toy sky, **Shift** / **F** descends, **E** lands. On a phone, ↑ / ↓ sit above the E button.
+- **Lighthouse studio** — across the water on the pond/bay side. Board the existing pot-ship, fly toward the striped lighthouse, land on the glowing dock, walk up, and press **E** (**Enter lighthouse**). Type an English sentence, tap **Generate**, watch the clip, then **Esc** to step back outside.
 
 Walk to the three planter beds in the garden, plant a seed in each, wait a few seconds for
 them to grow, and inspect them to learn a tiny fact. Grow all three and watch what happens
 to the rest of the planet.
 
-Or skip the walk with `?studio` on the URL to open the lighthouse studio immediately.
+Or skip the flight with `?dock` (stand on the lighthouse pier) or `?studio` (open the studio immediately).
 
-Live build: [pibo.paria.ai](https://pibo.paria.ai). After this lands, walk straight ahead
-into the lighthouse — or open [pibo.paria.ai/?studio](https://pibo.paria.ai/?studio).
+Live build: [pibo.paria.ai](https://pibo.paria.ai). After this lands, board the pot-ship
+and fly to the lighthouse in the water — or open [pibo.paria.ai/?studio](https://pibo.paria.ai/?studio).
 
 ## Screen studio (AI hook)
 

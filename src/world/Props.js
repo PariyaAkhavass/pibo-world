@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { clay, blob, ball, box, cyl, cone, shade } from "./materials.js";
 import { LAYOUT, dirOf } from "./layout.js";
 import { mulberry32 } from "./Planet.js";
+import { surfaceQuaternion, tangentToward } from "../core/SphereMath.js";
 
 /**
  * Every handcrafted structure and piece of nature on the starter planet.
@@ -18,10 +19,13 @@ export class Props {
     this.planetariumLights = [];
     this.twinklers = [];
     this.landingRing = null;
+    this.dockRing = null;
+    this.dockBeacon = null;
     this.tvScreen = null;
     this.tvBeacon = null;
     this.lighthouseBeam = null;
     this.pondWater = null;
+    this.bayWater = null;
     this.bridge = null;
     this.rewardBloom = null;
     this.swayers = []; // {mesh, phase, amp}
@@ -50,6 +54,10 @@ export class Props {
     this.pondWater = pond.userData.water;
     P.placeOnSurface(shade(pond, false, true), dirOf(LAYOUT.pond));
 
+    const bay = buildBay();
+    this.bayWater = bay.userData.water;
+    P.placeOnSurface(shade(bay, false, true), dirOf(LAYOUT.bay));
+
     const pad = buildLandingPad();
     this.landingRing = pad.userData.ring;
     this.landingBeacon = pad.userData.beacon;
@@ -66,6 +74,18 @@ export class Props {
         o.receiveShadow = false;
       }
     });
+
+    const dock = buildLighthouseDock();
+    this.dockRing = dock.userData.ring;
+    this.dockBeacon = dock.userData.beacon;
+    const padDir = dirOf(LAYOUT.lighthousePad);
+    P.placeOnSurface(shade(dock), padDir);
+    // +Z of the pier faces the lighthouse so the planks read as a walkway
+    surfaceQuaternion(
+      padDir,
+      tangentToward(padDir, dirOf(LAYOUT.lighthouse)),
+      dock.quaternion
+    );
 
     for (const step of LAYOUT.lighthousePath ?? []) {
       const lamp = buildLantern(step.lon);
@@ -166,9 +186,10 @@ export class Props {
       s.mesh.rotation.z = Math.sin(t * 1.6 + s.phase) * s.amp;
     }
 
-    // pond ripples
-    if (this.pondWater) {
-      const geo = this.pondWater.geometry;
+    // pond + bay ripples
+    for (const water of [this.pondWater, this.bayWater]) {
+      if (!water) continue;
+      const geo = water.geometry;
       const pos = geo.attributes.position;
       for (let i = 0; i < pos.count; i++) {
         const x = pos.getX(i), y = pos.getY(i);
@@ -192,6 +213,12 @@ export class Props {
       this.landingBeacon.scale.setScalar(0.9 + p * 0.18);
     }
     if (this.landingRing) this.landingRing.rotation.z += dt * 0.6;
+    if (this.dockRing) this.dockRing.rotation.z += dt * 0.6;
+    if (this.dockBeacon) {
+      const p = (Math.sin(t * 2.0) + 1) * 0.5;
+      this.dockBeacon.material.emissiveIntensity = 0.55 + p * 1.15;
+      this.dockBeacon.scale.setScalar(0.9 + p * 0.18);
+    }
 
     for (const tw of this.twinklers) {
       const p = (Math.sin(t * 2.4 + tw.phase) + 1) * 0.5;
@@ -636,6 +663,49 @@ function buildPond() {
   return g;
 }
 
+function buildBay() {
+  const g = new THREE.Group();
+  const R = 4.15;
+
+  const basin = new THREE.Mesh(
+    new THREE.CircleGeometry(R + 0.18, 40),
+    clay(0x6a4a35, { roughness: 1 })
+  );
+  basin.rotation.x = -Math.PI / 2;
+  basin.position.y = 0.015;
+  g.add(basin);
+
+  const waterGeo = new THREE.CircleGeometry(R, 48);
+  const water = new THREE.Mesh(
+    waterGeo,
+    new THREE.MeshStandardMaterial({
+      color: 0x4aa7d4,
+      roughness: 0.22,
+      metalness: 0.0,
+      transparent: true,
+      opacity: 0.92,
+      emissive: 0x2b7fb0,
+      emissiveIntensity: 0.14,
+    })
+  );
+  water.rotation.x = -Math.PI / 2;
+  water.position.y = 0.085;
+  g.add(water);
+  g.userData.water = water;
+
+  const rng = mulberry32(91);
+  for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2;
+    const s = 0.18 + rng() * 0.16;
+    const stone = blob(s, clay(0x9aa0a6), 1);
+    stone.position.set(Math.cos(a) * (R + 0.12), 0.08, Math.sin(a) * (R + 0.12));
+    stone.scale.y = 0.65;
+    g.add(stone);
+  }
+
+  return g;
+}
+
 function buildLighthouse() {
   const g = new THREE.Group();
   const cream = clay(0xfff6ea);
@@ -653,7 +723,7 @@ function buildLighthouse() {
   plaza.position.y = 0.2;
   g.add(plaza);
 
-  // tall candy-stripe shaft — the silhouette that should read from spawn
+  // tall candy-stripe shaft — reads as a lighthouse from the air
   const bands = 6;
   const bandH = 0.92;
   let y = 0.28;
@@ -793,6 +863,60 @@ function buildLandingPad() {
     })
   );
   beacon.position.y = 0.5;
+  g.add(beacon);
+  g.userData.beacon = beacon;
+
+  return g;
+}
+
+function buildLighthouseDock() {
+  const g = new THREE.Group();
+  const wood = clay(0xb98a55);
+  const plank = clay(0xc8a06a);
+
+  const deck = cyl(1.55, 1.68, 0.16, plank, 10);
+  deck.position.y = 0.1;
+  g.add(deck);
+  const inner = cyl(1.12, 1.12, 0.06, clay(0xfff0c7), 10);
+  inner.position.y = 0.2;
+  g.add(inner);
+
+  const walk = box(1.2, 0.12, 1.85, plank);
+  walk.position.set(0, 0.12, 1.85);
+  g.add(walk);
+  for (let i = 0; i < 4; i++) {
+    const board = box(0.22, 0.05, 2.15, wood);
+    board.position.set(-0.45 + i * 0.3, 0.18, 1.55);
+    g.add(board);
+  }
+  for (const sx of [-0.7, 0.7]) {
+    const post = cyl(0.06, 0.07, 0.55, wood, 8);
+    post.position.set(sx, 0.32, 2.45);
+    g.add(post);
+  }
+
+  const ringMat = new THREE.MeshStandardMaterial({
+    color: 0x8fd7ff,
+    emissive: 0x66c6ff,
+    emissiveIntensity: 1.15,
+    roughness: 0.4,
+  });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.055, 12, 40), ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.24;
+  g.add(ring);
+  g.userData.ring = ring;
+
+  const beacon = ball(
+    0.2,
+    new THREE.MeshStandardMaterial({
+      color: 0xbfe9ff,
+      emissive: 0x8fd7ff,
+      emissiveIntensity: 1.05,
+      roughness: 0.3,
+    })
+  );
+  beacon.position.y = 0.48;
   g.add(beacon);
   g.userData.beacon = beacon;
 

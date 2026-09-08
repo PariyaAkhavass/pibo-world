@@ -3,7 +3,7 @@ import { clay, blob, ball, box, cyl, cone, shade } from "../world/materials.js";
 import { LAYOUT, dirOf } from "../world/layout.js";
 import { generateClip, createMockClip } from "./videoGen.js";
 
-const INTERACT_RANGE = 4.6;
+const INTERACT_RANGE = 2.7;
 
 /**
  * First hub zone: the lighthouse studio. Out on the planet it is a tall

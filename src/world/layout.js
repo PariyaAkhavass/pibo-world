@@ -19,13 +19,16 @@ export const LAYOUT = {
   well: { lat: 53, lon: -146, yaw: 0.25 },
   picnic: { lat: 39, lon: -12, yaw: -0.45 },
   pond: { lat: 33, lon: -158 },
+  // larger bay on the blue/pond side — lighthouse island sits in this water
+  bay: { lat: 30, lon: -192 },
   landing: { lat: 36, lon: 66 },
   ufo: { lat: 36, lon: 66 },
-  // first hub zone — striped lighthouse, close enough to dominate the spawn view
-  lighthouse: { lat: 17, lon: 55, yaw: 0.2 },
-  // stepping-stones of light from wake-up toward the lighthouse door
+  // first hub zone — striped lighthouse on a rocky islet in the bay
+  lighthouse: { lat: 28, lon: -202, yaw: 0.7 },
+  // walkable dock beside the islet (outside the tower collider so the ship can land)
+  lighthousePad: { lat: 31, lon: -168 },
   lighthousePath: [
-    { lat: 4, lon: 14 }, { lat: 8, lon: 28 }, { lat: 12, lon: 42 },
+    { lat: 30, lon: -184 }, { lat: 31, lon: -176 },
   ],
 
   // far green side — a quiet meadow opposite the starting village
@@ -50,7 +53,7 @@ export const LAYOUT = {
     { lat: 34, lon: 8 }, { lat: 40, lon: -20 }, { lat: 30, lon: 44 },
     { lat: 46, lon: -78 }, { lat: 44, lon: 150 }, { lat: 52, lon: 100 },
     { lat: 38, lon: -128 }, { lat: 58, lon: -38 }, { lat: 56, lon: 58 },
-    { lat: 62, lon: 142 }, { lat: 28, lon: -202 },
+    { lat: 62, lon: 142 }, { lat: 48, lon: -212 },
   ],
   rocks: [
     { lat: 30, lon: -70 }, { lat: 48, lon: 30 }, { lat: 26, lon: 96 },
@@ -70,7 +73,7 @@ export const LAYOUT = {
     { lat: 54, lon: -4 }, { lat: 42, lon: 132 }, { lat: 55, lon: 172 },
   ],
   mushrooms: [
-    { lat: 22, lon: -140 }, { lat: 26, lon: -188 }, { lat: 48, lon: -52 },
+    { lat: 22, lon: -140 }, { lat: 24, lon: -148 }, { lat: 48, lon: -52 },
     { lat: 52, lon: 72 }, { lat: 58, lon: 212 }, { lat: 38, lon: 222 },
   ],
   benches: [
@@ -103,8 +106,8 @@ export function dirOf(entry) {
 
 /**
  * Solid footprints for surface collision. Radii are world units on the
- * planet (roughly half the building/tree width). Garden beds, the pond,
- * the landing pad, and flowers stay walkable so you can still reach them.
+ * Garden beds, the pond, landing pads, and flowers stay walkable so you
+ * can still reach them (including the lighthouse dock).
  */
 export function collidersOf(layout = LAYOUT) {
   const out = [];
@@ -120,7 +123,7 @@ export function collidersOf(layout = LAYOUT) {
   add(layout.library, 1.35);
   add(layout.windmill, 1.35);
   add(layout.well, 1.0);
-  add(layout.lighthouse, 1.75);
+  add(layout.lighthouse, 1.5);
   for (const t of layout.trees ?? []) add(t, 0.72);
   for (const r of layout.rocks ?? []) add(r, 0.58);
   for (const b of layout.benches ?? []) add(b, 0.55);
