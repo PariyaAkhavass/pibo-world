@@ -38,9 +38,9 @@ connection the first time.
 - Houses, the workshop, the observatory, trees, and rocks are solid — Pibo slides around them.
 - New landmarks fill out the walk: a little planetarium, mini café, tiny library,
   windmill, wishing well, picnic blanket, benches, lanterns, mailboxes, crystals,
-  mushrooms, star-stone paths, and a **lighthouse** out on the water.
+  mushrooms, star-stone paths, and a **lighthouse** standing in the ocean.
 - **Pot-ship** (village landing pad) — press **E** to board. **WASD** flies around the world, **Space** climbs into the toy sky, **Shift** / **F** descends, **E** lands. On a phone, ↑ / ↓ sit above the E button.
-- **Lighthouse studio** — across the water on the pond/bay side. Board the existing pot-ship, fly toward the striped lighthouse, land on the glowing dock, walk up, and press **E** (**Enter lighthouse**). Type an English sentence, tap **Generate**, watch the clip, then **Esc** to step back outside.
+- **Lighthouse studio** — out in the middle of the ocean. Board the existing pot-ship, fly toward the striped lighthouse, land on the glowing dock, walk up, and press **E** (**Enter lighthouse**). Type an English sentence, tap **Generate**, watch the clip, then **Esc** to step back outside.
 
 Walk to the three planter beds in the garden, plant a seed in each, wait a few seconds for
 them to grow, and inspect them to learn a tiny fact. Grow all three and watch what happens
@@ -49,7 +49,7 @@ to the rest of the planet.
 Or skip the flight with `?dock` (stand on the lighthouse pier) or `?studio` (open the studio immediately).
 
 Live build: [pibo.paria.ai](https://pibo.paria.ai). After this lands, board the pot-ship
-and fly to the lighthouse in the water — or open [pibo.paria.ai/?studio](https://pibo.paria.ai/?studio).
+and fly to the lighthouse in the ocean — or open [pibo.paria.ai/?studio](https://pibo.paria.ai/?studio).
 
 ## Screen studio (AI hook)
 
@@ -96,12 +96,13 @@ src/
     SphereMath.js   living on a sphere: placement, movement, orientation
     Collision.js    circular keep-out on the surface (houses, trees, rocks)
   world/
-    Planet.js       the Pocket Planet sphere + surface placement
+    Planet.js       the Pocket Planet sphere + grass/ocean biomes
     Environment.js  soft daytime lighting + shadows
     Props.js        handcrafted structures & nature (home, workshop, observatory, …)
     Ambient.js      clouds, butterflies — life while you stand still
     materials.js    shared "clay toy" materials & primitives
     layout.js       the handcrafted lat/lon layout of this planet
+    biome.js        grass cap, shoreline, and open-ocean coloring
   entities/
     Pibo.js         the player creature (walks, idles, faces movement)
     Ufo.js          pot-shaped ship you can board and fly

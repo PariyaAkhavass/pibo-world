@@ -161,6 +161,8 @@ export class Game {
       if (!q.has("studio") && !q.has("dock")) return;
       const here = dirOf(LAYOUT.lighthousePad);
       this.pibo.placeAt(here, tangentToward(here, dirOf(LAYOUT.lighthouse)), this.collision);
+      this.started = true;
+      this.ui.hideIntro();
       this._frameCameraOnPibo();
       if (q.has("studio")) this._enterStudio();
     } catch {
@@ -202,6 +204,7 @@ export class Game {
     this._handleInteraction();
 
     this.env.update(dt);
+    this.planet.update(dt);
     this.props.update(dt);
     this.garden.update(dt);
     this.ambient.update(dt);
@@ -296,7 +299,7 @@ export class Game {
 
     if (this.ufo.riding) {
       const pad = dirOf(LAYOUT.lighthousePad);
-      const nearDock = this.ufo.dir.angleTo(pad) * this.planet.radius < 4.4;
+      const nearDock = this.ufo.dir.angleTo(pad) * this.planet.radius < 5.2;
       ui.setPrompt(nearDock ? "Land at lighthouse" : "Land");
       if (this.input.consume("KeyE", "Enter")) this._landShip();
       return;
@@ -443,12 +446,12 @@ export class Game {
     this.ui.setFlying(true);
     this.ui.hideIntro();
     this.started = true;
-    this.ui.toast("Fly to the lighthouse across the water 🌊", 2600);
+    this.ui.toast("Fly to the lighthouse in the ocean 🌊", 2600);
   }
 
   _landShip() {
     const pad = dirOf(LAYOUT.lighthousePad);
-    const nearDock = this.ufo.dir.angleTo(pad) * this.planet.radius < 4.4;
+    const nearDock = this.ufo.dir.angleTo(pad) * this.planet.radius < 5.2;
     if (nearDock) {
       this.ufo.dir.copy(pad);
       this.ufo.forward.copy(tangentToward(pad, dirOf(LAYOUT.lighthouse)));
