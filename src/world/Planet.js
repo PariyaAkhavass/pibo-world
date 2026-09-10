@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { clay, shade } from "./materials.js";
 import { latLonToDir } from "../core/SphereMath.js";
+import { biomeColor, oceanAmount, waterTint } from "./biome.js";
 
 /**
  * The Pocket Planet itself: a small sphere the player lives on.
@@ -20,15 +21,19 @@ export class Planet {
   }
 
   _build(config) {
-    // Core ground sphere, gently two-toned via a second slightly-smaller shell
-    const ground = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(this.radius, 24),
-      clay(config.grass ?? 0x8fce74, { roughness: 0.95 })
-    );
+    // Core ground sphere — vertex-colored so a grassy village cap meets a
+    // planet-scale ocean instead of a uniform green ball with a tiny pond.
+    const geo = new THREE.IcosahedronGeometry(this.radius, 24);
+    this._paintBiomes(geo);
+    const groundMat = clay(0xffffff, { roughness: 0.95 });
+    groundMat.vertexColors = true;
+    const ground = new THREE.Mesh(geo, groundMat);
     ground.receiveShadow = true;
     ground.castShadow = true;
     this.group.add(ground);
     this.ground = ground;
+
+    this._buildOcean(geo);
 
     // A warm "soil" underside peeking out — sells the floating-toy look
     const soil = new THREE.Mesh(
@@ -37,23 +42,113 @@ export class Planet {
     );
     this.group.add(soil);
 
-    // Scatter faint darker grass patches for texture (flat decals on surface)
+    // Scatter faint darker grass patches for texture (flat decals on land only)
     this._grassPatches(config.grassDark ?? 0x7cbb63);
+  }
+
+  _paintBiomes(geo) {
+    const pos = geo.attributes.position;
+    const colors = new Float32Array(pos.count * 3);
+    const c = new THREE.Color();
+    const v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).normalize();
+      biomeColor(v, c);
+      colors[i * 3] = c.r;
+      colors[i * 3 + 1] = c.g;
+      colors[i * 3 + 2] = c.b;
+    }
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  }
+
+  _buildOcean(sourceGeo) {
+    const srcPos = sourceGeo.attributes.position;
+    const srcIdx = sourceGeo.index;
+    if (!srcIdx) return;
+    const vA = new THREE.Vector3(), vB = new THREE.Vector3(), vC = new THREE.Vector3();
+    const tint = new THREE.Color();
+    const verts = [];
+    const colors = [];
+    const lift = this.radius * 1.006;
+
+    const push = (v) => {
+      v.normalize();
+      verts.push(v.x * lift, v.y * lift, v.z * lift);
+      waterTint(v, tint);
+      colors.push(tint.r, tint.g, tint.b);
+    };
+
+    for (let i = 0; i < srcIdx.count; i += 3) {
+      vA.fromBufferAttribute(srcPos, srcIdx.getX(i));
+      vB.fromBufferAttribute(srcPos, srcIdx.getX(i + 1));
+      vC.fromBufferAttribute(srcPos, srcIdx.getX(i + 2));
+      const mid = vA.clone().add(vB).add(vC).normalize();
+      if (oceanAmount(mid) < 0.28) continue;
+      push(vA); push(vB); push(vC);
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    geo.computeVertexNormals();
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.2,
+      metalness: 0.04,
+      transparent: true,
+      opacity: 0.86,
+      vertexColors: true,
+      emissive: 0x165a82,
+      emissiveIntensity: 0.16,
+      depthWrite: false,
+    });
+
+    const water = new THREE.Mesh(geo, mat);
+    water.receiveShadow = true;
+    water.renderOrder = 1;
+    this.group.add(water);
+    this.oceanWater = water;
+    this.oceanBase = Float32Array.from(verts);
+    this.t = 0;
+  }
+
+  update(dt) {
+    if (!this.oceanWater) return;
+    this.t += dt;
+    const pos = this.oceanWater.geometry.attributes.position;
+    const base = this.oceanBase;
+    const t = this.t;
+    for (let i = 0; i < pos.count; i++) {
+      const ox = base[i * 3], oy = base[i * 3 + 1], oz = base[i * 3 + 2];
+      const len = Math.hypot(ox, oy, oz) || 1;
+      const nx = ox / len, ny = oy / len, nz = oz / len;
+      const wave = Math.sin(ox * 0.62 + oz * 0.44 - t * 2.05) * 0.05
+        + Math.sin(oy * 0.9 + ox * 0.28 + t * 1.35) * 0.028;
+      const s = len + wave;
+      pos.setXYZ(i, nx * s, ny * s, nz * s);
+    }
+    pos.needsUpdate = true;
   }
 
   _grassPatches(color) {
     const patchMat = clay(color, { roughness: 1 });
     const group = new THREE.Group();
     const rng = mulberry32(1337);
-    for (let i = 0; i < 26; i++) {
-      const lat = 8 + rng() * 60;
+    let placed = 0;
+    let guard = 0;
+    while (placed < 26 && guard < 80) {
+      guard++;
+      const lat = 8 + rng() * 52;
       const lon = rng() * 360;
       const dir = latLonToDir(lat, lon);
+      if (oceanAmount(dir) > 0.22) continue;
       const r = 0.5 + rng() * 1.4;
       const patch = new THREE.Mesh(new THREE.CircleGeometry(r, 14), patchMat);
       this.placeOnSurface(patch, dir, { lift: 0.02, flatDecal: true });
       patch.rotateZ(rng() * Math.PI);
       group.add(patch);
+      placed++;
     }
     shade(group, false, true);
     this.surface.add(group);

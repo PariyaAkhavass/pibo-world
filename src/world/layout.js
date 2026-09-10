@@ -19,17 +19,18 @@ export const LAYOUT = {
   well: { lat: 53, lon: -146, yaw: 0.25 },
   picnic: { lat: 39, lon: -12, yaw: -0.45 },
   pond: { lat: 33, lon: -158 },
-  // larger bay on the blue/pond side — lighthouse island sits in this water
-  bay: { lat: 30, lon: -192 },
   landing: { lat: 36, lon: 66 },
   ufo: { lat: 36, lon: 66 },
-  // first hub zone — striped lighthouse on a rocky islet in the bay
-  lighthouse: { lat: 28, lon: -202, yaw: 0.7 },
+  // striped lighthouse in the middle of the open ocean (south of the village cap)
+  lighthouse: { lat: 110, lon: 82, yaw: 0.45 },
   // walkable dock beside the islet (outside the tower collider so the ship can land)
-  lighthousePad: { lat: 31, lon: -168 },
+  lighthousePad: { lat: 102, lon: 64 },
+  lighthouseIsland: { lat: 106, lon: 73 },
   lighthousePath: [
-    { lat: 30, lon: -184 }, { lat: 31, lon: -176 },
+    { lat: 104, lon: 70 }, { lat: 107, lon: 76 },
   ],
+  // grassy island on the far side — companion meadow stays dry
+  meadowIsland: { lat: 128, lon: 188 },
 
   // far green side — a quiet meadow opposite the starting village
   companion: { lat: 122, lon: 204 },
@@ -53,18 +54,23 @@ export const LAYOUT = {
     { lat: 34, lon: 8 }, { lat: 40, lon: -20 }, { lat: 30, lon: 44 },
     { lat: 46, lon: -78 }, { lat: 44, lon: 150 }, { lat: 52, lon: 100 },
     { lat: 38, lon: -128 }, { lat: 58, lon: -38 }, { lat: 56, lon: 58 },
-    { lat: 62, lon: 142 }, { lat: 48, lon: -212 },
+    { lat: 48, lon: 142 }, { lat: 48, lon: -212 },
   ],
   rocks: [
     { lat: 30, lon: -70 }, { lat: 48, lon: 30 }, { lat: 26, lon: 96 },
-    { lat: 50, lon: -150 }, { lat: 42, lon: 180 }, { lat: 58, lon: -176 },
-    { lat: 60, lon: 86 }, { lat: 36, lon: -224 },
+    { lat: 50, lon: -150 }, { lat: 42, lon: 180 }, { lat: 50, lon: -176 },
+    { lat: 52, lon: 86 }, { lat: 36, lon: -224 },
+  ],
+  // a few stones out in the open water so the sea doesn't read as a flat void
+  seaRocks: [
+    { lat: 88, lon: 120 }, { lat: 94, lon: 28 }, { lat: 78, lon: -36 },
+    { lat: 132, lon: 86 }, { lat: 86, lon: 160 },
   ],
   flowers: [
     { lat: 16, lon: 40 }, { lat: 22, lon: -10 }, { lat: 28, lon: 60 },
     { lat: 34, lon: -30 }, { lat: 18, lon: 150 }, { lat: 30, lon: 170 },
     { lat: 24, lon: -90 }, { lat: 40, lon: 96 }, { lat: 12, lon: 90 },
-    { lat: 54, lon: -18 }, { lat: 58, lon: 32 }, { lat: 60, lon: 118 },
+    { lat: 54, lon: -18 }, { lat: 52, lon: 32 }, { lat: 50, lon: 118 },
     { lat: 48, lon: -206 }, { lat: 20, lon: -172 },
     { lat: 117, lon: 200 }, { lat: 120, lon: 208 }, { lat: 124, lon: 212 },
   ],
@@ -95,7 +101,7 @@ export const LAYOUT = {
     { lat: 50, lon: -132, yaw: 0.75 },
   ],
   crystals: [
-    { lat: 59, lon: -70 }, { lat: 63, lon: 24 }, { lat: 56, lon: 190 },
+    { lat: 52, lon: -70 }, { lat: 52, lon: 24 }, { lat: 50, lon: 190 },
     { lat: 45, lon: 238 },
   ],
 };
@@ -106,8 +112,8 @@ export function dirOf(entry) {
 
 /**
  * Solid footprints for surface collision. Radii are world units on the
- * Garden beds, the pond, landing pads, and flowers stay walkable so you
- * can still reach them (including the lighthouse dock).
+ * sphere. Garden beds, the pond, ocean, landing pads, and flowers stay
+ * walkable so you can still reach them (including the lighthouse dock).
  */
 export function collidersOf(layout = LAYOUT) {
   const out = [];

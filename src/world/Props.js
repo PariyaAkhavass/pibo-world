@@ -25,7 +25,6 @@ export class Props {
     this.tvBeacon = null;
     this.lighthouseBeam = null;
     this.pondWater = null;
-    this.bayWater = null;
     this.bridge = null;
     this.rewardBloom = null;
     this.swayers = []; // {mesh, phase, amp}
@@ -54,9 +53,11 @@ export class Props {
     this.pondWater = pond.userData.water;
     P.placeOnSurface(shade(pond, false, true), dirOf(LAYOUT.pond));
 
-    const bay = buildBay();
-    this.bayWater = bay.userData.water;
-    P.placeOnSurface(shade(bay, false, true), dirOf(LAYOUT.bay));
+    const sand = buildSandIsland(2.55);
+    P.placeOnSurface(shade(sand, false, true), dirOf(LAYOUT.lighthouseIsland));
+
+    const meadow = buildMeadowIsland();
+    P.placeOnSurface(shade(meadow, false, true), dirOf(LAYOUT.meadowIsland));
 
     const pad = buildLandingPad();
     this.landingRing = pad.userData.ring;
@@ -67,7 +68,14 @@ export class Props {
     this.tvScreen = lighthouse.userData.screen;
     this.tvBeacon = lighthouse.userData.beacon;
     this.lighthouseBeam = lighthouse.userData.beam;
-    P.placeOnSurface(shade(lighthouse), dirOf(LAYOUT.lighthouse), { yaw: LAYOUT.lighthouse.yaw });
+    const lhDir = dirOf(LAYOUT.lighthouse);
+    P.placeOnSurface(shade(lighthouse), lhDir);
+    // door (+Z) faces the dock so walking off the pier meets the entrance
+    surfaceQuaternion(
+      lhDir,
+      tangentToward(lhDir, dirOf(LAYOUT.lighthousePad)),
+      lighthouse.quaternion
+    );
     lighthouse.traverse((o) => {
       if (o.userData.keepBright) {
         o.castShadow = false;
@@ -101,6 +109,9 @@ export class Props {
     }
     for (const r of LAYOUT.rocks) {
       P.placeOnSurface(shade(buildRock(r.lon)), dirOf(r), { yaw: r.lon });
+    }
+    for (const r of LAYOUT.seaRocks ?? []) {
+      P.placeOnSurface(shade(buildRock(r.lon + 11)), dirOf(r), { yaw: r.lon });
     }
     for (const f of LAYOUT.flowers) {
       const fl = buildFlower(f.lon);
@@ -186,10 +197,9 @@ export class Props {
       s.mesh.rotation.z = Math.sin(t * 1.6 + s.phase) * s.amp;
     }
 
-    // pond + bay ripples
-    for (const water of [this.pondWater, this.bayWater]) {
-      if (!water) continue;
-      const geo = water.geometry;
+    // pond ripples — the open ocean animates on the planet mesh
+    if (this.pondWater) {
+      const geo = this.pondWater.geometry;
       const pos = geo.attributes.position;
       for (let i = 0; i < pos.count; i++) {
         const x = pos.getX(i), y = pos.getY(i);
@@ -614,6 +624,47 @@ function buildPicnic() {
   return g;
 }
 
+function buildSandIsland(radius) {
+  const g = new THREE.Group();
+  const sand = new THREE.Mesh(
+    new THREE.CircleGeometry(radius, 28),
+    clay(0xe6d09a, { roughness: 1 })
+  );
+  sand.rotation.x = -Math.PI / 2;
+  sand.position.y = 0.03;
+  g.add(sand);
+
+  const rng = mulberry32(119);
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    const s = 0.16 + rng() * 0.14;
+    const stone = blob(s, clay(0x9aa0a6), 1);
+    stone.position.set(Math.cos(a) * (radius * 0.92), 0.08, Math.sin(a) * (radius * 0.92));
+    stone.scale.y = 0.65;
+    g.add(stone);
+  }
+  return g;
+}
+
+function buildMeadowIsland() {
+  const g = new THREE.Group();
+  const grass = new THREE.Mesh(
+    new THREE.CircleGeometry(4.4, 28),
+    clay(0x86c56a, { roughness: 1 })
+  );
+  grass.rotation.x = -Math.PI / 2;
+  grass.position.y = 0.03;
+  g.add(grass);
+  const rim = new THREE.Mesh(
+    new THREE.RingGeometry(4.15, 4.7, 28),
+    clay(0xe6d09a, { roughness: 1 })
+  );
+  rim.rotation.x = -Math.PI / 2;
+  rim.position.y = 0.025;
+  g.add(rim);
+  return g;
+}
+
 function buildPond() {
   const g = new THREE.Group();
 
@@ -659,49 +710,6 @@ function buildPond() {
   pad.rotation.x = -Math.PI / 2;
   pad.position.set(0.4, 0.11, -0.3);
   g.add(pad);
-
-  return g;
-}
-
-function buildBay() {
-  const g = new THREE.Group();
-  const R = 4.15;
-
-  const basin = new THREE.Mesh(
-    new THREE.CircleGeometry(R + 0.18, 40),
-    clay(0x6a4a35, { roughness: 1 })
-  );
-  basin.rotation.x = -Math.PI / 2;
-  basin.position.y = 0.015;
-  g.add(basin);
-
-  const waterGeo = new THREE.CircleGeometry(R, 48);
-  const water = new THREE.Mesh(
-    waterGeo,
-    new THREE.MeshStandardMaterial({
-      color: 0x4aa7d4,
-      roughness: 0.22,
-      metalness: 0.0,
-      transparent: true,
-      opacity: 0.92,
-      emissive: 0x2b7fb0,
-      emissiveIntensity: 0.14,
-    })
-  );
-  water.rotation.x = -Math.PI / 2;
-  water.position.y = 0.085;
-  g.add(water);
-  g.userData.water = water;
-
-  const rng = mulberry32(91);
-  for (let i = 0; i < 18; i++) {
-    const a = (i / 18) * Math.PI * 2;
-    const s = 0.18 + rng() * 0.16;
-    const stone = blob(s, clay(0x9aa0a6), 1);
-    stone.position.set(Math.cos(a) * (R + 0.12), 0.08, Math.sin(a) * (R + 0.12));
-    stone.scale.y = 0.65;
-    g.add(stone);
-  }
 
   return g;
 }
