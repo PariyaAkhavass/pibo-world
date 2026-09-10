@@ -53,7 +53,7 @@ export class Props {
     this.pondWater = pond.userData.water;
     P.placeOnSurface(shade(pond, false, true), dirOf(LAYOUT.pond));
 
-    const sand = buildSandIsland(2.55);
+    const sand = buildSandIsland(2.15);
     P.placeOnSurface(shade(sand, false, true), dirOf(LAYOUT.lighthouseIsland));
 
     const meadow = buildMeadowIsland();
@@ -631,7 +631,7 @@ function buildSandIsland(radius) {
     clay(0xe6d09a, { roughness: 1 })
   );
   sand.rotation.x = -Math.PI / 2;
-  sand.position.y = 0.03;
+  sand.position.y = 0.09;
   g.add(sand);
 
   const rng = mulberry32(119);
@@ -653,14 +653,14 @@ function buildMeadowIsland() {
     clay(0x86c56a, { roughness: 1 })
   );
   grass.rotation.x = -Math.PI / 2;
-  grass.position.y = 0.03;
+  grass.position.y = 0.08;
   g.add(grass);
   const rim = new THREE.Mesh(
     new THREE.RingGeometry(4.15, 4.7, 28),
     clay(0xe6d09a, { roughness: 1 })
   );
   rim.rotation.x = -Math.PI / 2;
-  rim.position.y = 0.025;
+  rim.position.y = 0.07;
   g.add(rim);
   return g;
 }

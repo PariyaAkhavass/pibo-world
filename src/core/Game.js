@@ -161,6 +161,8 @@ export class Game {
       if (!q.has("studio") && !q.has("dock")) return;
       const here = dirOf(LAYOUT.lighthousePad);
       this.pibo.placeAt(here, tangentToward(here, dirOf(LAYOUT.lighthouse)), this.collision);
+      this.started = true;
+      this.ui.hideIntro();
       this._frameCameraOnPibo();
       if (q.has("studio")) this._enterStudio();
     } catch {

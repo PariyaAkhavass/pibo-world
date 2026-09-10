@@ -20,7 +20,7 @@ const OCEAN = new THREE.Color(0x2f90c0);
 const DEEP = new THREE.Color(0x1c6a9a);
 
 const ISLANDS = [
-  { dir: dirOf(LAYOUT.lighthouseIsland), radius: 15 },
+  { dir: dirOf(LAYOUT.lighthouseIsland), radius: 14 },
   { dir: dirOf(LAYOUT.meadowIsland), radius: 26 },
 ];
 
