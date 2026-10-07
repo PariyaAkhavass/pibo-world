@@ -388,6 +388,10 @@ export class Game {
   }
 
   _handleStudioInteraction() {
+    if (this.ui.isIdeaOpen) {
+      if (this.input.consume("Escape")) this.ui.closeIdeas();
+      return;
+    }
     const typing = this.ui.isStudioTyping;
     if (this.input.consume("Escape")) {
       this._leaveStudio();

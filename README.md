@@ -41,6 +41,7 @@ connection the first time.
   mushrooms, star-stone paths, and a **lighthouse** standing in the ocean.
 - **Pot-ship** (village landing pad) — press **E** to board. **WASD** flies around the world, **Space** climbs into the toy sky, **Shift** / **F** descends, **E** lands. On a phone, ↑ / ↓ sit above the E button.
 - **Lighthouse studio** — out in the middle of the ocean. Board the existing pot-ship, fly toward the striped lighthouse, land on the glowing dock, walk up, and press **E** (**Enter lighthouse**). Type an English sentence, tap **Generate**, watch the clip, then **Esc** to step back outside.
+- **Need an idea?** — inside the lighthouse studio. Rolls a tiny game prompt that stays inside the demo lesson (food words + “I like / I don’t like”). Lock a slot, reroll the rest, then **Use this idea** to drop the hint into the sentence box.
 
 Walk to the three planter beds in the garden, plant a seed in each, wait a few seconds for
 them to grow, and inspect them to learn a tiny fact. Grow all three and watch what happens
@@ -50,6 +51,27 @@ Or skip the flight with `?dock` (stand on the lighthouse pier) or `?studio` (ope
 
 Live build: [pibo.paria.ai](https://pibo.paria.ai). After this lands, board the pot-ship
 and fly to the lighthouse in the ocean — or open [pibo.paria.ai/?studio](https://pibo.paria.ai/?studio).
+On that screen, tap **Need an idea?** to roll a food-lesson hint without leaving the studio.
+
+## Idea generator
+
+Students design a tiny game inside a teacher frame. The generator only fills
+slots the lesson already lists — subject, stance (`likes` / `doesn't like`),
+a food word, and an optional twist.
+
+The demo lesson ships in `src/data/lessons/foodLikes.js` (food vocabulary +
+“I like / I don’t like”), so the lighthouse studio works with no backend and
+no API key. Try it:
+
+1. Open [pibo.paria.ai/?studio](https://pibo.paria.ai/?studio) (or `http://localhost:8000/?studio`).
+2. Tap **Need an idea?**
+3. Lock any slot (the dragon, “doesn’t like”, a snack…), then **Reroll the rest**.
+4. Tap **Use this idea**. The hint lands in the studio box. **Generate** plays it.
+
+Accepting an idea also stores it on `game.ui.lastIdea` and emits a `pibo-idea`
+event (`prompt`, `sentence`, and `slots`) for a later whiteboard. Wording comes
+from `templateStitch` in `src/systems/ideaGen.js`. A later LLM can replace that
+stitcher via `createIdeaGenerator({ lesson, stitch })` without changing the panel.
 
 ## Screen studio (AI hook)
 
@@ -111,12 +133,15 @@ src/
     GardenSystem.js the plant → grow → inspect → reward loop
     TvStudio.js     lighthouse interior + prompt → generate → preview
     videoGen.js     pluggable clip client (demo animation, optional API)
+    ideaGen.js      lesson-locked slot roller + template stitcher (LLM-swappable)
   data/
     plants.js       the three plants + their one-line facts
     studioPrompts.js English-practice sentence chips for the studio
+    lessons/foodLikes.js  demo lesson: food vocab + I like / I don't like
   config.js         runtime knobs (video API url, no secrets)
   ui/
     UI.js           minimal overlay: prompt, plant panel, facts, collection
+    IdeaPanel.js    "Need an idea?" overlay for the lighthouse studio
     Joystick.js     on-screen analog stick for phones and tablets
 ```
 

@@ -1,6 +1,7 @@
 import { PLANTS } from "../data/plants.js";
 import { STUDIO_PROMPTS } from "../data/studioPrompts.js";
 import { Joystick } from "./Joystick.js";
+import { IdeaPanel } from "./IdeaPanel.js";
 
 /**
  * Thin controller over the HTML overlay. Keeps the DOM out of gameplay code:
@@ -40,7 +41,14 @@ export class UI {
       studioGenerate: document.getElementById("studio-generate"),
       studioLeave: document.getElementById("studio-leave"),
       studioStatus: document.getElementById("studio-status"),
+      studioIdea: document.getElementById("studio-idea"),
     };
+
+    this.ideas = new IdeaPanel({
+      root: document.getElementById("idea-panel"),
+      onUse: (idea) => this._acceptIdea(idea),
+    });
+    this.lastIdea = null;
 
     this.input = null;
     this.joystick = null;
@@ -116,6 +124,10 @@ export class UI {
 
   _onAction() {
     if (!this.input) return;
+    if (this.isIdeaOpen) {
+      this.closeIdeas();
+      return;
+    }
     if (this.isStudioOpen) this._onStudioLeave?.();
     else if (this.isPanelOpen) this.closePanel();
     else if (this.isModalOpen) this.closeFact();
@@ -125,7 +137,7 @@ export class UI {
   _syncActionBtn() {
     const btn = this.el.actionBtn;
     if (!btn) return;
-    if (this.isStudioOpen || this.isModalOpen) {
+    if (this.isIdeaOpen || this.isStudioOpen || this.isModalOpen) {
       btn.textContent = "back";
       btn.classList.add("close-mode");
       btn.classList.remove("ready");
@@ -256,6 +268,7 @@ export class UI {
     this._renderStudioChips();
     this.el.studioGenerate.addEventListener("click", () => this.submitStudio());
     this.el.studioLeave.addEventListener("click", () => this._onStudioLeave?.());
+    this.el.studioIdea?.addEventListener("click", () => this.openIdeas());
     this.el.studioPrompt.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -281,6 +294,33 @@ export class UI {
     }
   }
 
+  /* idea generator -------------------------------------------------- */
+  get isIdeaOpen() {
+    return !!this.ideas?.isOpen;
+  }
+
+  openIdeas() {
+    if (!this.isStudioOpen) return;
+    this.el.studioPrompt?.blur();
+    this.ideas.open();
+    this._syncActionBtn();
+  }
+
+  closeIdeas() {
+    this.ideas?.close();
+    this._syncActionBtn();
+  }
+
+  _acceptIdea(idea) {
+    this.lastIdea = idea;
+    if (this.el.studioPrompt) {
+      this.el.studioPrompt.value = idea.prompt;
+    }
+    this.setStudioStatus(`Using your idea · ${idea.sentence}`);
+    this.closeIdeas();
+    window.dispatchEvent(new CustomEvent("pibo-idea", { detail: idea }));
+  }
+
   openStudio({ onGenerate, onLeave } = {}) {
     this._onStudioGenerate = onGenerate || null;
     this._onStudioLeave = onLeave || null;
@@ -294,6 +334,7 @@ export class UI {
   }
 
   closeStudio() {
+    this.closeIdeas();
     this.el.studio.classList.add("hidden");
     this._onStudioGenerate = null;
     this._onStudioLeave = null;
@@ -303,7 +344,7 @@ export class UI {
   }
 
   submitStudio() {
-    if (!this.isStudioOpen || this._studioBusy) return;
+    if (!this.isStudioOpen || this._studioBusy || this.isIdeaOpen) return;
     const prompt = (this.el.studioPrompt.value || "").trim();
     if (!prompt) {
       this.setStudioStatus("Type a little English sentence first");
