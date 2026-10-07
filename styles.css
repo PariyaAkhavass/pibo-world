@@ -242,6 +242,8 @@ html, body {
   left: max(16px, env(safe-area-inset-left));
   bottom: 5%;
   width: min(340px, 44vw);
+  max-height: 86vh;
+  overflow: auto;
   text-align: left;
   animation: studio-rise 0.24s ease;
   user-select: text;
@@ -286,6 +288,22 @@ html, body {
   touch-action: auto;
   user-select: text;
 }
+.studio-idea {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  color: #3f6b32;
+  background: #eef8e6;
+  box-shadow: 0 2px 0 rgba(123, 191, 106, 0.45);
+  cursor: pointer;
+}
+.studio-idea:hover { transform: translateY(-1px); }
 .studio-hud textarea:focus { border-color: var(--leaf); }
 .studio-chips {
   display: flex;
@@ -348,6 +366,126 @@ html, body {
   text-shadow: 0 1px 8px rgba(20, 16, 40, 0.35);
 }
 .studio-foot b { color: #ffe6d3; }
+
+/* Lesson-locked idea generator */
+.idea-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  background: rgba(36, 28, 60, 0.38);
+  pointer-events: auto;
+}
+.idea-card {
+  width: min(460px, 100%);
+  max-height: min(82vh, 680px);
+  overflow: auto;
+  padding: 16px 16px 14px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: left;
+  animation: idea-pop 0.22s ease;
+}
+@keyframes idea-pop {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.idea-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--coral);
+}
+.idea-title { font-weight: 700; font-size: 20px; margin-top: 2px; }
+.idea-frame {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.idea-prompt {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fffdf8;
+  border: 2px solid rgba(255, 154, 118, 0.28);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.idea-sentence {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e07a55;
+}
+.idea-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.idea-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #fff6ea;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(90, 60, 40, 0.08);
+}
+.idea-slot:hover { transform: translateY(-1px); }
+.idea-slot.is-locked {
+  border-color: var(--leaf);
+  background: #f3fbe8;
+}
+.idea-slot-emoji { font-size: 16px; line-height: 1; }
+.idea-slot-lock {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.idea-slot.is-locked .idea-slot-lock { color: #3f6b32; }
+.idea-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.idea-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+.idea-dismiss {
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.idea-dismiss:hover { color: var(--ink); }
 
 .beyond {
   position: absolute;
