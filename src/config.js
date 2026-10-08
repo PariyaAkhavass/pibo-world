@@ -9,6 +9,12 @@
  *   2. localStorage.setItem("PIBO_VIDEO_API", "https://...")
  *   3. Open the game with ?videoApi=https://your-api.example/generate
  */
+/**
+ * The blue companion and the little white Pino stay in the world (positions,
+ * letter, family voyage) but stay hidden until this is turned back on.
+ */
+export const SHOW_VILLAGE_FRIENDS = false;
+
 export function getVideoApiUrl() {
   try {
     const q = new URLSearchParams(window.location.search).get("videoApi");

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Input } from "./Input.js";
-import { tangentToward } from "./SphereMath.js";
+import { latLonOf, tangentToward } from "./SphereMath.js";
 import { Collision } from "./Collision.js";
 import { Planet } from "../world/Planet.js";
 import { Environment } from "../world/Environment.js";
@@ -13,6 +13,7 @@ import { Ufo } from "../entities/Ufo.js";
 import { Galaxy } from "../world/Galaxy.js";
 import { LAYOUT, dirOf, collidersOf } from "../world/layout.js";
 import { getPlant } from "../data/plants.js";
+import { SHOW_VILLAGE_FRIENDS } from "../config.js";
 import { UI } from "../ui/UI.js";
 
 /**
@@ -46,6 +47,15 @@ export class Game {
     this._guideNdc = new THREE.Vector3();
     this._guideCam = new THREE.Vector3();
     this.ui.onGoToLighthouse = () => this._goToLighthouse();
+    this.ui.onMapHere = () => this._playerLatLon();
+    this.ui.onMapTravel = (placeId) => {
+      if (placeId === "lighthouse") this._goToLighthouse();
+    };
+  }
+
+  _playerLatLon() {
+    const subject = this.familyShip?.riding ? this.familyShip : this.ufo?.riding ? this.ufo : this.pibo;
+    return latLonOf(subject.dir);
   }
 
   _initRenderer() {
@@ -122,6 +132,11 @@ export class Game {
         leafTall: 0xd8f2c8,
       },
     });
+    this.friendsVisible = SHOW_VILLAGE_FRIENDS;
+    if (!this.friendsVisible) {
+      this.companion.setVisible(false);
+      this.pino.setVisible(false);
+    }
 
     const shipDir = dirOf(LAYOUT.familyShip);
     this.familyShip = new Ufo(this.planet, shipDir, tangentToward(shipDir, friendDir), {
@@ -186,9 +201,11 @@ export class Game {
       return;
     }
 
-    const frozen = this.ui.isModalOpen;
-    this.companion.update(dt, null, { frozen: true });
-    this.pino.update(dt, null, { frozen: true });
+    const frozen = this.ui.isModalOpen || this.ui.isMapOpen;
+    if (this.friendsVisible) {
+      this.companion.update(dt, null, { frozen: true });
+      this.pino.update(dt, null, { frozen: true });
+    }
     this.familyShip.update(dt, null, { frozen });
 
     if (this.familyShip.riding) {
@@ -290,6 +307,12 @@ export class Game {
   _handleInteraction() {
     const ui = this.ui;
 
+    if (ui.isMapOpen) {
+      ui.hidePrompt();
+      if (this.input.consume("Escape")) ui.closeMap();
+      return;
+    }
+
     // While a panel/fact is open, route only modal keys.
     if (ui.isModalOpen) {
       ui.hidePrompt();
@@ -332,7 +355,7 @@ export class Game {
       return;
     }
 
-    if (p.distanceTo(this.companion.worldPosition()) < 2.6) {
+    if (this.friendsVisible && p.distanceTo(this.companion.worldPosition()) < 2.6) {
       ui.setPrompt("Talk");
       if (this.input.consume("KeyE", "Enter")) this._talkToCompanion();
       return;
@@ -520,6 +543,7 @@ export class Game {
     const x = onScreen ? sx : Math.min(w - marginX, Math.max(marginX, sx));
     let y = onScreen ? sy - 36 : Math.min(h - marginBottom, Math.max(marginTop, sy));
     if (!onScreen && x < 220 && y < 78) y = 78;
+    if (x > w - 170 && y < 140) y = 140;
     const rotation = onScreen ? -Math.PI / 2 : Math.atan2(sy - h / 2, sx - w / 2);
     this.ui.setLighthouseGuide({
       hidden: false,
