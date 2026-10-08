@@ -41,7 +41,7 @@ connection the first time.
   mushrooms, star-stone paths, and a **lighthouse** standing in the ocean.
 - **Pot-ship** (village landing pad) — press **E** to board. **WASD** flies around the world, **Space** climbs into the toy sky, **Shift** / **F** descends, **E** lands. On a phone, ↑ / ↓ sit above the E button.
 - **Lighthouse studio** — a gold beam rises over the ocean from the moment you wake up. An on-screen marker labeled **Lighthouse Studio** points at it. Tap **Go to lighthouse** (top left) to stand on the dock without the pot-ship, then press **E**. You can still fly there: board the pot-ship and follow the same beam.
-- **Swimming** — walk off the grass into the blue water and Pibo swims right away (no wading), a little slower, with paddling arms and a splash. Step onto the beach, an island, or the lighthouse dock and Pibo walks again.
+- **Swimming** — the instant Pibo touches blue water it tips forward, lies face-down, and breaststrokes (both arms sweep out and back together, legs kick). Stepping onto grass or the lighthouse dock stands it upright and it walks again.
 - **Need an idea?** — inside the lighthouse studio. Rolls a tiny game prompt that stays inside the demo lesson (food words + “I like / I don’t like”). Lock a slot, reroll the rest, then **Use this idea** to drop the hint into the sentence box.
 
 Walk to the three planter beds in the garden, plant a seed in each, wait a few seconds for
