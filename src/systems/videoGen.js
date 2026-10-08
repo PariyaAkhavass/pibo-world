@@ -401,16 +401,55 @@ function drawSubject(ctx, x, y, subject, color, t, action) {
   ctx.restore();
 }
 
+function wrapCaption(ctx, text, maxWidth, maxLines) {
+  const words = String(text || "").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [""];
+  const lines = [];
+  let current = "";
+  for (let i = 0; i < words.length; i++) {
+    const next = current ? `${current} ${words[i]}` : words[i];
+    if (ctx.measureText(next).width <= maxWidth || !current) {
+      current = next;
+      continue;
+    }
+    lines.push(current);
+    current = words[i];
+    if (lines.length === maxLines - 1) {
+      const rest = words.slice(i).join(" ");
+      lines.push(fitEllipsis(ctx, rest, maxWidth));
+      return lines;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+function fitEllipsis(ctx, text, maxWidth) {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let clipped = text;
+  while (clipped.length > 1 && ctx.measureText(`${clipped}…`).width > maxWidth) {
+    clipped = clipped.slice(0, -1).trimEnd();
+  }
+  return `${clipped}…`;
+}
+
 function drawCaption(ctx, w, h, text) {
-  ctx.fillStyle = "rgba(74, 59, 53, 0.82)";
-  roundRect(ctx, 24, h - 64, w - 48, 44, 14);
-  ctx.fill();
-  ctx.fillStyle = "#fff7ec";
-  ctx.font = "600 18px Fredoka, system-ui, sans-serif";
+  ctx.font = "600 16px Fredoka, system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  const clipped = text.length > 52 ? `${text.slice(0, 50)}…` : text;
-  ctx.fillText(clipped, w / 2, h - 42);
+  const maxWidth = w - 80;
+  const lines = wrapCaption(ctx, text, maxWidth, 3);
+  const lineH = 22;
+  const padY = 12;
+  const boxH = padY * 2 + lines.length * lineH;
+  const top = h - 14 - boxH;
+  ctx.fillStyle = "rgba(74, 59, 53, 0.82)";
+  roundRect(ctx, 20, top, w - 40, boxH, 14);
+  ctx.fill();
+  ctx.fillStyle = "#fff7ec";
+  lines.forEach((line, i) => {
+    ctx.fillText(line, w / 2, top + padY + lineH * i + lineH / 2);
+  });
 }
 
 function ellipse(ctx, x, y, rx, ry) {

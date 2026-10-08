@@ -23,6 +23,11 @@ export const LAYOUT = {
   ufo: { lat: 36, lon: 66 },
   // striped lighthouse in the middle of the open ocean (south of the village cap)
   lighthouse: { lat: 110, lon: 82, yaw: 0.45 },
+  // signs that point across the water, including one in the opening view
+  lighthouseSigns: [
+    { lat: 13, lon: 58 },
+    { lat: 31, lon: 52 },
+  ],
   // walkable dock beside the islet (outside the tower collider so the ship can land)
   lighthousePad: { lat: 102, lon: 64 },
   lighthouseIsland: { lat: 106, lon: 73 },
