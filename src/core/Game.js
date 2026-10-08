@@ -41,6 +41,11 @@ export class Game {
     this._camUp = this.pibo.dir.clone();
     this._camForward = this.pibo.forward.clone();
     this._camTarget = this.pibo.worldPosition();
+    this._lighthouseDir = dirOf(LAYOUT.lighthouse);
+    this._guideTip = new THREE.Vector3();
+    this._guideNdc = new THREE.Vector3();
+    this._guideCam = new THREE.Vector3();
+    this.ui.onGoToLighthouse = () => this._goToLighthouse();
   }
 
   _initRenderer() {
@@ -201,6 +206,7 @@ export class Game {
     }
 
     this._updateCamera(dt);
+    this._updateLighthouseGuide();
     this._handleInteraction();
 
     this.env.update(dt);
@@ -450,7 +456,72 @@ export class Game {
     this.ui.setFlying(true);
     this.ui.hideIntro();
     this.started = true;
-    this.ui.toast("Fly to the lighthouse in the ocean 🌊", 2600);
+    this.ui.toast("Follow the gold beam, or tap Go to lighthouse 🌊", 2800);
+  }
+
+  _goToLighthouse() {
+    if (this.ui.isIdeaOpen) this.ui.closeIdeas();
+    if (this.studio.active) this._leaveStudio();
+    this.ui.closeModals();
+    this.ui.closeCollection();
+
+    const pad = dirOf(LAYOUT.lighthousePad);
+    const forward = tangentToward(pad, this._lighthouseDir);
+    if (this.familyShip.riding) {
+      const home = dirOf(LAYOUT.familyShip);
+      this.familyShip.settle(home, tangentToward(home, dirOf(LAYOUT.companion)));
+    }
+    if (this.ufo.riding) this.ufo.settle(pad, forward);
+    this.pibo.setVisible(true);
+    this.pibo.placeAt(pad, forward, this.collision);
+    this.ui.setFlying(false);
+    this.ui.hideIntro();
+    this.started = true;
+    this._frameCameraOnPibo();
+    this.ui.toast("Lighthouse dock. Press E to step inside.", 2800);
+  }
+
+  _updateLighthouseGuide() {
+    if (this.studio.active || this.familyShip.mode === "voyage") {
+      this.ui.setLighthouseGuide({ hidden: true });
+      return;
+    }
+    const from = this.ufo.riding ? this.ufo.dir : this.pibo.dir;
+    const dist = from.angleTo(this._lighthouseDir) * this.planet.radius;
+    if (dist < 5.5) {
+      this.ui.setLighthouseGuide({ hidden: true });
+      return;
+    }
+
+    const tip = this._guideTip.copy(this._lighthouseDir).multiplyScalar(this.planet.radius + 52);
+    this.camera.getWorldDirection(this._guideCam);
+    const inFront = tip.clone().sub(this.camera.position).dot(this._guideCam) > 0;
+    this._guideNdc.copy(tip).project(this.camera);
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    let sx = (this._guideNdc.x * 0.5 + 0.5) * w;
+    let sy = (-this._guideNdc.y * 0.5 + 0.5) * h;
+    if (!inFront) {
+      sx = w - sx;
+      sy = h - sy;
+    }
+    const marginX = 28;
+    const marginTop = 72;
+    const marginBottom = 120;
+    const onScreen = inFront
+      && sx > marginX && sx < w - marginX
+      && sy > marginTop && sy < h - marginBottom;
+    const x = onScreen ? sx : Math.min(w - marginX, Math.max(marginX, sx));
+    let y = onScreen ? sy - 36 : Math.min(h - marginBottom, Math.max(marginTop, sy));
+    if (!onScreen && x < 220 && y < 78) y = 78;
+    const rotation = onScreen ? -Math.PI / 2 : Math.atan2(sy - h / 2, sx - w / 2);
+    this.ui.setLighthouseGuide({
+      hidden: false,
+      x,
+      y,
+      distance: Math.max(1, Math.round(dist)),
+      rotation,
+    });
   }
 
   _landShip() {

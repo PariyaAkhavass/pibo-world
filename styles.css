@@ -230,7 +230,9 @@ html, body {
 }
 .in-studio #sky::after { opacity: 0.08; }
 .in-studio .collection-btn,
-.in-studio .collection { display: none; }
+.in-studio .collection,
+.in-studio .lighthouse-go,
+.in-studio .lighthouse-marker { display: none; }
 .in-studio .toast { bottom: 40%; }
 .in-studio .joystick {
   visibility: hidden;
@@ -509,6 +511,62 @@ html, body {
     radial-gradient(120% 90% at 50% 100%, #1b1438 0%, #0b0a18 70%);
 }
 .galaxy #sky::after { opacity: 0.15; }
+
+/* Lighthouse studio — visible from spawn */
+.lighthouse-go {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  left: max(18px, env(safe-area-inset-left));
+  z-index: 4;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.lighthouse-go:hover { transform: translateY(-2px); }
+#ui > .lighthouse-marker { pointer-events: none; }
+.lighthouse-marker {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px 7px 8px;
+  background: var(--card);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+.lighthouse-arrow {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff3d4;
+  color: #e07a55;
+  font-size: 14px;
+  font-weight: 700;
+}
+.lighthouse-marker-copy {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.lighthouse-marker-copy b {
+  font-size: 13px;
+  color: var(--ink);
+}
 
 /* Collection */
 .collection-btn {

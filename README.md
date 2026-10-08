@@ -40,7 +40,7 @@ connection the first time.
   windmill, wishing well, picnic blanket, benches, lanterns, mailboxes, crystals,
   mushrooms, star-stone paths, and a **lighthouse** standing in the ocean.
 - **Pot-ship** (village landing pad) — press **E** to board. **WASD** flies around the world, **Space** climbs into the toy sky, **Shift** / **F** descends, **E** lands. On a phone, ↑ / ↓ sit above the E button.
-- **Lighthouse studio** — out in the middle of the ocean. Board the existing pot-ship, fly toward the striped lighthouse, land on the glowing dock, walk up, and press **E** (**Enter lighthouse**). Type an English sentence, tap **Generate**, watch the clip, then **Esc** to step back outside.
+- **Lighthouse studio** — a gold beam rises over the ocean from the moment you wake up. An on-screen marker labeled **Lighthouse Studio** points at it. Tap **Go to lighthouse** (top left) to stand on the dock without the pot-ship, then press **E**. You can still fly there: board the pot-ship and follow the same beam.
 - **Need an idea?** — inside the lighthouse studio. Rolls a tiny game prompt that stays inside the demo lesson (food words + “I like / I don’t like”). Lock a slot, reroll the rest, then **Use this idea** to drop the hint into the sentence box.
 
 Walk to the three planter beds in the garden, plant a seed in each, wait a few seconds for
@@ -49,8 +49,8 @@ to the rest of the planet.
 
 Or skip the flight with `?dock` (stand on the lighthouse pier) or `?studio` (open the studio immediately).
 
-Live build: [pibo.paria.ai](https://pibo.paria.ai). After this lands, board the pot-ship
-and fly to the lighthouse in the ocean — or open [pibo.paria.ai/?studio](https://pibo.paria.ai/?studio).
+Live build: [pibo.paria.ai](https://pibo.paria.ai). From spawn, follow the gold beam
+or tap **Go to lighthouse**, then press **E**. Or open [pibo.paria.ai/?studio](https://pibo.paria.ai/?studio).
 On that screen, tap **Need an idea?** to roll a food-lesson hint without leaving the studio.
 
 ## Idea generator

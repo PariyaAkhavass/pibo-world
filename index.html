@@ -22,13 +22,22 @@
 
   <!-- Minimal UI overlay. The planet itself is the interface. -->
   <div id="ui">
+    <button type="button" id="lighthouse-go" class="lighthouse-go">Go to lighthouse</button>
+    <div id="lighthouse-marker" class="lighthouse-marker hidden" aria-hidden="true">
+      <span class="lighthouse-arrow" aria-hidden="true">➜</span>
+      <span class="lighthouse-marker-copy">
+        <b>Lighthouse Studio</b>
+        <span id="lighthouse-distance"></span>
+      </span>
+    </div>
+
     <!-- Intro title card -->
     <div id="intro" class="intro">
       <div class="intro-mark">Pibo</div>
       <div class="intro-sub">your pocket planet</div>
       <div class="intro-hint">
-        <span class="hint-kb">move with <b>WASD</b> / <b>arrows</b> · <b>E</b> boards the pot-ship · fly to the <b>lighthouse</b></span>
-        <span class="hint-touch">use the <b>joystick</b> · tap <b>E</b> to board · fly to the <b>lighthouse</b></span>
+        <span class="hint-kb">move with <b>WASD</b> · follow the <b>gold beam</b> · or tap <b>Go to lighthouse</b></span>
+        <span class="hint-touch">use the <b>joystick</b> · follow the <b>gold beam</b> · or tap <b>Go to lighthouse</b></span>
       </div>
     </div>
 

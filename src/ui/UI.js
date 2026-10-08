@@ -42,6 +42,10 @@ export class UI {
       studioLeave: document.getElementById("studio-leave"),
       studioStatus: document.getElementById("studio-status"),
       studioIdea: document.getElementById("studio-idea"),
+      lighthouseGo: document.getElementById("lighthouse-go"),
+      lighthouseMarker: document.getElementById("lighthouse-marker"),
+      lighthouseDistance: document.getElementById("lighthouse-distance"),
+      lighthouseArrow: document.querySelector("#lighthouse-marker .lighthouse-arrow"),
     };
 
     this.ideas = new IdeaPanel({
@@ -65,6 +69,7 @@ export class UI {
     this._renderCollection();
 
     this.el.collectionBtn.addEventListener("click", () => this.toggleCollection());
+    this.el.lighthouseGo?.addEventListener("click", () => this.onGoToLighthouse?.());
     this._bindStudio();
   }
 
@@ -252,6 +257,27 @@ export class UI {
   closeModals() {
     this.closePanel();
     this.closeFact();
+  }
+
+  /* lighthouse guide ----------------------------------------------- */
+  setLighthouseGuide({ hidden, x = 0, y = 0, distance = 0, rotation = 0 } = {}) {
+    const marker = this.el.lighthouseMarker;
+    const go = this.el.lighthouseGo;
+    const conceal = !!hidden || this.isStudioOpen;
+    if (marker) {
+      marker.classList.toggle("hidden", conceal);
+      marker.setAttribute("aria-hidden", conceal ? "true" : "false");
+    }
+    if (go) go.classList.toggle("hidden", conceal);
+    if (hidden || !marker) return;
+    marker.style.left = `${x}px`;
+    marker.style.top = `${y}px`;
+    if (this.el.lighthouseDistance) {
+      this.el.lighthouseDistance.textContent = `${distance} away`;
+    }
+    if (this.el.lighthouseArrow) {
+      this.el.lighthouseArrow.style.transform = `rotate(${rotation}rad)`;
+    }
   }
 
   /* screen studio -------------------------------------------------- */

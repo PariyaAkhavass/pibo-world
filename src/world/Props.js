@@ -24,6 +24,8 @@ export class Props {
     this.tvScreen = null;
     this.tvBeacon = null;
     this.lighthouseBeam = null;
+    this.lighthouseColumn = null;
+    this.lighthouseStar = null;
     this.pondWater = null;
     this.bridge = null;
     this.rewardBloom = null;
@@ -68,6 +70,8 @@ export class Props {
     this.tvScreen = lighthouse.userData.screen;
     this.tvBeacon = lighthouse.userData.beacon;
     this.lighthouseBeam = lighthouse.userData.beam;
+    this.lighthouseColumn = lighthouse.userData.column;
+    this.lighthouseStar = lighthouse.userData.star;
     const lhDir = dirOf(LAYOUT.lighthouse);
     P.placeOnSurface(shade(lighthouse), lhDir);
     // door (+Z) faces the dock so walking off the pier meets the entrance
@@ -94,6 +98,17 @@ export class Props {
       tangentToward(padDir, dirOf(LAYOUT.lighthouse)),
       dock.quaternion
     );
+
+    for (const spot of LAYOUT.lighthouseSigns ?? []) {
+      const signDir = dirOf(spot);
+      const sign = shade(buildLighthouseSign());
+      P.placeOnSurface(sign, signDir);
+      surfaceQuaternion(
+        signDir,
+        tangentToward(signDir, dirOf(LAYOUT.lighthouse)),
+        sign.quaternion
+      );
+    }
 
     for (const step of LAYOUT.lighthousePath ?? []) {
       const lamp = buildLantern(step.lon);
@@ -215,6 +230,14 @@ export class Props {
       this.tvBeacon.material.emissiveIntensity = 0.9 + p * 1.1;
     }
     if (this.lighthouseBeam) this.lighthouseBeam.rotation.y += dt * 0.85;
+    if (this.lighthouseColumn) {
+      const pulse = 0.55 + (Math.sin(t * 1.6) + 1) * 0.16;
+      this.lighthouseColumn.material.opacity = pulse;
+    }
+    if (this.lighthouseStar) {
+      const s = 1 + Math.sin(t * 2.4) * 0.14;
+      this.lighthouseStar.scale.setScalar(s);
+    }
 
     // landing beacon pulse
     if (this.landingBeacon) {
@@ -833,6 +856,95 @@ function buildLighthouse() {
   lamp.position.y = y + 0.72;
   g.add(lamp);
 
+  // A column tall enough to clear the planet's curve. From the north-pole
+  // spawn the tower itself is over the horizon; the upper shaft is not.
+  const columnH = 64;
+  const columnMat = new THREE.MeshBasicMaterial({
+    color: 0xffd56a,
+    transparent: true,
+    opacity: 0.72,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const column = new THREE.Mesh(
+    new THREE.CylinderGeometry(5.2, 0.7, columnH, 20, 1, true),
+    columnMat
+  );
+  column.position.y = y + 0.9 + columnH / 2;
+  column.userData.keepBright = true;
+  column.renderOrder = 2;
+  g.add(column);
+  g.userData.column = column;
+
+  const coreMat = new THREE.MeshBasicMaterial({
+    color: 0xfff6c8,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const core = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.35, 0.28, columnH, 12, 1, true),
+    coreMat
+  );
+  core.position.y = column.position.y;
+  core.userData.keepBright = true;
+  core.renderOrder = 2;
+  g.add(core);
+
+  const star = ball(2.15, new THREE.MeshBasicMaterial({ color: 0xfff3a0 }), 16);
+  star.position.y = y + 0.9 + columnH;
+  star.userData.keepBright = true;
+  g.add(star);
+  g.userData.star = star;
+
+  return g;
+}
+
+function lighthouseSignTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 72;
+  const ctx = canvas.getContext("2d");
+  const paint = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fff6ea";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#e07a55";
+    ctx.font = "700 30px Fredoka, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Lighthouse", 128, 38);
+  };
+  paint();
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(() => {
+      paint();
+      tex.needsUpdate = true;
+    });
+  }
+  return tex;
+}
+
+function buildLighthouseSign() {
+  const g = new THREE.Group();
+  const post = cyl(0.05, 0.07, 0.92, clay(0x8f6548), 8);
+  post.position.y = 0.46;
+  g.add(post);
+
+  const plank = box(1.2, 0.38, 0.07, new THREE.MeshBasicMaterial({
+    map: lighthouseSignTexture(),
+    color: 0xffffff,
+  }));
+  plank.position.y = 0.98;
+  g.add(plank);
+
+  const tip = cone(0.16, 0.32, clay(0xf26f6f), 4);
+  tip.rotation.x = Math.PI / 2;
+  tip.position.set(0, 0.98, 0.46);
+  g.add(tip);
   return g;
 }
 
