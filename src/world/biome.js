@@ -81,8 +81,10 @@ function onLighthouseDock(dir) {
   _right.crossVectors(DOCK_PAD, DOCK_FWD);
   const along = _off.dot(DOCK_FWD) * PLANET_R;
   const side = _off.dot(_right) * PLANET_R;
-  const onDeck = along * along + side * side <= 2.05 * 2.05;
-  const onPier = along >= -0.2 && along <= 3.05 && Math.abs(side) <= 1.05;
+  // Match the visible round deck (radius ~1.7) and the short pier, so the
+  // pot keeps swimming in the blue water beside the wood.
+  const onDeck = along * along + side * side <= 1.78 * 1.78;
+  const onPier = along >= 0.35 && along <= 2.65 && Math.abs(side) <= 0.78;
   return onDeck || onPier;
 }
 

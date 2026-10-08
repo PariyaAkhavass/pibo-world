@@ -365,7 +365,7 @@ export class Pibo {
     this.splash.position.set(0, 0, 0.48);
 
     const bob = Math.sin(t * Math.PI * 2) * 0.02;
-    this.body.position.y = 0.08 + bob;
+    this.body.position.y = 0.22 + bob;
     this.body.rotation.x = Math.PI / 2;
     this.body.rotation.y = 0;
     this.body.rotation.z = 0;
