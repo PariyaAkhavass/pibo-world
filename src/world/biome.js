@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { LAYOUT, dirOf } from "./layout.js";
+import { tangentToward } from "../core/SphereMath.js";
 
 /**
  * Planet-scale biomes. The garden village is a grassy cap around the north
@@ -46,4 +47,57 @@ export function oceanAmount(dir) {
   else land = 1 - (lat - (OCEAN_LAT - SHORE_WIDTH)) / SHORE_WIDTH;
   land = Math.max(land, islandAmount(n));
   return 1 - land;
+}
+
+/**
+ * Latitude where the sandy beach ends and the ground is blue ocean.
+ * Shallow water at this line counts as water — there is no wade band.
+ */
+export const WATERLINE_LAT = OCEAN_LAT + 6;
+
+const PLANET_R = 10;
+/** How far the pot sticks forward of its center, so swim starts on contact. */
+const BODY_REACH = 0.42;
+
+const _n = new THREE.Vector3();
+const _off = new THREE.Vector3();
+const _right = new THREE.Vector3();
+
+const LAND_DISCS = [
+  { dir: dirOf(LAYOUT.lighthouseIsland), radius: 2.15 },
+  { dir: dirOf(LAYOUT.meadowIsland), radius: 4.4 },
+];
+
+const DOCK_PAD = dirOf(LAYOUT.lighthousePad);
+const DOCK_FWD = tangentToward(DOCK_PAD, dirOf(LAYOUT.lighthouse));
+
+function onDisc(dir, disc) {
+  return dir.angleTo(disc.dir) * PLANET_R <= disc.radius + BODY_REACH;
+}
+
+function onLighthouseDock(dir) {
+  if (dir.angleTo(DOCK_PAD) > 0.45) return false;
+  _off.copy(dir).addScaledVector(DOCK_PAD, -dir.dot(DOCK_PAD));
+  _right.crossVectors(DOCK_PAD, DOCK_FWD);
+  const along = _off.dot(DOCK_FWD) * PLANET_R;
+  const side = _off.dot(_right) * PLANET_R;
+  // Match the visible round deck (radius ~1.7) and the short pier, so the
+  // pot keeps swimming in the blue water beside the wood.
+  const onDeck = along * along + side * side <= 1.78 * 1.78;
+  const onPier = along >= 0.35 && along <= 2.65 && Math.abs(side) <= 0.78;
+  return onDeck || onPier;
+}
+
+/**
+ * True when the character is touching the blue ocean — shoreline shallows
+ * included. Grass, the beach, the islands, and the lighthouse dock are dry.
+ */
+export function isBlueWater(dir) {
+  _n.copy(dir).normalize();
+  if (latOf(_n) <= WATERLINE_LAT - (BODY_REACH / PLANET_R) * (180 / Math.PI)) return false;
+  for (const disc of LAND_DISCS) {
+    if (onDisc(_n, disc)) return false;
+  }
+  if (onLighthouseDock(_n)) return false;
+  return true;
 }

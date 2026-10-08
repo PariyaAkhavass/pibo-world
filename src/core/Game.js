@@ -204,6 +204,12 @@ export class Game {
       this.started = true;
       this.ui.hideIntro();
     }
+    if (!this.ufo.riding && !this.familyShip.riding) {
+      if (this.pibo.inWater && !this._wasSwimming) {
+        this.ui.toast("Splash — Pibo swims!", 1600);
+      }
+      this._wasSwimming = this.pibo.inWater;
+    }
 
     this._updateCamera(dt);
     this._updateLighthouseGuide();

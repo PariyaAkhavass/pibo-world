@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from "https://unpkg.com/three@0.160.0/examples/jsm
 import { clay, blob, ball, cyl, cone } from "../world/materials.js";
 import { shade } from "../world/materials.js";
 import { surfaceQuaternion, tangentAt } from "../core/SphereMath.js";
+import { isBlueWater } from "../world/biome.js";
 
 /**
  * Pibo — the player's little creature. An original silhouette: a chubby little
@@ -35,9 +36,13 @@ export class Pibo {
     this.controllable = opts.controllable !== false;
 
     this.linSpeed = 4.2; // units/sec along surface
+    this.swimSpeed = 3.05; // a little slower, still easy to steer
     this.turnSpeed = 2.6; // rad/sec
     this.radius = 0.5 * this.charScale; // collision padding — about half the pot's width
     this.moving = false;
+    this.inWater = false;
+    this.swimPose = 0; // 1 face-down in blue water, 0 upright on land
+    this.strokeT = 0;
     this.walkPhase = 0;
     this.idleT = Math.random() * 10;
     this.blinkT = 2 + Math.random() * 3;
@@ -140,16 +145,25 @@ export class Pibo {
     }
     this.body.add(this.sprout);
 
-    // --- stubby arms ---
+    // --- stubby arms (pivot at the shoulder so they can paddle) ---
+    this.arms = [];
+    this.armPads = [];
     for (const sx of [-1, 1]) {
-      const arm = blob(0.14, pot, 2);
-      arm.scale.set(0.75, 1, 0.75);
-      arm.position.set(sx * 0.58, 0.5, 0.06);
+      const arm = new THREE.Group();
+      const upper = blob(0.14, pot, 2);
+      upper.scale.set(0.75, 1, 0.75);
+      upper.position.y = -0.16;
+      arm.add(upper);
+      arm.position.set(sx * 0.58, 0.66, 0.06);
       this.body.add(arm);
+      this.arms.push(arm);
+      this.armPads.push(upper);
     }
 
     // --- stubby legs (animated for walking) ---
     this.legs = [];
+    this.legShins = [];
+    this.legFeet = [];
     for (const sx of [-1, 1]) {
       const leg = new THREE.Group();
       const shin = cyl(0.13, 0.15, 0.18, pot, 8);
@@ -162,9 +176,43 @@ export class Pibo {
       leg.position.set(sx * 0.24, 0.18, 0.01);
       this.body.add(leg);
       this.legs.push(leg);
+      this.legShins.push(shin);
+      this.legFeet.push(foot);
     }
 
     shade(this.group, true, false);
+    this._buildSplash();
+  }
+
+  _buildSplash() {
+    this.splash = new THREE.Group();
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xc8f4ff,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.splashRing = new THREE.Mesh(new THREE.RingGeometry(0.26, 0.5, 22), ringMat);
+    this.splashRing.rotation.x = -Math.PI / 2;
+    this.splashRing.position.y = 0.06;
+    this.splash.add(this.splashRing);
+
+    const dropMat = new THREE.MeshBasicMaterial({
+      color: 0xe7fbff,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
+    this.droplets = [];
+    for (let i = 0; i < 3; i++) {
+      const drop = ball(0.055, dropMat.clone(), 8);
+      drop.position.y = 0.12;
+      this.splash.add(drop);
+      this.droplets.push(drop);
+    }
+    this.splash.visible = false;
+    this.group.add(this.splash);
   }
 
   _applyTransform() {
@@ -211,7 +259,8 @@ export class Pibo {
     if (this.moving) {
       const up = this.dir.clone().normalize();
       const right = new THREE.Vector3().crossVectors(up, this.forward).normalize();
-      const da = (move * this.linSpeed * dt) / this.planet.radius;
+      const speed = this.inWater ? this.swimSpeed : this.linSpeed;
+      const da = (move * speed * dt) / this.planet.radius;
       this.dir.applyAxisAngle(right, da).normalize();
       this.forward.applyAxisAngle(right, da);
     }
@@ -223,6 +272,10 @@ export class Pibo {
     // keep forward a clean tangent
     const up = this.dir.clone().normalize();
     this.forward.sub(up.clone().multiplyScalar(this.forward.dot(up))).normalize();
+
+    // Blue water is swim, immediately. Grass and the dock are a stand, immediately.
+    this.inWater = isBlueWater(this.dir);
+    this.swimPose = this.inWater ? 1 : 0;
 
     this._applyTransform();
     this._animate(dt);
@@ -242,28 +295,174 @@ export class Pibo {
       this.eyes.scale.y = 1;
     }
 
-    if (this.moving) {
-      this.walkPhase += dt * 12;
-      const b = Math.abs(Math.sin(this.walkPhase)); // bounce
-      this.body.position.y = b * 0.14;
-      // squash & stretch
-      const sq = 1 + Math.sin(this.walkPhase * 2) * 0.05;
-      this.body.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
-      this.body.rotation.x = 0.12; // lean into the walk
-      // waddle legs
-      this.legs[0].rotation.x = Math.sin(this.walkPhase) * 0.6;
-      this.legs[1].rotation.x = -Math.sin(this.walkPhase) * 0.6;
-      this.sprout.rotation.z = Math.sin(this.walkPhase) * 0.12;
-    } else {
-      // gentle idle breathing
-      this.idleT += dt;
-      const breathe = Math.sin(this.idleT * 2) * 0.03;
-      this.body.position.y = breathe;
-      this.body.scale.set(1 - breathe * 0.4, 1 + breathe * 0.6, 1 - breathe * 0.4);
-      this.body.rotation.x = THREE.MathUtils.lerp(this.body.rotation.x, 0, 0.1);
-      this.legs[0].rotation.x = THREE.MathUtils.lerp(this.legs[0].rotation.x, 0, 0.2);
-      this.legs[1].rotation.x = THREE.MathUtils.lerp(this.legs[1].rotation.x, 0, 0.2);
-      this.sprout.rotation.z = Math.sin(this.idleT * 1.5) * 0.08;
+    if (this.inWater) {
+      this._animateSwim(dt);
+      return;
     }
+    this._animateLand(dt);
+  }
+
+  /** Upright walk or idle. Limbs stay short and hang at the sides. */
+  _animateLand(dt) {
+    this._setPaddleLength(false);
+    this.splash.position.set(0, 0, 0);
+
+    if (this.moving) this.walkPhase += dt * 12;
+    else this.idleT += dt;
+
+    let y = 0;
+    let rx = 0;
+    let sx = 1;
+    let sy = 1;
+    let sz = 1;
+    let leg0 = 0;
+    let leg1 = 0;
+    let sproutZ = 0;
+
+    if (this.moving) {
+      const b = Math.abs(Math.sin(this.walkPhase));
+      y = b * 0.14;
+      const sq = 1 + Math.sin(this.walkPhase * 2) * 0.05;
+      sx = 1 / Math.sqrt(sq);
+      sy = sq;
+      sz = sx;
+      rx = 0.12;
+      leg0 = Math.sin(this.walkPhase) * 0.6;
+      leg1 = -leg0;
+      sproutZ = Math.sin(this.walkPhase) * 0.12;
+    } else {
+      const breathe = Math.sin(this.idleT * 2) * 0.03;
+      y = breathe;
+      sx = 1 - breathe * 0.4;
+      sy = 1 + breathe * 0.6;
+      sz = sx;
+      sproutZ = Math.sin(this.idleT * 1.5) * 0.08;
+    }
+
+    this.body.position.y = y;
+    this.body.rotation.x = rx;
+    this.body.rotation.y = 0;
+    this.body.rotation.z = 0;
+    this.body.scale.set(sx, sy, sz);
+    this.legs[0].rotation.set(leg0, 0, 0);
+    this.legs[1].rotation.set(leg1, 0, 0);
+    this.sprout.rotation.z = sproutZ;
+    this.arms[0].rotation.set(0, 0, 0);
+    this.arms[1].rotation.set(0, 0, 0);
+    this._animateSplash(0);
+  }
+
+  /**
+   * Face-down on the surface. Both arms sweep out and back together
+   * (breaststroke); the legs frog-kick on the recovery. No walk cycle.
+   */
+  _animateSwim(dt) {
+    const period = this.moving ? 0.92 : 1.7;
+    this.strokeT = (this.strokeT + dt / period) % 1;
+    const t = this.strokeT;
+
+    this._setPaddleLength(true);
+    this.splash.position.set(0, 0, 0.48);
+
+    const bob = Math.sin(t * Math.PI * 2) * 0.02;
+    this.body.position.y = 0.22 + bob;
+    this.body.rotation.x = Math.PI / 2;
+    this.body.rotation.y = 0;
+    this.body.rotation.z = 0;
+    this.body.scale.set(1, 1, 1);
+
+    const right = this._breaststrokeDir(t);
+    this._aimArm(this.arms[0], -right[0], right[1], right[2]);
+    this._aimArm(this.arms[1], right[0], right[1], right[2]);
+
+    const kick = this._frogKick(t);
+    this.legs[0].rotation.set(kick.x, 0, kick.spread);
+    this.legs[1].rotation.set(kick.x, 0, -kick.spread);
+    this.sprout.rotation.z = 0;
+    this._animateSplash(1, t);
+  }
+
+  /** Longer paddles while swimming so the stroke reads at camera distance. */
+  _setPaddleLength(swim) {
+    const ay = swim ? -0.55 : -0.16;
+    const ax = swim ? 1.15 : 0.75;
+    const az = swim ? 0.8 : 0.75;
+    const aScaleY = swim ? 3.4 : 1;
+    for (const pad of this.armPads) {
+      pad.position.y = ay;
+      pad.scale.set(ax, aScaleY, az);
+    }
+    for (const shin of this.legShins) {
+      shin.scale.y = swim ? 1.8 : 1;
+      shin.position.y = swim ? -0.16 : -0.09;
+    }
+    for (const foot of this.legFeet) {
+      foot.position.y = swim ? -0.32 : -0.18;
+    }
+  }
+
+  /**
+   * Right-arm aim in body space while the pot is tipped face-down:
+   * +Y forward, +X out to the right, +Z down into the water.
+   */
+  _breaststrokeDir(t) {
+    const keys = [
+      [0.0, 0.06, 0.98, 0.16],
+      [0.18, 0.28, 0.9, 0.22],
+      [0.4, 1.0, 0.05, 0.28],
+      [0.58, 0.42, -0.9, 0.1],
+      [0.74, 0.16, -0.15, 0.7],
+      [0.88, 0.08, 0.62, 0.4],
+      [1.0, 0.06, 0.98, 0.16],
+    ];
+    let i = 0;
+    while (i < keys.length - 2 && t >= keys[i + 1][0]) i++;
+    const a = keys[i];
+    const b = keys[i + 1];
+    const k = THREE.MathUtils.smoothstep(t, a[0], b[0]);
+    return [
+      THREE.MathUtils.lerp(a[1], b[1], k),
+      THREE.MathUtils.lerp(a[2], b[2], k),
+      THREE.MathUtils.lerp(a[3], b[3], k),
+    ];
+  }
+
+  /** Point a shoulder pivot so the arm blob aims along (dx, dy, dz). */
+  _aimArm(arm, dx, dy, dz) {
+    const len = Math.hypot(dx, dy, dz) || 1;
+    dx /= len;
+    dy /= len;
+    dz /= len;
+    const horiz = Math.hypot(dx, dy);
+    arm.rotation.x = Math.atan2(-dz, horiz);
+    arm.rotation.y = 0;
+    arm.rotation.z = Math.atan2(dx, -dy);
+  }
+
+  /** Both legs together: tuck and spread, then snap back as the arms reach. */
+  _frogKick(t) {
+    if (t < 0.56 || t > 0.94) return { x: 0, spread: 0 };
+    const u = (t - 0.56) / 0.38;
+    const bend = Math.sin(u * Math.PI);
+    const spread = u < 0.42 ? u / 0.42 : Math.max(0, 1 - (u - 0.42) / 0.58);
+    return { x: -bend * 1.35, spread: spread * 0.95 };
+  }
+
+  _animateSplash(s, strokeT = 0) {
+    const show = s > 0.2;
+    this.splash.visible = show;
+    if (!show) return;
+    const pull = Math.sin(THREE.MathUtils.clamp((strokeT - 0.18) / 0.42, 0, 1) * Math.PI);
+    const pulse = this.moving ? 0.35 + pull * 1.15 : 0.28 + Math.sin(strokeT * Math.PI * 2) * 0.08;
+    this.splashRing.scale.setScalar(0.85 + pulse);
+    this.splashRing.material.opacity = 0.28 + pulse * 0.35;
+    this.droplets.forEach((drop, i) => {
+      const phase = strokeT * Math.PI * 2 + i * 2.1;
+      const hop = this.moving ? pull * Math.max(0, Math.sin(phase)) : 0;
+      const ang = i * 2.2 + strokeT * Math.PI * 2;
+      drop.position.set(Math.cos(ang) * (0.34 + hop * 0.2), 0.1 + hop * 0.28, Math.sin(ang) * 0.22);
+      drop.material.opacity = hop * 0.85;
+      drop.scale.setScalar(0.7 + hop);
+    });
   }
 }
