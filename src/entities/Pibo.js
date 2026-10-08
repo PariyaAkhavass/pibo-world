@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from "https://unpkg.com/three@0.160.0/examples/jsm
 import { clay, blob, ball, cyl, cone } from "../world/materials.js";
 import { shade } from "../world/materials.js";
 import { surfaceQuaternion, tangentAt } from "../core/SphereMath.js";
+import { isBlueWater } from "../world/biome.js";
 
 /**
  * Pibo — the player's little creature. An original silhouette: a chubby little
@@ -35,9 +36,12 @@ export class Pibo {
     this.controllable = opts.controllable !== false;
 
     this.linSpeed = 4.2; // units/sec along surface
+    this.swimSpeed = 3.05; // a little slower, still easy to steer
     this.turnSpeed = 2.6; // rad/sec
     this.radius = 0.5 * this.charScale; // collision padding — about half the pot's width
     this.moving = false;
+    this.inWater = false;
+    this.swimPose = 0; // 1 while swimming; eases back to 0 on land
     this.walkPhase = 0;
     this.idleT = Math.random() * 10;
     this.blinkT = 2 + Math.random() * 3;
@@ -140,12 +144,17 @@ export class Pibo {
     }
     this.body.add(this.sprout);
 
-    // --- stubby arms ---
+    // --- stubby arms (pivot at the shoulder so they can paddle) ---
+    this.arms = [];
     for (const sx of [-1, 1]) {
-      const arm = blob(0.14, pot, 2);
-      arm.scale.set(0.75, 1, 0.75);
-      arm.position.set(sx * 0.58, 0.5, 0.06);
+      const arm = new THREE.Group();
+      const upper = blob(0.14, pot, 2);
+      upper.scale.set(0.75, 1, 0.75);
+      upper.position.y = -0.16;
+      arm.add(upper);
+      arm.position.set(sx * 0.58, 0.66, 0.06);
       this.body.add(arm);
+      this.arms.push(arm);
     }
 
     // --- stubby legs (animated for walking) ---
@@ -165,6 +174,38 @@ export class Pibo {
     }
 
     shade(this.group, true, false);
+    this._buildSplash();
+  }
+
+  _buildSplash() {
+    this.splash = new THREE.Group();
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xc8f4ff,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.splashRing = new THREE.Mesh(new THREE.RingGeometry(0.26, 0.5, 22), ringMat);
+    this.splashRing.rotation.x = -Math.PI / 2;
+    this.splashRing.position.y = 0.06;
+    this.splash.add(this.splashRing);
+
+    const dropMat = new THREE.MeshBasicMaterial({
+      color: 0xe7fbff,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
+    this.droplets = [];
+    for (let i = 0; i < 3; i++) {
+      const drop = ball(0.055, dropMat.clone(), 8);
+      drop.position.y = 0.12;
+      this.splash.add(drop);
+      this.droplets.push(drop);
+    }
+    this.splash.visible = false;
+    this.group.add(this.splash);
   }
 
   _applyTransform() {
@@ -211,7 +252,8 @@ export class Pibo {
     if (this.moving) {
       const up = this.dir.clone().normalize();
       const right = new THREE.Vector3().crossVectors(up, this.forward).normalize();
-      const da = (move * this.linSpeed * dt) / this.planet.radius;
+      const speed = this.inWater ? this.swimSpeed : this.linSpeed;
+      const da = (move * speed * dt) / this.planet.radius;
       this.dir.applyAxisAngle(right, da).normalize();
       this.forward.applyAxisAngle(right, da);
     }
@@ -223,6 +265,12 @@ export class Pibo {
     // keep forward a clean tangent
     const up = this.dir.clone().normalize();
     this.forward.sub(up.clone().multiplyScalar(this.forward.dot(up))).normalize();
+
+    // Pose matches the water under the body this frame. Entering snaps to
+    // swim; stepping onto grass or the dock eases back up into a walk.
+    this.inWater = isBlueWater(this.dir);
+    if (this.inWater) this.swimPose = 1;
+    else this.swimPose = Math.max(0, this.swimPose - dt / 0.32);
 
     this._applyTransform();
     this._animate(dt);
@@ -242,28 +290,97 @@ export class Pibo {
       this.eyes.scale.y = 1;
     }
 
-    if (this.moving) {
-      this.walkPhase += dt * 12;
-      const b = Math.abs(Math.sin(this.walkPhase)); // bounce
-      this.body.position.y = b * 0.14;
-      // squash & stretch
+    const s = this.swimPose;
+    if (s > 0.5) this.walkPhase += dt * (this.moving ? 9 : 4.2);
+    else if (this.moving) this.walkPhase += dt * 12;
+    else this.idleT += dt;
+
+    let y = 0;
+    let rx = 0;
+    let rz = 0;
+    let sx = 1;
+    let sy = 1;
+    let sz = 1;
+    let leg0 = 0;
+    let leg1 = 0;
+    let sproutZ = 0;
+    let arm0x = 0;
+    let arm1x = 0;
+    let arm0z = 0;
+    let arm1z = 0;
+
+    if (this.moving && s < 0.98) {
+      const b = Math.abs(Math.sin(this.walkPhase));
+      y = b * 0.14;
       const sq = 1 + Math.sin(this.walkPhase * 2) * 0.05;
-      this.body.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
-      this.body.rotation.x = 0.12; // lean into the walk
-      // waddle legs
-      this.legs[0].rotation.x = Math.sin(this.walkPhase) * 0.6;
-      this.legs[1].rotation.x = -Math.sin(this.walkPhase) * 0.6;
-      this.sprout.rotation.z = Math.sin(this.walkPhase) * 0.12;
-    } else {
-      // gentle idle breathing
-      this.idleT += dt;
+      sx = 1 / Math.sqrt(sq);
+      sy = sq;
+      sz = sx;
+      rx = 0.12;
+      leg0 = Math.sin(this.walkPhase) * 0.6;
+      leg1 = -leg0;
+      sproutZ = Math.sin(this.walkPhase) * 0.12;
+    } else if (s < 0.98) {
       const breathe = Math.sin(this.idleT * 2) * 0.03;
-      this.body.position.y = breathe;
-      this.body.scale.set(1 - breathe * 0.4, 1 + breathe * 0.6, 1 - breathe * 0.4);
-      this.body.rotation.x = THREE.MathUtils.lerp(this.body.rotation.x, 0, 0.1);
-      this.legs[0].rotation.x = THREE.MathUtils.lerp(this.legs[0].rotation.x, 0, 0.2);
-      this.legs[1].rotation.x = THREE.MathUtils.lerp(this.legs[1].rotation.x, 0, 0.2);
-      this.sprout.rotation.z = Math.sin(this.idleT * 1.5) * 0.08;
+      y = breathe;
+      sx = 1 - breathe * 0.4;
+      sy = 1 + breathe * 0.6;
+      sz = sx;
+      sproutZ = Math.sin(this.idleT * 1.5) * 0.08;
     }
+
+    if (s > 0.001) {
+      const wave = Math.sin(this.walkPhase);
+      const bob = Math.sin(this.walkPhase * 2) * (this.moving ? 0.045 : 0.03);
+      const swimY = -0.36 + bob;
+      const swimRx = 0.48;
+      const swimRz = wave * 0.07;
+      const kick = 0.85 + Math.sin(this.walkPhase * 2) * 0.28;
+      y = THREE.MathUtils.lerp(y, swimY, s);
+      rx = THREE.MathUtils.lerp(rx, swimRx, s);
+      rz = THREE.MathUtils.lerp(rz, swimRz, s);
+      sx = THREE.MathUtils.lerp(sx, 1.04, s);
+      sy = THREE.MathUtils.lerp(sy, 0.94, s);
+      sz = THREE.MathUtils.lerp(sz, 1.02, s);
+      leg0 = THREE.MathUtils.lerp(leg0, kick, s);
+      leg1 = THREE.MathUtils.lerp(leg1, kick * 0.85, s);
+      sproutZ = THREE.MathUtils.lerp(sproutZ, wave * 0.05, s);
+      arm0x = Math.sin(this.walkPhase) * 1.15 * s;
+      arm1x = Math.sin(this.walkPhase + Math.PI) * 1.15 * s;
+      arm0z = 0.85 * s;
+      arm1z = -0.85 * s;
+    }
+
+    this.body.position.y = y;
+    this.body.rotation.x = rx;
+    this.body.rotation.z = rz;
+    this.body.scale.set(sx, sy, sz);
+    this.legs[0].rotation.x = leg0;
+    this.legs[1].rotation.x = leg1;
+    this.sprout.rotation.z = sproutZ;
+    this.arms[0].rotation.x = arm0x;
+    this.arms[1].rotation.x = arm1x;
+    this.arms[0].rotation.z = arm0z;
+    this.arms[1].rotation.z = arm1z;
+    this._animateSplash(s);
+  }
+
+  _animateSplash(s) {
+    const show = s > 0.2;
+    this.splash.visible = show;
+    if (!show) return;
+    const pulse = this.moving
+      ? 0.55 + Math.abs(Math.sin(this.walkPhase)) * 0.7
+      : 0.35 + Math.sin(this.walkPhase) * 0.08;
+    this.splashRing.scale.setScalar(0.85 + pulse);
+    this.splashRing.material.opacity = 0.28 + pulse * 0.35;
+    this.droplets.forEach((drop, i) => {
+      const phase = this.walkPhase + i * 2.1;
+      const hop = this.moving ? Math.max(0, Math.sin(phase)) : 0;
+      const ang = i * 2.2 + this.walkPhase * 0.4;
+      drop.position.set(Math.cos(ang) * (0.34 + hop * 0.2), 0.1 + hop * 0.28, Math.sin(ang) * 0.22);
+      drop.material.opacity = hop * 0.85;
+      drop.scale.setScalar(0.7 + hop);
+    });
   }
 }
