@@ -1,7 +1,9 @@
 import { PLANTS } from "../data/plants.js";
 import { STUDIO_PROMPTS } from "../data/studioPrompts.js";
+import { lockedLabel } from "../data/planets.js";
 import { Joystick } from "./Joystick.js";
 import { IdeaPanel } from "./IdeaPanel.js";
+import { WorldMap } from "./WorldMap.js";
 
 /**
  * Thin controller over the HTML overlay. Keeps the DOM out of gameplay code:
@@ -43,6 +45,7 @@ export class UI {
       studioStatus: document.getElementById("studio-status"),
       studioIdea: document.getElementById("studio-idea"),
       lighthouseGo: document.getElementById("lighthouse-go"),
+      mapBtn: document.getElementById("map-btn"),
       lighthouseMarker: document.getElementById("lighthouse-marker"),
       lighthouseDistance: document.getElementById("lighthouse-distance"),
       lighthouseArrow: document.querySelector("#lighthouse-marker .lighthouse-arrow"),
@@ -51,6 +54,12 @@ export class UI {
     this.ideas = new IdeaPanel({
       root: document.getElementById("idea-panel"),
       onUse: (idea) => this._acceptIdea(idea),
+    });
+    this.map = new WorldMap({
+      root: document.getElementById("map-overlay"),
+      onTravel: (id) => this.onMapTravel?.(id),
+      onLocked: (planet) => this.toast(`${planet.name} — ${lockedLabel(planet)}`, 1800),
+      onClose: () => this._syncActionBtn(),
     });
     this.lastIdea = null;
 
@@ -70,6 +79,10 @@ export class UI {
 
     this.el.collectionBtn.addEventListener("click", () => this.toggleCollection());
     this.el.lighthouseGo?.addEventListener("click", () => this.onGoToLighthouse?.());
+    this.el.mapBtn?.addEventListener("click", () => {
+      if (this.isMapOpen) this.closeMap();
+      else this.openMap();
+    });
     this._bindStudio();
   }
 
@@ -129,6 +142,10 @@ export class UI {
 
   _onAction() {
     if (!this.input) return;
+    if (this.isMapOpen) {
+      this.closeMap();
+      return;
+    }
     if (this.isIdeaOpen) {
       this.closeIdeas();
       return;
@@ -142,7 +159,7 @@ export class UI {
   _syncActionBtn() {
     const btn = this.el.actionBtn;
     if (!btn) return;
-    if (this.isIdeaOpen || this.isStudioOpen || this.isModalOpen) {
+    if (this.isMapOpen || this.isIdeaOpen || this.isStudioOpen || this.isModalOpen) {
       btn.textContent = "back";
       btn.classList.add("close-mode");
       btn.classList.remove("ready");
@@ -257,6 +274,25 @@ export class UI {
   closeModals() {
     this.closePanel();
     this.closeFact();
+    this.closeMap();
+  }
+
+  /* world map ------------------------------------------------------ */
+  get isMapOpen() {
+    return !!this.map?.isOpen;
+  }
+
+  openMap() {
+    this.closeCollection();
+    this.map.open(this.onMapHere?.() ?? { lat: 0, lon: 0 });
+    this.el.mapBtn?.setAttribute("aria-expanded", "true");
+    this._syncActionBtn();
+  }
+
+  closeMap() {
+    this.map?.close();
+    this.el.mapBtn?.setAttribute("aria-expanded", "false");
+    this._syncActionBtn();
   }
 
   /* lighthouse guide ----------------------------------------------- */
@@ -348,6 +384,7 @@ export class UI {
   }
 
   openStudio({ onGenerate, onLeave } = {}) {
+    this.closeMap();
     this._onStudioGenerate = onGenerate || null;
     this._onStudioLeave = onLeave || null;
     this._studioBusy = false;

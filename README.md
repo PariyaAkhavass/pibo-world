@@ -33,7 +33,9 @@ connection the first time.
 - **E** / **Enter** — interact (plant, then later inspect what you grew)
 - **1 / 2 / 3** — choose a plant
 - **Esc** — step back from a panel
-- **🪴** (top-right) — see the things you've grown
+- **Map** (top-right) — your planet, a “You are here” dot, and other planets that stay locked until a points system exists. Tap the lighthouse, then **Go to the lighthouse**, to use the same trip as the top-left button. Close with **×**, a click outside, or **Esc**.
+- **🪴** (under Map) — see the things you've grown
+- The blue friend and little white Pino are hidden for now. Turn them back on with `SHOW_VILLAGE_FRIENDS` in `src/config.js`.
 - **Phone / tablet** — a little joystick (bottom-left) steers Pibo; tap **E** (bottom-right) to interact. On-screen prompts and plant cards are tappable too.
 - Houses, the workshop, the observatory, trees, and rocks are solid — Pibo slides around them.
 - New landmarks fill out the walk: a little planetarium, mini café, tiny library,

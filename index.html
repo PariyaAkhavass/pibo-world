@@ -23,6 +23,10 @@
   <!-- Minimal UI overlay. The planet itself is the interface. -->
   <div id="ui">
     <button type="button" id="lighthouse-go" class="lighthouse-go">Go to lighthouse</button>
+    <button type="button" id="map-btn" class="map-btn" aria-haspopup="dialog" aria-controls="map-overlay" aria-expanded="false">
+      <span class="map-btn-icon" aria-hidden="true">🗺️</span>
+      <span>Map</span>
+    </button>
     <div id="lighthouse-marker" class="lighthouse-marker hidden" aria-hidden="true">
       <span class="lighthouse-arrow" aria-hidden="true">➜</span>
       <span class="lighthouse-marker-copy">
@@ -98,6 +102,27 @@
         </div>
         <p class="idea-hint" data-idea-hint>Tap a slot to lock it. Every roll stays inside this lesson.</p>
         <button type="button" class="idea-dismiss" data-idea-dismiss>Not now</button>
+      </div>
+    </div>
+
+    <!-- World map. Home planet plus planets still locked. -->
+    <div id="map-overlay" class="map-overlay hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="map-title">
+      <button type="button" class="map-scrim" data-map-scrim aria-label="Close map"></button>
+      <div class="map-card">
+        <button type="button" class="map-close" data-map-close aria-label="Close map">×</button>
+        <div class="map-kicker">Your planet</div>
+        <h2 id="map-title" class="map-title">Pibo World</h2>
+        <div class="map-disc" data-map-disc>
+          <div class="map-land" data-map-land></div>
+          <div class="map-you" data-map-you title="You are here" aria-label="You are here"></div>
+        </div>
+        <div class="map-detail">
+          <strong data-map-detail-name>You are here</strong>
+          <span data-map-detail-note>Village</span>
+          <button type="button" class="map-go hidden" data-map-go>Go to the lighthouse</button>
+        </div>
+        <div class="map-kicker">Other planets</div>
+        <div class="map-galaxy" data-map-galaxy></div>
       </div>
     </div>
 
