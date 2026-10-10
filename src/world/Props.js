@@ -1360,27 +1360,30 @@ function puffCluster(r, rng) {
   return g;
 }
 
-/** Dense layered leaves in yellow-green, tips pointing outward. */
+/** Layered yellow-green clay leaves sitting on a solid canopy. */
 function leafBall(r, rng) {
   const g = new THREE.Group();
-  const core = blob(r * 0.52, LEAF_LIME_DEEP, 1);
-  core.scale.set(1, 0.7, 1);
+  const core = blob(r * 0.8, LEAF_LIME_MID, 1);
+  core.scale.set(1.08, 0.7, 1.02);
   g.add(core);
-  const leaves = Math.round(14 + r * 26);
-  for (let i = 0; i < leaves; i++) {
-    const a = rng() * Math.PI * 2;
-    const elev = (rng() * 0.95 - 0.12) * Math.PI * 0.5;
-    const dir = new THREE.Vector3(
-      Math.cos(a) * Math.cos(elev),
-      Math.sin(elev) * 0.9 + 0.2,
-      Math.sin(a) * Math.cos(elev),
-    ).normalize();
-    const leaf = cone(r * 0.2, r * 0.4, dir.y > 0.55 ? LEAF_LIME : LEAF_LIME_MID, 5);
-    leaf.scale.set(1.2, 1, 0.4);
-    leaf.position.copy(dir).multiplyScalar(r * (0.42 + rng() * 0.5));
-    leaf.quaternion.setFromUnitVectors(_UP, dir);
-    leaf.rotateY(rng() * Math.PI);
-    g.add(leaf);
+  const layers = [
+    { y: r * 0.02, rad: r * 0.7, n: 8, size: 0.32, tilt: 0.35 },
+    { y: r * 0.32, rad: r * 0.58, n: 7, size: 0.3, tilt: 0.85 },
+    { y: r * 0.58, rad: r * 0.32, n: 5, size: 0.26, tilt: 1.35 },
+  ];
+  for (const layer of layers) {
+    const spin = rng() * Math.PI;
+    for (let i = 0; i < layer.n; i++) {
+      const a = spin + (i / layer.n) * Math.PI * 2;
+      const dir = new THREE.Vector3(Math.cos(a), layer.tilt, Math.sin(a)).normalize();
+      const mat = i % 2 === 0 ? LEAF_LIME : layer.y > r * 0.4 ? LEAF_LIME : LEAF_LIME_DEEP;
+      const leaf = blob(r * layer.size, mat, 0);
+      leaf.scale.set(1.55, 0.4, 1.05);
+      leaf.position.set(Math.cos(a) * layer.rad, layer.y, Math.sin(a) * layer.rad);
+      leaf.quaternion.setFromUnitVectors(_UP, dir);
+      leaf.rotateY(rng() * 0.4);
+      g.add(leaf);
+    }
   }
   return g;
 }
