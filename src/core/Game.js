@@ -48,8 +48,10 @@ export class Game {
     this._guideCam = new THREE.Vector3();
     this.ui.onGoToLighthouse = () => this._goToLighthouse();
     this.ui.onMapHere = () => this._playerLatLon();
+    this.ui.onGoToArcade = () => this._goToArcade();
     this.ui.onMapTravel = (placeId) => {
       if (placeId === "lighthouse") this._goToLighthouse();
+      else if (placeId === "arcade") this._goToArcade();
     };
   }
 
@@ -185,6 +187,10 @@ export class Game {
       this.ui.hideIntro();
       this._frameCameraOnPibo();
       if (q.has("studio")) this._enterStudio();
+      if (q.has("arcade")) {
+        this._goToArcade();
+        this._enterArcade();
+      }
     } catch {
       return;
     }
@@ -201,7 +207,7 @@ export class Game {
       return;
     }
 
-    const frozen = this.ui.isModalOpen || this.ui.isMapOpen;
+    const frozen = this.ui.isModalOpen || this.ui.isMapOpen || this.ui.isArcadeOpen;
     if (this.friendsVisible) {
       this.companion.update(dt, null, { frozen: true });
       this.pino.update(dt, null, { frozen: true });
@@ -307,6 +313,12 @@ export class Game {
   _handleInteraction() {
     const ui = this.ui;
 
+    if (ui.isArcadeOpen) {
+      ui.hidePrompt();
+      if (this.input.consume("Escape")) ui.closeArcade();
+      return;
+    }
+
     if (ui.isMapOpen) {
       ui.hidePrompt();
       if (this.input.consume("Escape")) ui.closeMap();
@@ -345,6 +357,13 @@ export class Game {
     if (tower) {
       ui.setPrompt(tower.label);
       if (this.input.consume("KeyE", "Enter")) this._enterStudio();
+      return;
+    }
+
+    const arcade = this._arcadeInteractable(p);
+    if (arcade) {
+      ui.setPrompt(arcade.label);
+      if (this.input.consume("KeyE", "Enter")) this._enterArcade();
       return;
     }
 
@@ -488,6 +507,45 @@ export class Game {
     this.ui.toast("Follow the gold beam, or tap Go to lighthouse 🌊", 2800);
   }
 
+  _arcadeInteractable(p) {
+    const center = dirOf(LAYOUT.arcade).multiplyScalar(this.planet.radius);
+    if (p.distanceTo(center) < 3.4) return { label: "Enter arcade" };
+    return null;
+  }
+
+  _enterArcade() {
+    if (this.ui.isIdeaOpen) this.ui.closeIdeas();
+    if (this.studio.active) this._leaveStudio();
+    this.ui.closeModals();
+    this.ui.closeCollection();
+    this.started = true;
+    this.ui.hideIntro();
+    this.ui.openArcade();
+    this.ui.toast("You choose the obstacles. The arcade draws the pictures.", 2400);
+  }
+
+  _goToArcade() {
+    if (this.ui.isIdeaOpen) this.ui.closeIdeas();
+    if (this.studio.active) this._leaveStudio();
+    this.ui.closeModals();
+    this.ui.closeCollection();
+
+    const pad = dirOf(LAYOUT.arcadeDoor);
+    const forward = tangentToward(pad, dirOf(LAYOUT.arcade));
+    if (this.familyShip.riding) {
+      const home = dirOf(LAYOUT.familyShip);
+      this.familyShip.settle(home, tangentToward(home, dirOf(LAYOUT.companion)));
+    }
+    if (this.ufo.riding) this.ufo.settle(pad, forward);
+    this.pibo.setVisible(true);
+    this.pibo.placeAt(pad, forward, this.collision);
+    this.ui.setFlying(false);
+    this.ui.hideIntro();
+    this.started = true;
+    this._frameCameraOnPibo();
+    this.ui.toast("Arcade room. Press E to make a game.", 2800);
+  }
+
   _goToLighthouse() {
     if (this.ui.isIdeaOpen) this.ui.closeIdeas();
     if (this.studio.active) this._leaveStudio();
@@ -542,7 +600,7 @@ export class Game {
       && sy > marginTop && sy < h - marginBottom;
     const x = onScreen ? sx : Math.min(w - marginX, Math.max(marginX, sx));
     let y = onScreen ? sy - 36 : Math.min(h - marginBottom, Math.max(marginTop, sy));
-    if (!onScreen && x < 220 && y < 78) y = 78;
+    if (!onScreen && x < 240 && y < 130) y = 130;
     if (x > w - 170 && y < 140) y = 140;
     const rotation = onScreen ? -Math.PI / 2 : Math.atan2(sy - h / 2, sx - w / 2);
     this.ui.setLighthouseGuide({

@@ -15,6 +15,7 @@ const PLACES = [
   { id: "cafe", name: "Café", at: LAYOUT.cafe },
   { id: "library", name: "Library", at: LAYOUT.library },
   { id: "lighthouse", name: "Lighthouse Studio", short: "Lighthouse", at: LAYOUT.lighthouse, featured: true, travel: "lighthouse" },
+  { id: "arcade", name: "Arcade", at: LAYOUT.arcade, featured: true, travel: "arcade" },
 ];
 
 /** Percent from the disc center. 46 keeps the south pole inside the rim. */
@@ -141,7 +142,11 @@ export class WorldMap {
     const standingThere = hereName === place.name;
     this.detailNote.textContent = standingThere ? "You are here" : place.travel ? "Tap to travel" : "On your planet";
     if (place.travel) {
-      this.go.textContent = place.travel === "lighthouse" ? "Go to the lighthouse" : `Go to ${place.name}`;
+      const travelLabel = {
+        lighthouse: "Go to the lighthouse",
+        arcade: "Go to Arcade",
+      };
+      this.go.textContent = travelLabel[place.travel] || `Go to ${place.name}`;
       this.go.classList.remove("hidden");
     } else {
       this.go.classList.add("hidden");
