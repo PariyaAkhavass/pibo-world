@@ -68,6 +68,7 @@ export class UI {
       onClose: () => {
         document.documentElement.classList.remove("in-arcade");
         this._syncActionBtn();
+        this.onArcadeLeave?.();
       },
     });
     this.lastIdea = null;

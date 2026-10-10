@@ -1,5 +1,5 @@
-import { STICKERS, BACKGROUNDS, HIDE_SPOTS, hideSpot } from "../data/arcadeStickers.js";
-import { createArcadeAssistant } from "../systems/arcadeAssistant.js";
+import { STICKERS, HIDE_SPOTS } from "../data/arcadeStickers.js";
+import { createArcadeAssistant, templateArcadeStitch } from "../systems/arcadeAssistant.js";
 import { read, authorOf, normalizeSteps, normalizeSpec } from "../systems/gameSpec.js";
 import { createTreasurePlay } from "../systems/treasureRuntime.js";
 import { createAuthorshipLog, loadAuthorshipLog, saveAuthorshipLog, downloadJson } from "../systems/arcadeLog.js";
@@ -21,13 +21,14 @@ function who(author) {
 }
 
 /**
- * One editor overlay: pick a template or answer a few questions, then drag
- * the room, write English clues, test the game, and export the authorship log.
+ * Side panel for the arcade interior. The 2D game itself is drawn on the
+ * machine screen (see ArcadeRoom); this panel is where the child decides.
  */
 export class ArcadeEditor {
-  constructor({ root, lesson, assistant, onClose } = {}) {
+  constructor({ root, lesson, assistant, onClose, onScreen } = {}) {
     this.root = root;
     this.onClose = onClose || null;
+    this.onScreen = onScreen || null;
     this.assistant = assistant || createArcadeAssistant({ lesson });
     this.lesson = this.assistant.lesson;
     this.log = loadAuthorshipLog();
@@ -37,6 +38,7 @@ export class ArcadeEditor {
     this.questions = [];
     this.play = null;
     this.mode = "start";
+    this._screenMessage = "";
   }
 
   open() {
@@ -62,11 +64,11 @@ export class ArcadeEditor {
     const card = h("div", "arcade-card");
     const bar = h("div", "arcade-bar");
     bar.append(h("div", "arcade-kicker", "Arcade room"));
-    const close = h("button", "arcade-x", "×");
-    close.type = "button";
-    close.setAttribute("aria-label", "Close arcade");
-    close.addEventListener("click", () => this.close());
-    bar.append(close);
+    const exit = h("button", "arcade-quiet", "Exit");
+    exit.type = "button";
+    exit.setAttribute("aria-label", "Leave the arcade");
+    exit.addEventListener("click", () => this.close());
+    bar.append(exit);
     card.append(bar);
 
     if (this.mode === "start") card.append(this._start());
@@ -74,7 +76,9 @@ export class ArcadeEditor {
     else if (this.mode === "play") card.append(this._playView());
     else card.append(this._edit());
 
+    card.append(h("p", "arcade-frame", "Esc steps back outside."));
     this.root.append(card);
+    this._emitScreen();
   }
 
   _start() {
@@ -145,9 +149,15 @@ export class ArcadeEditor {
         for (const other of chips.querySelectorAll(".arcade-chip")) other.classList.remove("is-on");
         button.classList.add("is-on");
         this.log.add("chip", { questionId: q.id, chipId: chip.id, label: chip.label }, "child");
+        this._stage(q, chip, chip.label);
+        this._emitScreen();
       });
       chips.append(button);
     }
+    field.addEventListener("input", () => {
+      this._stage(q, null, field.value);
+      this._emitScreen();
+    });
     body.append(chips, field);
     const next = h("button", "arcade-go", this.questionIndex === this.questions.length - 1 ? "Make my game" : "Next");
     next.type = "button";
@@ -156,18 +166,26 @@ export class ArcadeEditor {
     return body;
   }
 
+  _stage(q, chip, typed) {
+    const text = String(typed || "").trim();
+    const usedChip = chip && text === chip.label;
+    if (q.id === "idea") this.answers.idea = text || chip?.label || "";
+    if (q.id === "keyPlace" && (usedChip || text)) {
+      this.answers.keyPlace = usedChip ? chip.place || chip.id : this._matchSpot(text);
+    }
+    if (q.id === "clue" && (usedChip || text)) {
+      this.answers.clue = usedChip ? chip.text || chip.label : text;
+      if (usedChip?.place) this.answers.treasurePlace = chip.place;
+      else this.answers.treasurePlace = this._matchSpot(text);
+    }
+  }
+
   _answer(q, chip, typed) {
     const text = String(typed || "").trim();
     if (!text && !chip) return;
     const usedChip = chip && text === chip.label;
     if (!usedChip && text) this.log.add("typed", { questionId: q.id, text }, "child");
-    if (q.id === "idea") this.answers.idea = text || chip?.label || "";
-    if (q.id === "keyPlace") this.answers.keyPlace = usedChip ? chip.place || chip.id : this._matchSpot(text);
-    if (q.id === "clue") {
-      this.answers.clue = usedChip ? chip.text || chip.label : text;
-      if (usedChip?.place) this.answers.treasurePlace = chip.place;
-      else this.answers.treasurePlace = this._matchSpot(text);
-    }
+    this._stage(q, chip, text);
     this.questionIndex += 1;
     if (this.questionIndex < this.questions.length) {
       this.questions = this.assistant.questions(this.answers);
@@ -214,7 +232,7 @@ export class ArcadeEditor {
     const body = h("div", "arcade-body arcade-workspace");
     const title = h("h2", "arcade-title", read(spec.title));
     body.append(title);
-    body.append(h("p", "arcade-lead", "Drag the stickers. You decide where the key and the treasure hide, the order, and the clues."));
+    body.append(h("p", "arcade-lead", "Drag the pictures on the screen. You decide where the key and the treasure hide, the order, and the clues."));
 
     const actions = h("div", "arcade-actions");
     actions.append(this._action("Play / Test", "arcade-go", () => this._beginPlay()));
@@ -226,7 +244,6 @@ export class ArcadeEditor {
     }));
     body.append(actions);
 
-    const room = this._room(spec, true);
     const side = h("div", "arcade-side");
 
     side.append(h("div", "arcade-label", "Stickers"));
@@ -242,6 +259,7 @@ export class ArcadeEditor {
     side.append(this._labeledField("Goal", read(spec.goal), authorOf(spec.goal), (value) => {
       spec.goal = { value, author: "child" };
       this.log.add("edit", { field: "goal", value }, "child");
+      this._emitScreen();
     }));
 
     side.append(this._spotSelect("Key hides", read(spec.obstacles[0].keyHidesIn), (id) => {
@@ -272,11 +290,7 @@ export class ArcadeEditor {
     side.append(this._clueField("Clue for the key", spec.clues[0]));
     side.append(this._clueField("Clue for the treasure", spec.clues[1]));
     side.append(h("p", "arcade-frame", `Lesson frame: ${this.lesson.grammar.frame}`));
-
-    const columns = h("div", "arcade-columns");
-    columns.append(room, side);
-    body.append(columns);
-    this._roomNode = room;
+    body.append(side);
     return body;
   }
 
@@ -326,6 +340,7 @@ export class ArcadeEditor {
       clue.author = "child";
       wrap.querySelector(".arcade-label").textContent = `${label} · you`;
       this.log.add("edit", { field: clue.id, value: clue.text }, "child");
+      this._emitScreen();
     });
     wrap.append(area);
     return wrap;
@@ -366,86 +381,28 @@ export class ArcadeEditor {
       }
       this.log.add("edit", { field: "sticker", value: sticker.id }, "child");
     }
-    if (this._roomNode) this._paintRoom(this._roomNode, spec, true);
+    this._emitScreen();
   }
 
-  _room(spec, editable) {
-    const room = h("div", `arcade-room room-${read(spec.scene.background) || "castle"}`);
-    this._paintRoom(room, spec, editable);
-    return room;
-  }
-
-  _paintRoom(room, spec, editable) {
-    room.className = `arcade-room room-${read(spec.scene.background) || "castle"}`;
-    room.replaceChildren();
-    const bg = BACKGROUNDS[read(spec.scene.background)] || BACKGROUNDS.castle;
-    room.append(h("div", "arcade-bg-label", bg.label));
-    const hero = STICKERS[read(spec.hero)] || STICKERS.ghost;
-    const mascot = h("div", "arcade-hero", hero.emoji);
-    mascot.title = hero.label;
-    room.append(mascot);
-    const keyIn = read(spec.obstacles[0].keyHidesIn);
-    const treasureIn = read(spec.obstacles[0].treasureHidesIn);
-    const lockId = read(spec.obstacles[0].lockId);
-    for (const object of spec.objects) {
-      const sticker = STICKERS[object.asset] || STICKERS.door;
-      const spot = h("button", "arcade-object");
-      spot.type = "button";
-      spot.style.left = `${object.x}%`;
-      spot.style.top = `${object.y}%`;
-      const tags = [];
-      if (object.id === keyIn) tags.push("key");
-      if (object.id === treasureIn) tags.push("treasure");
-      if (object.id === lockId) tags.push("lock");
-      spot.append(h("span", "arcade-emoji", sticker.emoji));
-      spot.append(h("span", "arcade-object-name", object.name));
-      if (tags.length && editable) spot.append(h("span", "arcade-tags", tags.join(" · ")));
-      if (editable) this._drag(spot, object);
-      else spot.addEventListener("click", () => this._onPlayClick(object.id));
-      room.append(spot);
-    }
-  }
-
-  _drag(spot, object) {
-    let start = null;
-    let moved = false;
-    const down = (event) => {
-      event.preventDefault();
-      const room = spot.parentElement.getBoundingClientRect();
-      start = { x: event.clientX, y: event.clientY, room };
-      moved = false;
-      spot.setPointerCapture?.(event.pointerId);
-    };
-    const move = (event) => {
-      if (!start) return;
-      const room = start.room;
-      const dx = event.clientX - start.x;
-      const dy = event.clientY - start.y;
-      if (dx * dx + dy * dy < 9) return;
-      moved = true;
-      object.x = Math.min(92, Math.max(8, ((event.clientX - room.left) / room.width) * 100));
-      object.y = Math.min(88, Math.max(12, ((event.clientY - room.top) / room.height) * 100));
-      spot.style.left = `${object.x}%`;
-      spot.style.top = `${object.y}%`;
-    };
-    const up = () => {
-      if (!start || !moved) {
-        start = null;
-        return;
-      }
-      start = null;
-      moved = false;
+  /** Drag on the machine screen. `commit` logs the drop. */
+  moveOnScreen(id, x, y, commit) {
+    if (this.mode !== "edit" || !this.spec) return false;
+    const object = this.spec.objects.find((item) => item.id === id);
+    if (!object) return false;
+    object.x = x;
+    object.y = y;
+    if (commit) {
       object.author = "child";
-      this.log.add("edit", { field: "move", id: object.id, x: Math.round(object.x), y: Math.round(object.y) }, "child");
-    };
-    spot.addEventListener("pointerdown", down);
-    spot.addEventListener("pointermove", move);
-    spot.addEventListener("pointerup", up);
+      this.log.add("edit", { field: "move", id, x: Math.round(x), y: Math.round(y) }, "child");
+    }
+    this._emitScreen();
+    return true;
   }
 
   _beginPlay() {
     this.play = createTreasurePlay(this.spec);
     this.mode = "play";
+    this._screenMessage = "Tap a thing on the screen.";
     this.log.add("play", { id: this.spec.id }, "child");
     this._render();
   }
@@ -456,9 +413,8 @@ export class ArcadeEditor {
     body.append(h("h2", "arcade-title", read(spec.title)));
     const clue = h("p", "arcade-clue", this.play.clueForStep() || read(spec.goal));
     body.append(clue);
-    const room = this._room(spec, false);
-    body.append(room);
-    const message = h("p", "arcade-message", "Tap a thing in the room.");
+    body.append(h("p", "arcade-lead", "Tap the pictures on the machine."));
+    const message = h("p", "arcade-message", this._screenMessage || "Tap a thing on the screen.");
     body.append(message);
     this._playClue = clue;
     this._playMessage = message;
@@ -472,12 +428,35 @@ export class ArcadeEditor {
     return body;
   }
 
+  hitPlay(objectId) {
+    if (this.mode !== "play") return false;
+    this._onPlayClick(objectId);
+    return true;
+  }
+
   _onPlayClick(objectId) {
     if (!this.play) return;
     const result = this.play.click(objectId);
+    this._screenMessage = result.message;
     if (this._playMessage) this._playMessage.textContent = result.message;
     if (this._playClue) this._playClue.textContent = this.play.clueForStep() || (result.won ? "You did it!" : this._playClue.textContent);
     this.log.add("play", { click: objectId, won: !!result.won, message: result.message }, "child");
+    this._emitScreen();
+  }
+
+  _emitScreen() {
+    let spec = null;
+    if (this.mode === "edit" || this.mode === "play") spec = this.spec;
+    else if (this.mode === "ask" && (this.answers.idea || this.answers.keyPlace || this.answers.clue)) {
+      spec = templateArcadeStitch(this.lesson, this.answers);
+    }
+    this.onScreen?.({
+      spec,
+      mode: this.mode,
+      message: this._screenMessage || "",
+      clue: this.mode === "play" && this.play ? (this.play.clueForStep() || "") : "",
+      won: !!this.play?.state?.won,
+    });
   }
 
   _save() {
