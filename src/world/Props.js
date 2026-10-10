@@ -1293,26 +1293,213 @@ function buildStarStone(seed = 0) {
   return g;
 }
 
-function buildTree(seed = 0) {
+// Shared clay palette so every tree stays in the diorama and we don't
+// allocate a new material per leaf.
+const WOOD = clay(0xc48955);
+const WOOD_DARK = clay(0x8d5a32);
+const LEAF_BRIGHT = clay(0x58c244);
+const LEAF_HI = clay(0x96e56a);
+const LEAF_DEEP = clay(0x348f30);
+const LEAF_LIME = clay(0xc6de55);
+const LEAF_LIME_MID = clay(0xa4c83c);
+const LEAF_LIME_DEEP = clay(0x6ea832);
+const GRASS = clay(0x4caf45);
+const GRASS_LT = clay(0x86d25a);
+const _UP = new THREE.Vector3(0, 1, 0);
+const _LIMB = new THREE.Vector3();
+
+/** A tapered branch from `from` to `to` in the parent's local space. */
+function addLimb(parent, from, to, rBase, rTip, mat) {
+  _LIMB.subVectors(to, from);
+  const len = _LIMB.length();
+  if (len < 1e-4) return null;
+  const limb = cyl(Math.max(rTip, 0.025), Math.max(rBase, 0.025), len, mat, 7);
+  limb.position.copy(from).add(to).multiplyScalar(0.5);
+  _LIMB.multiplyScalar(1 / len);
+  limb.quaternion.setFromUnitVectors(_UP, _LIMB);
+  parent.add(limb);
+  return limb;
+}
+
+function addRoots(parent, rng, n = 4) {
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + rng() * 0.35;
+    const from = new THREE.Vector3(Math.cos(a) * 0.1, 0.2, Math.sin(a) * 0.1);
+    const to = new THREE.Vector3(Math.cos(a) * (0.38 + rng() * 0.16), 0.02, Math.sin(a) * (0.38 + rng() * 0.16));
+    addLimb(parent, from, to, 0.13, 0.045, WOOD_DARK);
+  }
+}
+
+function addGrass(parent, rng, n = 6) {
+  for (let i = 0; i < n; i++) {
+    const a = rng() * Math.PI * 2;
+    const d = 0.18 + rng() * 0.4;
+    const tuft = cone(0.04 + rng() * 0.02, 0.14 + rng() * 0.12, rng() > 0.45 ? GRASS_LT : GRASS, 4);
+    tuft.position.set(Math.cos(a) * d, 0.05, Math.sin(a) * d);
+    tuft.rotation.z = (rng() - 0.5) * 0.55;
+    tuft.rotation.x = (rng() - 0.5) * 0.4;
+    parent.add(tuft);
+  }
+}
+
+/** Big rounded canopy with smaller clay bumps, like a hand-sculpted cloud. */
+function puffCluster(r, rng) {
   const g = new THREE.Group();
-  const rng = mulberry32(Math.floor(seed * 97) + 3);
-  const h = 1.3 + rng() * 0.6;
-  const trunk = cyl(0.16, 0.24, h, clay(0x9b6a43), 10);
-  trunk.position.y = h / 2;
-  g.add(trunk);
+  const main = blob(r, LEAF_BRIGHT, 1);
+  main.scale.set(1.06, 0.86, 1.02);
+  g.add(main);
+  const bumps = 6;
+  for (let i = 0; i < bumps; i++) {
+    const a = rng() * Math.PI * 2;
+    const elev = 0.15 + rng() * 1.15;
+    const dir = new THREE.Vector3(Math.cos(a) * Math.cos(elev), Math.sin(elev), Math.sin(a) * Math.cos(elev)).normalize();
+    const bump = blob(r * (0.26 + rng() * 0.16), dir.y > 0.45 ? LEAF_HI : dir.y < 0.05 ? LEAF_DEEP : LEAF_BRIGHT, 0);
+    bump.position.copy(dir).multiplyScalar(r * 0.76);
+    g.add(bump);
+  }
+  return g;
+}
+
+/** Dense layered leaves in yellow-green, tips pointing outward. */
+function leafBall(r, rng) {
+  const g = new THREE.Group();
+  const core = blob(r * 0.52, LEAF_LIME_DEEP, 1);
+  core.scale.set(1, 0.7, 1);
+  g.add(core);
+  const leaves = Math.round(14 + r * 26);
+  for (let i = 0; i < leaves; i++) {
+    const a = rng() * Math.PI * 2;
+    const elev = (rng() * 0.95 - 0.12) * Math.PI * 0.5;
+    const dir = new THREE.Vector3(
+      Math.cos(a) * Math.cos(elev),
+      Math.sin(elev) * 0.9 + 0.2,
+      Math.sin(a) * Math.cos(elev),
+    ).normalize();
+    const leaf = cone(r * 0.2, r * 0.4, dir.y > 0.55 ? LEAF_LIME : LEAF_LIME_MID, 5);
+    leaf.scale.set(1.2, 1, 0.4);
+    leaf.position.copy(dir).multiplyScalar(r * (0.42 + rng() * 0.5));
+    leaf.quaternion.setFromUnitVectors(_UP, dir);
+    leaf.rotateY(rng() * Math.PI);
+    g.add(leaf);
+  }
+  return g;
+}
+
+/**
+ * Chunky cloud tree: twisted trunk, root flares, and several puffy
+ * bright-green clusters (reference 1).
+ */
+function treeCloud(rng) {
+  const g = new THREE.Group();
+  const mid = new THREE.Vector3((rng() - 0.5) * 0.16, 0.52, (rng() - 0.5) * 0.16);
+  const top = new THREE.Vector3((rng() - 0.5) * 0.22, 1.02, (rng() - 0.5) * 0.14);
+  addLimb(g, new THREE.Vector3(0, 0.02, 0), mid, 0.34, 0.24, WOOD);
+  addLimb(g, mid, top, 0.22, 0.16, WOOD);
+  addRoots(g, rng, 4 + Math.floor(rng() * 2));
 
   const crown = new THREE.Group();
-  crown.position.y = h;
-  const foliageColor = rng() > 0.5 ? 0x7bbf6a : 0x6aa85c;
-  const f1 = blob(0.8 + rng() * 0.2, clay(foliageColor, { flat: true }), 1);
-  f1.position.y = 0.5;
-  crown.add(f1);
-  const f2 = blob(0.55, clay(0x8ccf78, { flat: true }), 1);
-  f2.position.set(0.4, 0.2, 0.2);
-  crown.add(f2);
-  crown.userData.sway = 0.05; // whole crown sways gently
+  crown.position.copy(top);
+  const clusters = 5;
+  for (let i = 0; i < clusters; i++) {
+    const a = (i / clusters) * Math.PI * 2 + rng() * 0.4;
+    const tip = new THREE.Vector3(Math.cos(a) * (0.28 + rng() * 0.32), 0.42 + rng() * 0.48, Math.sin(a) * (0.28 + rng() * 0.32));
+    addLimb(crown, new THREE.Vector3(0, 0.06, 0), tip, 0.13, 0.08, WOOD);
+    const puff = puffCluster(0.42 + rng() * 0.12, rng);
+    puff.position.copy(tip);
+    crown.add(puff);
+  }
+  const crest = new THREE.Vector3((rng() - 0.5) * 0.16, 0.95 + rng() * 0.15, (rng() - 0.5) * 0.16);
+  addLimb(crown, new THREE.Vector3(0, 0.2, 0), crest, 0.11, 0.07, WOOD);
+  const topPuff = puffCluster(0.5 + rng() * 0.08, rng);
+  topPuff.position.copy(crest);
+  crown.add(topPuff);
+  crown.userData.sway = 0.035;
   g.add(crown);
+  addGrass(g, rng, 7);
+  return g;
+}
 
+/**
+ * Leaning tree: a curved trunk, one side branch, and layered
+ * yellow-green leaf clusters (reference 2).
+ */
+function treeLean(rng) {
+  const g = new THREE.Group();
+  const lean = rng() > 0.5 ? 1 : -1;
+  const zSign = rng() > 0.5 ? 1 : -1;
+  const segs = 6;
+  const pts = [];
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs;
+    pts.push(new THREE.Vector3(
+      lean * (0.08 * t + 0.95 * t * t),
+      0.04 + t * 1.45,
+      zSign * Math.sin(t * Math.PI) * 0.16,
+    ));
+  }
+  for (let i = 0; i < segs; i++) {
+    const t0 = i / segs;
+    const t1 = (i + 1) / segs;
+    addLimb(g, pts[i], pts[i + 1], 0.3 * (1 - t0 * 0.62), 0.3 * (1 - t1 * 0.62), WOOD);
+  }
+
+  const from = pts[2];
+  const sideTip = from.clone().add(new THREE.Vector3(-lean * 0.58, 0.18, zSign * 0.16));
+  addLimb(g, from, sideTip, 0.1, 0.06, WOOD);
+  const side = new THREE.Group();
+  side.position.copy(sideTip);
+  side.add(leafBall(0.34, rng));
+  side.userData.sway = 0.05;
+  g.add(side);
+
+  const crown = new THREE.Group();
+  const end = pts[segs];
+  crown.position.set(end.x + lean * 0.12, end.y + 0.18, end.z);
+  crown.add(leafBall(0.72 + rng() * 0.08, rng));
+  crown.userData.sway = 0.03;
+  g.add(crown);
+  addGrass(g, rng, 5);
+  addRoots(g, rng, 3);
+  return g;
+}
+
+/** A shorter fork: two thick arms, each ending in one big puff. */
+function treeFork(rng) {
+  const g = new THREE.Group();
+  const top = new THREE.Vector3((rng() - 0.5) * 0.08, 0.62, (rng() - 0.5) * 0.08);
+  addLimb(g, new THREE.Vector3(0, 0.02, 0), top, 0.32, 0.2, WOOD);
+  addRoots(g, rng, 4);
+
+  const crown = new THREE.Group();
+  crown.position.copy(top);
+  const arms = [
+    new THREE.Vector3(-0.48, 0.72, 0.08),
+    new THREE.Vector3(0.5, 0.64, -0.06),
+    new THREE.Vector3(0.05, 0.95, 0.28),
+  ];
+  arms.forEach((tip, i) => {
+    const wobble = tip.clone();
+    wobble.x += (rng() - 0.5) * 0.12;
+    wobble.z += (rng() - 0.5) * 0.12;
+    addLimb(crown, new THREE.Vector3(0, 0.05, 0), wobble, i === 2 ? 0.09 : 0.14, 0.07, WOOD);
+    const puff = puffCluster(i === 2 ? 0.36 : 0.5 + rng() * 0.06, rng);
+    puff.position.copy(wobble);
+    crown.add(puff);
+  });
+  crown.userData.sway = 0.04;
+  g.add(crown);
+  addGrass(g, rng, 6);
+  return g;
+}
+
+function buildTree(seed = 0) {
+  const rng = mulberry32(Math.floor(seed * 97) + 3);
+  const kind = Math.floor(rng() * 3);
+  const model = kind === 0 ? treeCloud(rng) : kind === 1 ? treeLean(rng) : treeFork(rng);
+  const g = new THREE.Group();
+  model.rotation.y = rng() * Math.PI * 2;
+  model.scale.setScalar(0.84 + rng() * 0.32);
+  g.add(model);
   return g;
 }
 
