@@ -8,6 +8,7 @@ import { Props } from "../world/Props.js";
 import { Ambient } from "../world/Ambient.js";
 import { GardenSystem } from "../systems/GardenSystem.js";
 import { TvStudio } from "../systems/TvStudio.js";
+import { ArcadeRoom } from "../systems/ArcadeRoom.js";
 import { Pibo } from "../entities/Pibo.js";
 import { Ufo } from "../entities/Ufo.js";
 import { Galaxy } from "../world/Galaxy.js";
@@ -99,6 +100,11 @@ export class Game {
     this.ambient = new Ambient(this.scene, 10);
     this.galaxy = new Galaxy(this.scene);
     this.studio = new TvStudio(this.planet, { outdoorScreen: this.props.tvScreen });
+    this.arcadeRoom = new ArcadeRoom(this.canvas);
+    this.arcadeRoom.onPlay = (id) => this.ui.arcade?.hitPlay(id);
+    this.arcadeRoom.onMove = (id, x, y, commit) => this.ui.arcade?.moveOnScreen(id, x, y, commit);
+    this.ui.arcade.onScreen = (view) => this.arcadeRoom.show(view);
+    this.ui.onArcadeLeave = () => this._leaveArcade();
     this.collision = new Collision(this.planet.radius, collidersOf(LAYOUT));
     if (this.props.landingBeacon) this.props.landingBeacon.visible = false;
   }
@@ -180,6 +186,11 @@ export class Game {
   _maybeBootStudio() {
     try {
       const q = new URLSearchParams(window.location.search);
+      if (q.has("arcade")) {
+        this._goToArcade();
+        this._enterArcade();
+        return;
+      }
       if (!q.has("studio") && !q.has("dock")) return;
       const here = dirOf(LAYOUT.lighthousePad);
       this.pibo.placeAt(here, tangentToward(here, dirOf(LAYOUT.lighthouse)), this.collision);
@@ -187,10 +198,6 @@ export class Game {
       this.ui.hideIntro();
       this._frameCameraOnPibo();
       if (q.has("studio")) this._enterStudio();
-      if (q.has("arcade")) {
-        this._goToArcade();
-        this._enterArcade();
-      }
     } catch {
       return;
     }
@@ -198,6 +205,14 @@ export class Game {
 
   _frame() {
     const dt = Math.min(this.clock.getDelta(), 0.05);
+
+    if (this.arcadeRoom.active) {
+      this.arcadeRoom.update(dt);
+      this._handleArcadeInteraction();
+      this.input.endFrame();
+      this.renderer.render(this.arcadeRoom.scene, this.arcadeRoom.camera);
+      return;
+    }
 
     if (this.studio.active) {
       this.studio.update(dt);
@@ -441,6 +456,10 @@ export class Game {
     setTimeout(() => this.ui.showBeyond(), 8500);
   }
 
+  _handleArcadeInteraction() {
+    if (this.input.consume("Escape")) this._leaveArcade();
+  }
+
   _handleStudioInteraction() {
     if (this.ui.isIdeaOpen) {
       if (this.input.consume("Escape")) this.ui.closeIdeas();
@@ -516,12 +535,24 @@ export class Game {
   _enterArcade() {
     if (this.ui.isIdeaOpen) this.ui.closeIdeas();
     if (this.studio.active) this._leaveStudio();
+    if (this.arcadeRoom.active) this._leaveArcade();
     this.ui.closeModals();
     this.ui.closeCollection();
     this.started = true;
     this.ui.hideIntro();
+    this.arcadeRoom.enter();
     this.ui.openArcade();
-    this.ui.toast("You choose the obstacles. The arcade draws the pictures.", 2400);
+    this.renderer.setClearColor(0x14080c, 1);
+    this.ui.toast("The screen is yours. Make a game on it.", 2400);
+  }
+
+  _leaveArcade() {
+    if (!this.arcadeRoom.active && !this.ui.isArcadeOpen) return;
+    this.arcadeRoom.leave();
+    this.ui.closeArcade();
+    this.renderer.setClearColor(0x000000, 0);
+    this._frameCameraOnPibo();
+    this.ui.toast("Back outside the arcade", 2000);
   }
 
   _goToArcade() {
@@ -543,7 +574,7 @@ export class Game {
     this.ui.hideIntro();
     this.started = true;
     this._frameCameraOnPibo();
-    this.ui.toast("Arcade room. Press E to make a game.", 2800);
+    this.ui.toast("Arcade. Press E to step inside.", 2800);
   }
 
   _goToLighthouse() {
@@ -666,5 +697,6 @@ export class Game {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
     this.studio?.resize(w, h);
+    this.arcadeRoom?.resize(w, h);
   }
 }

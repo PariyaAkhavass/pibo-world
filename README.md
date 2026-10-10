@@ -45,7 +45,7 @@ connection the first time.
 - **Lighthouse studio** — a gold beam rises over the ocean from the moment you wake up. An on-screen marker labeled **Lighthouse Studio** points at it. Tap **Go to lighthouse** (top left) to stand on the dock without the pot-ship, then press **E**. You can still fly there: board the pot-ship and follow the same beam.
 - **Swimming** — the instant Pibo touches blue water it tips forward, lies face-down, and breaststrokes (both arms sweep out and back together, legs kick). Stepping onto grass or the lighthouse dock stands it upright and it walks again.
 - **Need an idea?** — inside the lighthouse studio. Rolls a tiny game prompt that stays inside the demo lesson (food words + “I like / I don’t like”). Lock a slot, reroll the rest, then **Use this idea** to drop the hint into the sentence box.
-- **Arcade room** — tap **Go to Arcade** (under Go to lighthouse), or use the map, then press **E** at the cabinet. Choose the treasure-hunt template or describe your idea with suggestion chips. You place the key, the lock, the treasure, the step order, and the English clues. **Play / Test** runs that game. **Save** keeps it in this browser. **Export log (JSON)** downloads the authorship log.
+- **Arcade room** — tap **Go to Arcade** (under Go to lighthouse), or use the map, then press **E** to step inside. The machine's screen shows your game as you choose a template or answer the idea chips. Drag pictures on the screen, set the key, the treasure, the order, and the English clues. **Play / Test** runs on that screen. **Exit** or **Esc** steps back outside. **Save** and **Export log (JSON)** work from the side panel.
 
 Walk to the three planter beds in the garden, plant a seed in each, wait a few seconds for
 them to grow, and inspect them to learn a tiny fact. Grow all three and watch what happens
@@ -74,7 +74,9 @@ no API key. Try it:
 
 ## Arcade room
 
-Kids make a point-and-click treasure hunt inside the 3D world. The child keeps the meaningful decisions: the idea, where the key and the treasure hide, the order of steps, and the English clues. The arcade only supplies stickers, positions, and the play rules. Nothing in the spec is executable code.
+Kids make a point-and-click treasure hunt inside the arcade. Press **E** at the outdoor cabinet and Pibo steps into the room. The camera sits on the machine's screen. A panel beside it is where the child chooses the template or answers chips, writes clues, and saves. The 2D game is drawn on the screen and updates as those choices change. **Play / Test** is played by tapping that screen. **Exit** or **Esc** returns outside.
+
+The child keeps the meaningful decisions: the idea, where the key and the treasure hide, the order of steps, and the English clues. The arcade only supplies stickers, positions, and the play rules. Nothing in the spec is executable code.
 
 A game is a JSON spec (`src/systems/gameSpec.js`). Every field records who wrote it: `child`, `ai`, `template`, or `teacher`. One runtime (`src/systems/treasureRuntime.js`) plays any treasure-hunt spec. The describe-your-idea path asks two or three questions with tap-to-pick chips and accepts a typed answer. Wording stays inside the same food lesson as the lighthouse (“I like / I don’t like”). `createArcadeAssistant({ stitch })` is the seam for a later model, matching `createIdeaGenerator({ stitch })`. The model would return a spec, not code, and mark art it invents as `author: "ai"`.
 
@@ -149,6 +151,8 @@ src/
     gameSpec.js     treasure-hunt spec: every field has an author tag
     arcadeAssistant.js  template questions + stitcher (LLM-swappable)
     treasureRuntime.js  shared 2D player for any treasure-hunt spec
+    ArcadeRoom.js   arcade interior; the machine screen shows the 2D game
+    arcadeScreen.js paints that screen from the current spec
     arcadeLog.js    authorship log for thesis export
   data/
     plants.js       the three plants + their one-line facts

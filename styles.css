@@ -241,6 +241,10 @@ html, body {
 .in-arcade .lighthouse-go,
 .in-arcade .arcade-go-btn,
 .in-arcade .lighthouse-marker { display: none; }
+.in-arcade .joystick {
+  visibility: hidden;
+  pointer-events: none;
+}
 .in-studio .toast { bottom: 40%; }
 .in-studio .joystick {
   visibility: hidden;
@@ -987,21 +991,25 @@ html, body {
 }
 .touch-ui .studio-chips,
 .touch-ui .studio-actions { justify-content: center; }
-/* Arcade room editor */
+/* Arcade interior panel — sits beside the machine, not over its screen */
+#ui > .arcade-overlay { pointer-events: none; }
 .arcade-overlay {
   position: absolute;
-  inset: 0;
-  z-index: 9;
-  display: grid;
-  place-items: center;
-  padding: 12px;
-  background: rgba(48, 32, 64, 0.35);
+  left: max(12px, env(safe-area-inset-left));
+  top: max(12px, env(safe-area-inset-top));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  width: min(320px, 34vw);
+  z-index: 6;
+  display: block;
+  padding: 0;
+  background: none;
 }
 .arcade-card {
-  width: min(920px, 96vw);
-  max-height: min(92vh, 840px);
+  pointer-events: auto;
+  width: 100%;
+  max-height: 100%;
   overflow: auto;
-  padding: 12px 16px 16px;
+  padding: 12px 14px 16px;
   background: var(--cream);
   border-radius: 22px;
   box-shadow: var(--shadow);
@@ -1046,7 +1054,7 @@ html, body {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  min-width: min(240px, 100%);
+  width: 100%;
   padding: 12px 14px;
   border: none;
   border-radius: 16px;
