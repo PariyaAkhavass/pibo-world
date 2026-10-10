@@ -503,8 +503,7 @@ export class ArcadeEditor {
       pre = h("pre", "arcade-log");
       this.root.querySelector(".arcade-card")?.append(pre);
     }
-    const tail = data.events.slice(-6);
-    pre.textContent = JSON.stringify({ version: data.version, events: tail }, null, 2);
+    pre.textContent = JSON.stringify({ version: data.version, events: data.events }, null, 2);
   }
 
   _toast(text) {

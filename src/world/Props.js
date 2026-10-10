@@ -522,12 +522,22 @@ function buildArcade() {
     g.add(stripe);
   }
 
-  const marquee = box(1.35, 0.32, 0.06, new THREE.MeshBasicMaterial({
+  const marquee = box(1.45, 0.38, 0.08, new THREE.MeshBasicMaterial({
     map: arcadeSignTexture(),
     color: 0xffffff,
   }));
-  marquee.position.set(0, 1.72, 0.58);
+  marquee.position.set(0, 1.78, 0.64);
   g.add(marquee);
+
+  const signPost = cyl(0.05, 0.07, 1.2, clay(0x8f6548), 8);
+  signPost.position.set(0.95, 0.6, 1.35);
+  g.add(signPost);
+  const yardSign = box(1.45, 0.48, 0.08, new THREE.MeshBasicMaterial({
+    map: arcadeSignTexture(),
+    color: 0xffffff,
+  }));
+  yardSign.position.set(0.95, 1.22, 1.35);
+  g.add(yardSign);
 
   const roof = box(1.7, 0.14, 1.2, clay(0x5a3d86));
   roof.position.y = 1.58;
