@@ -46,6 +46,15 @@ export class Props {
     this._collectTwinkles(planetarium);
 
     P.placeOnSurface(shade(buildCafe()), dirOf(LAYOUT.cafe), { yaw: LAYOUT.cafe.yaw });
+
+    const arcade = buildArcade();
+    const arcadeDir = dirOf(LAYOUT.arcade);
+    P.placeOnSurface(shade(arcade), arcadeDir);
+    surfaceQuaternion(
+      arcadeDir,
+      tangentToward(arcadeDir, dirOf(LAYOUT.arcadeDoor)),
+      arcade.quaternion
+    );
     P.placeOnSurface(shade(buildLibrary()), dirOf(LAYOUT.library), { yaw: LAYOUT.library.yaw });
     P.placeOnSurface(shade(buildWindmill()), dirOf(LAYOUT.windmill), { yaw: LAYOUT.windmill.yaw });
     P.placeOnSurface(shade(buildWell()), dirOf(LAYOUT.well), { yaw: LAYOUT.well.yaw });
@@ -441,6 +450,94 @@ function buildPlanetarium(lightRefs) {
   beam.position.y = 1.25;
   beam.rotation.x = Math.PI;
   g.add(beam);
+
+  return g;
+}
+
+function arcadeSignTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+  const paint = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#5a3d86";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fff6ea";
+    ctx.font = "700 36px Fredoka, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("ARCADE", 128, 34);
+  };
+  paint();
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(() => {
+      paint();
+      tex.needsUpdate = true;
+    });
+  }
+  return tex;
+}
+
+/** Enterable cabinet. Local +Z is the door, aimed at the approach spot. */
+function buildArcade() {
+  const g = new THREE.Group();
+
+  const slab = cyl(1.35, 1.45, 0.12, clay(0x6b4c9a), 8);
+  slab.position.y = 0.06;
+  g.add(slab);
+
+  const body = box(1.55, 1.35, 1.05, clay(0x7b5ea7));
+  body.position.y = 0.8;
+  g.add(body);
+
+  const screen = box(0.92, 0.58, 0.05, new THREE.MeshBasicMaterial({ color: 0x7ee7ff }));
+  screen.position.set(0.12, 1.05, 0.56);
+  g.add(screen);
+
+  const bezel = box(1.05, 0.7, 0.04, clay(0x3d3158));
+  bezel.position.set(0.12, 1.05, 0.53);
+  g.add(bezel);
+
+  const stick = ball(0.07, clay(0xf26f6f), 10);
+  stick.position.set(0.48, 0.62, 0.58);
+  g.add(stick);
+  const stickPost = cyl(0.025, 0.03, 0.1, clay(0xfff0c7), 8);
+  stickPost.position.set(0.48, 0.52, 0.56);
+  g.add(stickPost);
+
+  const door = box(0.36, 0.62, 0.06, clay(0xffc7a3));
+  door.position.set(-0.42, 0.4, 0.56);
+  g.add(door);
+  const knob = ball(0.04, clay(0xf5d06f), 8);
+  knob.position.set(-0.3, 0.38, 0.6);
+  g.add(knob);
+
+  for (let i = 0; i < 6; i++) {
+    const stripe = box(0.24, 0.1, 0.36, i % 2 ? clay(0xf26f6f) : clay(0xfff0c7));
+    stripe.position.set(-0.6 + i * 0.24, 1.52, 0.62);
+    stripe.rotation.x = -0.4;
+    g.add(stripe);
+  }
+
+  const marquee = box(1.35, 0.32, 0.06, new THREE.MeshBasicMaterial({
+    map: arcadeSignTexture(),
+    color: 0xffffff,
+  }));
+  marquee.position.set(0, 1.72, 0.58);
+  g.add(marquee);
+
+  const roof = box(1.7, 0.14, 1.2, clay(0x5a3d86));
+  roof.position.y = 1.58;
+  g.add(roof);
+
+  for (let i = 0; i < 5; i++) {
+    const bulb = ball(0.055, new THREE.MeshBasicMaterial({ color: i % 2 ? 0xfff3a0 : 0xff9a76 }), 8);
+    bulb.position.set(-0.5 + i * 0.25, 1.92, 0.42);
+    g.add(bulb);
+  }
 
   return g;
 }

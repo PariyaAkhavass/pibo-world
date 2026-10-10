@@ -4,6 +4,7 @@ import { lockedLabel } from "../data/planets.js";
 import { Joystick } from "./Joystick.js";
 import { IdeaPanel } from "./IdeaPanel.js";
 import { WorldMap } from "./WorldMap.js";
+import { ArcadeEditor } from "./ArcadeEditor.js";
 
 /**
  * Thin controller over the HTML overlay. Keeps the DOM out of gameplay code:
@@ -45,6 +46,7 @@ export class UI {
       studioStatus: document.getElementById("studio-status"),
       studioIdea: document.getElementById("studio-idea"),
       lighthouseGo: document.getElementById("lighthouse-go"),
+      arcadeGo: document.getElementById("arcade-go"),
       mapBtn: document.getElementById("map-btn"),
       lighthouseMarker: document.getElementById("lighthouse-marker"),
       lighthouseDistance: document.getElementById("lighthouse-distance"),
@@ -60,6 +62,13 @@ export class UI {
       onTravel: (id) => this.onMapTravel?.(id),
       onLocked: (planet) => this.toast(`${planet.name} — ${lockedLabel(planet)}`, 1800),
       onClose: () => this._syncActionBtn(),
+    });
+    this.arcade = new ArcadeEditor({
+      root: document.getElementById("arcade-overlay"),
+      onClose: () => {
+        document.documentElement.classList.remove("in-arcade");
+        this._syncActionBtn();
+      },
     });
     this.lastIdea = null;
 
@@ -79,6 +88,7 @@ export class UI {
 
     this.el.collectionBtn.addEventListener("click", () => this.toggleCollection());
     this.el.lighthouseGo?.addEventListener("click", () => this.onGoToLighthouse?.());
+    this.el.arcadeGo?.addEventListener("click", () => this.onGoToArcade?.());
     this.el.mapBtn?.addEventListener("click", () => {
       if (this.isMapOpen) this.closeMap();
       else this.openMap();
@@ -142,6 +152,10 @@ export class UI {
 
   _onAction() {
     if (!this.input) return;
+    if (this.isArcadeOpen) {
+      this.closeArcade();
+      return;
+    }
     if (this.isMapOpen) {
       this.closeMap();
       return;
@@ -159,7 +173,7 @@ export class UI {
   _syncActionBtn() {
     const btn = this.el.actionBtn;
     if (!btn) return;
-    if (this.isMapOpen || this.isIdeaOpen || this.isStudioOpen || this.isModalOpen) {
+    if (this.isArcadeOpen || this.isMapOpen || this.isIdeaOpen || this.isStudioOpen || this.isModalOpen) {
       btn.textContent = "back";
       btn.classList.add("close-mode");
       btn.classList.remove("ready");
@@ -275,6 +289,25 @@ export class UI {
     this.closePanel();
     this.closeFact();
     this.closeMap();
+    this.closeArcade();
+  }
+
+  /* arcade editor -------------------------------------------------- */
+  get isArcadeOpen() {
+    return !!this.arcade?.isOpen;
+  }
+
+  openArcade() {
+    this.closeMap();
+    this.closeCollection();
+    this.arcade?.open();
+    document.documentElement.classList.add("in-arcade");
+    this.hidePrompt();
+    this._syncActionBtn();
+  }
+
+  closeArcade() {
+    this.arcade?.close();
   }
 
   /* world map ------------------------------------------------------ */
@@ -299,7 +332,7 @@ export class UI {
   setLighthouseGuide({ hidden, x = 0, y = 0, distance = 0, rotation = 0 } = {}) {
     const marker = this.el.lighthouseMarker;
     const go = this.el.lighthouseGo;
-    const conceal = !!hidden || this.isStudioOpen;
+    const conceal = !!hidden || this.isStudioOpen || this.isArcadeOpen;
     if (marker) {
       marker.classList.toggle("hidden", conceal);
       marker.setAttribute("aria-hidden", conceal ? "true" : "false");
@@ -385,6 +418,7 @@ export class UI {
 
   openStudio({ onGenerate, onLeave } = {}) {
     this.closeMap();
+    this.closeArcade();
     this._onStudioGenerate = onGenerate || null;
     this._onStudioLeave = onLeave || null;
     this._studioBusy = false;

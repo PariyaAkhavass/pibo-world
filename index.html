@@ -23,6 +23,7 @@
   <!-- Minimal UI overlay. The planet itself is the interface. -->
   <div id="ui">
     <button type="button" id="lighthouse-go" class="lighthouse-go">Go to lighthouse</button>
+    <button type="button" id="arcade-go" class="arcade-go-btn">Go to Arcade</button>
     <button type="button" id="map-btn" class="map-btn" aria-haspopup="dialog" aria-controls="map-overlay" aria-expanded="false">
       <span class="map-btn-icon" aria-hidden="true">🗺️</span>
       <span>Map</span>
@@ -125,6 +126,9 @@
         <div class="map-galaxy" data-map-galaxy></div>
       </div>
     </div>
+
+    <!-- Arcade room. Kids design a 2D game; the runtime only plays a spec. -->
+    <div id="arcade-overlay" class="arcade-overlay hidden" role="dialog" aria-modal="true" aria-hidden="true"></div>
 
     <!-- Collection button + drawer -->
     <button id="collection-btn" class="collection-btn" title="Your collection">🪴</button>

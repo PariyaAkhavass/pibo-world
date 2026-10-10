@@ -21,6 +21,9 @@ export const LAYOUT = {
   pond: { lat: 33, lon: -158 },
   landing: { lat: 36, lon: 66 },
   ufo: { lat: 36, lon: 66 },
+  // arcade cabinet on the village grass, door one step downhill so E is outside the walls
+  arcade: { lat: 18, lon: 168, yaw: 0.2 },
+  arcadeDoor: { lat: 30, lon: 168 },
   // striped lighthouse in the middle of the open ocean (south of the village cap)
   lighthouse: { lat: 110, lon: 82, yaw: 0.45 },
   // signs that point across the water, including one in the opening view
@@ -131,6 +134,7 @@ export function collidersOf(layout = LAYOUT) {
   add(layout.observatory, 2.0);
   add(layout.planetarium, 1.65);
   add(layout.cafe, 1.55);
+  add(layout.arcade, 1.25);
   add(layout.library, 1.35);
   add(layout.windmill, 1.35);
   add(layout.well, 1.0);
