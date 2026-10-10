@@ -991,188 +991,268 @@ html, body {
 }
 .touch-ui .studio-chips,
 .touch-ui .studio-actions { justify-content: center; }
-/* Arcade interior panel — sits beside the machine, not over its screen */
+/* Arcade creation UI sits on the machine screen. Exit stays a small window control. */
 #ui > .arcade-overlay { pointer-events: none; }
+.in-arcade .mobile-controls { display: none !important; }
+.in-arcade .toast {
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  bottom: auto;
+  left: auto;
+  transform: none;
+  max-width: min(280px, 46vw);
+}
 .arcade-overlay {
   position: absolute;
-  left: max(12px, env(safe-area-inset-left));
-  top: max(12px, env(safe-area-inset-top));
-  bottom: max(12px, env(safe-area-inset-bottom));
-  width: min(320px, 34vw);
+  inset: 0;
   z-index: 6;
   display: block;
   padding: 0;
   background: none;
 }
-.arcade-card {
+.arcade-exit {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  left: max(10px, env(safe-area-inset-left));
+  z-index: 8;
   pointer-events: auto;
-  width: 100%;
-  max-height: 100%;
-  overflow: auto;
-  padding: 12px 14px 16px;
-  background: var(--cream);
-  border-radius: 22px;
-  box-shadow: var(--shadow);
-  user-select: text;
-  touch-action: auto;
-}
-.arcade-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.arcade-kicker {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #7b5ea7;
-}
-.arcade-x {
-  width: 36px;
-  height: 36px;
+  min-height: 44px;
+  padding: 8px 16px;
   border: none;
-  border-radius: 50%;
-  background: #fff;
+  border-radius: 999px;
+  background: #fffaf6;
   color: var(--ink);
-  font-size: 22px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 18px;
+  box-shadow: 0 4px 0 rgba(90, 60, 40, 0.12), var(--shadow);
   cursor: pointer;
 }
-.arcade-title { margin: 6px 0 4px; font-size: 24px; line-height: 1.15; }
-.arcade-lead, .arcade-frame, .arcade-step { margin: 0 0 8px; color: var(--ink-soft); font-size: 14px; }
-.arcade-choices, .arcade-actions, .arcade-chips, .arcade-stickers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.arcade-screen {
+  position: absolute;
+  z-index: 7;
+  container-type: size;
+  font-size: 16px;
+  border-radius: 18px;
+  overflow: hidden;
+  color: var(--ink);
+  touch-action: auto;
+  user-select: text;
 }
-.arcade-choice, .arcade-chip, .arcade-sticker, .arcade-go, .arcade-quiet, .arcade-textbtn, .arcade-mini, .arcade-object {
+.arcade-body, .arcade-dock {
+  font-size: clamp(15px, 5.4cqh, 22px);
+}
+.arcade-screen.is-form {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  background: #fff6ee;
+  overflow: hidden;
+}
+.arcade-screen.is-stage {
+  pointer-events: none;
+  background: none;
+  overflow: visible;
+}
+.arcade-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  padding: 0.65em 0.7em 0.7em;
+  box-sizing: border-box;
+}
+.arcade-title {
+  margin: 0;
+  font-size: 1.35em;
+  line-height: 1.15;
+}
+.arcade-lead, .arcade-step {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.72em;
+  font-weight: 600;
+}
+.arcade-choices, .arcade-chips, .arcade-order {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.arcade-type { flex: 0 0 auto; max-height: 5.2em; }
+.arcade-chips.is-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  align-content: start;
+}
+.arcade-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.35em;
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  padding-top: 0.2em;
+  background: #fff6ee;
+}
+.arcade-choice, .arcade-chip, .arcade-go, .arcade-quiet, .arcade-mini, .arcade-choice-inline, .arcade-menu-btn, .arcade-menu-item {
   font-family: inherit;
   cursor: pointer;
+  touch-action: manipulation;
 }
-.arcade-choice {
+.arcade-choice, .arcade-chip, .arcade-go, .arcade-quiet, .arcade-choice-inline {
+  border: none;
+  border-radius: 0.7em;
+  font-weight: 700;
+  font-size: 1em;
+  line-height: 1.2;
+}
+.arcade-choice, .arcade-chip {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 0.15em;
   width: 100%;
-  padding: 12px 14px;
+  padding: 0.55em 0.7em;
+  text-align: left;
+}
+.arcade-choice { background: #7b5ea7; color: #fffaf6; }
+.arcade-choice-alt { background: #e07a55; }
+.arcade-choice-quiet { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 3px #e4d3c4; }
+.arcade-choice-note { font-weight: 600; font-size: 0.62em; opacity: 0.9; }
+.arcade-chip, .arcade-quiet, .arcade-choice-inline {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 3px #eadfce;
+}
+.arcade-chip.is-on { box-shadow: inset 0 0 0 4px #7b5ea7; background: #f4ecff; }
+.arcade-go {
+  padding: 0.55em 0.8em;
+  background: #7bbf6a;
+  color: #243022;
+}
+.arcade-quiet, .arcade-choice-inline { padding: 0.55em 0.75em; }
+.arcade-actions > * { flex: 1 1 30%; }
+.arcade-dock .arcade-actions { flex-wrap: nowrap; }
+.arcade-dock .arcade-actions > * {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-left: 0.35em;
+  padding-right: 0.35em;
+}
+.arcade-type, .arcade-input {
+  width: 100%;
   border: none;
-  border-radius: 16px;
+  border-radius: 0.7em;
+  padding: 0.55em 0.7em;
+  font-family: inherit;
+  font-size: max(16px, 0.85em);
+  color: var(--ink);
+  background: #fff;
+  box-shadow: inset 0 0 0 3px #eadfce;
+  resize: vertical;
+}
+.arcade-dock {
+  pointer-events: auto;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--chrome, 0.28) * 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25em;
+  padding: 0.4em 0.6em;
+  background: #fff6ee;
+  overflow: auto;
+}
+.arcade-dock-title, .arcade-clue, .arcade-message {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.arcade-dock-title { font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arcade-clue { font-size: 0.85em; }
+.arcade-message { font-size: 0.72em; color: var(--ink-soft); }
+.arcade-message.is-won { color: #2f6b32; font-size: 1em; }
+.arcade-step-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4em;
+  padding: 0.4em 0.55em;
+  border-radius: 0.7em;
+  background: #fff;
+  font-weight: 700;
+  font-size: 0.8em;
+}
+.arcade-mini {
+  border: none;
+  border-radius: 999px;
+  padding: 0.35em 0.7em;
   background: #7b5ea7;
   color: #fffaf6;
   font-weight: 700;
-  font-size: 16px;
-  text-align: left;
+  font-size: 0.95em;
 }
-.arcade-choice-alt { background: #e07a55; }
-.arcade-choice-note { font-weight: 500; font-size: 12px; opacity: 0.9; }
-.arcade-textbtn, .arcade-quiet, .arcade-mini {
+.arcade-menu {
+  position: absolute;
+  top: 0.35em;
+  right: 0.35em;
+  z-index: 2;
+  pointer-events: auto;
+}
+.arcade-menu-btn, .arcade-menu-item {
   border: none;
   border-radius: 999px;
-  background: #fff;
+  background: #fffaf6;
   color: var(--ink);
   font-weight: 700;
-}
-.arcade-textbtn, .arcade-quiet { padding: 8px 12px; }
-.arcade-mini { padding: 2px 8px; font-size: 12px; }
-.arcade-go {
-  border: none;
-  border-radius: 999px;
-  padding: 10px 14px;
-  background: #7bbf6a;
-  color: #243022;
-  font-weight: 700;
-}
-.arcade-chip, .arcade-sticker {
-  border: none;
-  border-radius: 999px;
-  padding: 8px 12px;
-  background: #fff;
-  color: var(--ink);
-  font-weight: 600;
-}
-.arcade-chip.is-on, .arcade-sticker:focus { outline: 3px solid #7b5ea7; }
-.arcade-type, .arcade-input {
-  width: 100%;
-  margin-top: 6px;
-  border: none;
-  border-radius: 12px;
-  padding: 8px 10px;
-  font-family: inherit;
   font-size: 14px;
-  color: var(--ink);
-  background: #fff;
+  box-shadow: var(--shadow);
 }
-.arcade-columns {
-  display: grid;
-  grid-template-columns: minmax(240px, 1.15fr) minmax(220px, 0.85fr);
-  gap: 14px;
-  margin-top: 10px;
-}
-.arcade-room {
-  position: relative;
-  min-height: 280px;
-  border-radius: 18px;
-  overflow: hidden;
-}
-.room-castle { background: linear-gradient(#2e2448, #7b5ea7 42%, #d7c4ef 100%); }
-.room-garden { background: linear-gradient(#b7e4ff, #d7f0b8 48%, #7bbf6a 100%); }
-.arcade-bg-label {
+.arcade-menu-btn { padding: 6px 12px; }
+.arcade-menu-panel {
   position: absolute;
-  left: 10px;
-  top: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fffaf6;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-}
-.arcade-hero {
-  position: absolute;
-  left: 50%;
-  top: 18%;
-  transform: translateX(-50%);
-  font-size: 42px;
-}
-.arcade-object {
-  position: absolute;
-  transform: translate(-50%, -50%);
+  top: calc(100% + 6px);
+  right: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  border: none;
-  background: rgba(255, 250, 240, 0.88);
-  border-radius: 14px;
-  padding: 4px 6px;
-  color: var(--ink);
-  touch-action: none;
+  gap: 6px;
+  min-width: 148px;
 }
-.arcade-emoji { font-size: 26px; line-height: 1; }
-.arcade-object-name, .arcade-tags { font-size: 11px; font-weight: 700; }
-.arcade-tags { color: #7b5ea7; }
-.arcade-side { display: flex; flex-direction: column; gap: 8px; }
-.arcade-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
-.arcade-step-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; }
-.arcade-clue, .arcade-message { font-weight: 600; }
+.arcade-menu-item { padding: 8px 12px; text-align: left; }
 .arcade-log {
-  margin: 10px 0 0;
-  padding: 8px;
-  max-height: 140px;
+  margin: 0;
+  padding: 0.6em;
+  max-height: 50cqh;
   overflow: auto;
-  border-radius: 12px;
+  border-radius: 0.7em;
   background: #fff;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.35;
   white-space: pre-wrap;
 }
 .arcade-toast {
-  margin-top: 8px;
+  position: absolute;
+  left: 0.6em;
+  right: 0.6em;
+  bottom: 0.5em;
+  padding: 0.4em 0.6em;
+  border-radius: 0.7em;
+  background: #e7f6df;
+  color: #2f6b32;
   font-weight: 700;
-  color: #3d6b34;
+  font-size: 0.75em;
+  pointer-events: none;
 }
-@media (max-width: 720px) {
-  .arcade-columns { grid-template-columns: 1fr; }
-}
+.is-stage .arcade-toast { bottom: calc(var(--chrome, 0.28) * 100% + 0.4em); }
 
 .touch-ui .map-btn {
   top: max(18px, env(safe-area-inset-top));

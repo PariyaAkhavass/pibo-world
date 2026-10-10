@@ -1,10 +1,12 @@
 import { STICKERS, HIDE_SPOTS } from "../data/arcadeStickers.js";
 import { createArcadeAssistant, templateArcadeStitch } from "../systems/arcadeAssistant.js";
-import { read, authorOf, normalizeSteps, normalizeSpec } from "../systems/gameSpec.js";
+import { read, normalizeSteps, normalizeSpec } from "../systems/gameSpec.js";
 import { createTreasurePlay } from "../systems/treasureRuntime.js";
-import { createAuthorshipLog, loadAuthorshipLog, saveAuthorshipLog, downloadJson } from "../systems/arcadeLog.js";
+import { loadAuthorshipLog, saveAuthorshipLog, downloadJson } from "../systems/arcadeLog.js";
 
 const SAVE_KEY = "pibo.arcade.spec";
+const EDIT_STEPS = ["sticker", "goal", "key", "treasure", "order", "clue0", "clue1"];
+const STICKER_PICKS = ["ghost", "cat", "door", "bed", "tree", "chest", "painting"];
 
 function h(tag, className, text) {
   const node = document.createElement(tag);
@@ -13,16 +15,10 @@ function h(tag, className, text) {
   return node;
 }
 
-function who(author) {
-  if (author === "child") return "you";
-  if (author === "ai") return "helper";
-  if (author === "teacher") return "teacher";
-  return "starter";
-}
-
 /**
- * Side panel for the arcade interior. The 2D game itself is drawn on the
- * machine screen (see ArcadeRoom); this panel is where the child decides.
+ * Creation UI drawn on top of the arcade machine's screen. One step at a
+ * time: start choices, guided questions, then a big preview with play and
+ * change steps. Save, the authorship log, and Export JSON stay in a menu.
  */
 export class ArcadeEditor {
   constructor({ root, lesson, assistant, onClose, onScreen } = {}) {
@@ -38,13 +34,23 @@ export class ArcadeEditor {
     this.questions = [];
     this.play = null;
     this.mode = "start";
+    this.editStep = null;
+    this.menuOpen = false;
+    this.showLog = false;
     this._screenMessage = "";
+    this._rect = null;
+    this._chromeSent = -1;
+    this._pendingToast = "";
+    this.screenEl = null;
   }
 
   open() {
     this.root.classList.remove("hidden");
     this.root.setAttribute("aria-hidden", "false");
     this.mode = "start";
+    this.editStep = null;
+    this.menuOpen = false;
+    this.showLog = false;
     this._render();
   }
 
@@ -59,47 +65,86 @@ export class ArcadeEditor {
     return this.root && !this.root.classList.contains("hidden");
   }
 
+  /** Move the on-screen UI so it sits inside the machine's display. */
+  place(rect) {
+    if (!rect || rect.width < 24 || rect.height < 24) return;
+    this._rect = rect;
+    const chrome = this._chrome();
+    this._applyPlace();
+    if (chrome !== this._chromeSent) {
+      this._chromeSent = chrome;
+      this._emitScreen();
+    }
+  }
+
+  _chrome() {
+    const height = this._rect?.height || 420;
+    if (this.showLog || this.editStep) return 0;
+    if (this.mode === "play") return Math.min(0.42, Math.max(0.32, 118 / height));
+    if (this.mode === "edit") return Math.min(0.36, Math.max(0.26, 92 / height));
+    return 0;
+  }
+
+  _applyPlace() {
+    const rect = this._rect;
+    const screen = this.screenEl;
+    if (!rect || !screen) return;
+    screen.style.left = `${rect.left}px`;
+    screen.style.top = `${rect.top}px`;
+    screen.style.width = `${rect.width}px`;
+    screen.style.height = `${rect.height}px`;
+    screen.style.setProperty("--chrome", String(this._chrome()));
+  }
+
   _render() {
     this.root.replaceChildren();
-    const card = h("div", "arcade-card");
-    const bar = h("div", "arcade-bar");
-    bar.append(h("div", "arcade-kicker", "Arcade room"));
-    const exit = h("button", "arcade-quiet", "Exit");
+    const exit = h("button", "arcade-exit", "Exit");
     exit.type = "button";
     exit.setAttribute("aria-label", "Leave the arcade");
     exit.addEventListener("click", () => this.close());
-    bar.append(exit);
-    card.append(bar);
+    this.root.append(exit);
 
-    if (this.mode === "start") card.append(this._start());
-    else if (this.mode === "ask") card.append(this._ask());
-    else if (this.mode === "play") card.append(this._playView());
-    else card.append(this._edit());
+    const stage = this.mode === "edit" || this.mode === "play";
+    const covered = this.showLog || !!this.editStep || !stage;
+    const screen = h("div", `arcade-screen ${covered ? "is-form" : "is-stage"}`);
+    screen.dataset.mode = this.showLog ? "log" : (this.editStep || this.mode);
+    this.screenEl = screen;
 
-    card.append(h("p", "arcade-frame", "Esc steps back outside."));
-    this.root.append(card);
+    if (this.showLog) screen.append(this._logView());
+    else if (this.mode === "start") screen.append(this._start());
+    else if (this.mode === "ask") screen.append(this._ask());
+    else if (this.mode === "play") screen.append(this._playDock());
+    else if (this.editStep) screen.append(this._editStep());
+    else screen.append(this._editDock());
+
+    if ((this.mode === "edit" || this.mode === "play") && !this.showLog) screen.append(this._menu());
+    if (this._pendingToast) {
+      screen.append(h("div", "arcade-toast", this._pendingToast));
+      this._pendingToast = "";
+    }
+    this.root.append(screen);
+    this._applyPlace();
     this._emitScreen();
   }
 
   _start() {
     const body = h("div", "arcade-body");
     body.append(h("h2", "arcade-title", "Make a tiny game"));
-    body.append(h("p", "arcade-lead", "You choose the goal, the obstacles, and the English clues. The arcade draws the pictures."));
     const choices = h("div", "arcade-choices");
-    const template = h("button", "arcade-choice", "Choose a game template");
+    const template = h("button", "arcade-choice", "Choose a template");
     template.type = "button";
-    const templateNote = h("span", "arcade-choice-note", "Treasure hunt · a ghost in a castle");
-    template.append(templateNote);
+    template.append(h("span", "arcade-choice-note", "Treasure hunt"));
     template.addEventListener("click", () => this._chooseTemplate());
-    const describe = h("button", "arcade-choice arcade-choice-alt", "Describe your game idea");
+    const describe = h("button", "arcade-choice arcade-choice-alt", "Describe your idea");
     describe.type = "button";
-    describe.append(h("span", "arcade-choice-note", "Answer a few questions, then edit"));
+    describe.append(h("span", "arcade-choice-note", "Answer a few questions"));
     describe.addEventListener("click", () => this._startQuestions());
     choices.append(template, describe);
     body.append(choices);
     if (this._savedSpec()) {
-      const cont = h("button", "arcade-textbtn", "Continue your saved game");
+      const cont = h("button", "arcade-choice arcade-choice-quiet", "Continue");
       cont.type = "button";
+      cont.append(h("span", "arcade-choice-note", "Your saved game"));
       cont.addEventListener("click", () => this._continue());
       body.append(cont);
     }
@@ -111,6 +156,7 @@ export class ArcadeEditor {
     this.log.add("template-chosen", { id: "ghost-castle", title: read(this.spec.title) }, "child");
     this.log.add("prompt", { id: "template", prompt: "Choose a game template" }, "template");
     this.mode = "edit";
+    this.editStep = null;
     this._render();
   }
 
@@ -132,14 +178,13 @@ export class ArcadeEditor {
   _ask() {
     const q = this.questions[this.questionIndex];
     const body = h("div", "arcade-body");
-    body.append(h("p", "arcade-step", `Question ${this.questionIndex + 1} of ${this.questions.length}`));
+    body.append(h("p", "arcade-step", `${this.questionIndex + 1} of ${this.questions.length}`));
     body.append(h("h2", "arcade-title", q.prompt));
-    if (q.hint) body.append(h("p", "arcade-lead", q.hint));
     const chips = h("div", "arcade-chips");
     let picked = null;
     const field = h("textarea", "arcade-type");
     field.rows = 2;
-    field.placeholder = q.placeholder || "Type your own answer";
+    field.placeholder = q.placeholder || "Type your own";
     for (const chip of q.chips) {
       const button = h("button", "arcade-chip", chip.label);
       button.type = "button";
@@ -206,6 +251,7 @@ export class ArcadeEditor {
   async _finishAssistant() {
     this.spec = await this.assistant.finish(this.answers);
     this.mode = "edit";
+    this.editStep = null;
     this._render();
   }
 
@@ -215,6 +261,7 @@ export class ArcadeEditor {
     this.spec = normalizeSpec(saved, this.lesson);
     this.log.add("edit", { field: "continue", id: this.spec.id }, "child");
     this.mode = "edit";
+    this.editStep = null;
     this._render();
   }
 
@@ -227,70 +274,191 @@ export class ArcadeEditor {
     }
   }
 
-  _edit() {
+  _editDock() {
     const spec = this.spec;
-    const body = h("div", "arcade-body arcade-workspace");
-    const title = h("h2", "arcade-title", read(spec.title));
-    body.append(title);
-    body.append(h("p", "arcade-lead", "Drag the pictures on the screen. You decide where the key and the treasure hide, the order, and the clues."));
+    const dock = h("div", "arcade-dock");
+    dock.append(h("p", "arcade-dock-title", read(spec.title)));
+    dock.append(h("p", "arcade-lead", "Drag the pictures."));
+    const actions = h("div", "arcade-actions");
+    actions.append(this._action("Play", "arcade-go", () => this._beginPlay()));
+    actions.append(this._action("Change", "arcade-choice-inline", () => {
+      this.editStep = EDIT_STEPS[0];
+      this.menuOpen = false;
+      this._render();
+    }));
+    actions.append(this._action("Save", "arcade-quiet", () => this._save()));
+    dock.append(actions);
+    return dock;
+  }
+
+  _editStep() {
+    const spec = this.spec;
+    const step = this.editStep;
+    const index = EDIT_STEPS.indexOf(step);
+    const body = h("div", "arcade-body");
+    body.append(h("p", "arcade-step", `${index + 1} of ${EDIT_STEPS.length}`));
+
+    if (step === "sticker") {
+      body.append(h("h2", "arcade-title", "Pick a picture"));
+      const chips = h("div", "arcade-chips is-grid");
+      for (const id of STICKER_PICKS) {
+        const sticker = STICKERS[id];
+        const button = h("button", "arcade-chip", `${sticker.emoji} ${sticker.label}`);
+        button.type = "button";
+        const hero = id === "ghost" || id === "cat";
+        const selected = hero
+          ? read(spec.hero) === id
+          : spec.objects.some((item) => item.asset === id);
+        if (selected) button.classList.add("is-on");
+        button.addEventListener("click", () => {
+          this._useSticker(sticker);
+          this._render();
+        });
+        chips.append(button);
+      }
+      body.append(chips);
+    } else if (step === "goal") {
+      body.append(h("h2", "arcade-title", "The goal"));
+      const input = h("textarea", "arcade-type");
+      input.rows = 3;
+      input.value = read(spec.goal) || "";
+      input.addEventListener("input", () => {
+        spec.goal = { value: input.value.trim(), author: "child" };
+      });
+      input.addEventListener("change", () => {
+        this.log.add("edit", { field: "goal", value: input.value.trim() }, "child");
+      });
+      body.append(input);
+    } else if (step === "key" || step === "treasure") {
+      const key = step === "key";
+      body.append(h("h2", "arcade-title", key ? "The key hides…" : "The treasure hides…"));
+      const current = read(key ? spec.obstacles[0].keyHidesIn : spec.obstacles[0].treasureHidesIn);
+      const chips = h("div", "arcade-chips");
+      for (const spot of HIDE_SPOTS) {
+        const button = h("button", "arcade-chip", spot.phrase);
+        button.type = "button";
+        if (spot.id === current) button.classList.add("is-on");
+        button.addEventListener("click", () => {
+          if (key) this._setKey(spot.id);
+          else this._setTreasure(spot.id);
+        });
+        chips.append(button);
+      }
+      body.append(chips);
+    } else if (step === "order") {
+      body.append(h("h2", "arcade-title", "The order"));
+      const order = h("div", "arcade-order");
+      this._paintOrder(order, spec);
+      body.append(order);
+    } else if (step === "clue0" || step === "clue1") {
+      const clue = spec.clues[step === "clue0" ? 0 : 1];
+      body.append(h("h2", "arcade-title", step === "clue0" ? "Clue for the key" : "Clue for the treasure"));
+      body.append(h("p", "arcade-lead", this.lesson.grammar.frame));
+      const area = h("textarea", "arcade-type");
+      area.rows = 3;
+      area.value = clue.text || "";
+      area.addEventListener("change", () => {
+        clue.text = area.value.trim();
+        clue.author = "child";
+        this.log.add("edit", { field: clue.id, value: clue.text }, "child");
+        this._emitScreen();
+      });
+      body.append(area);
+    }
 
     const actions = h("div", "arcade-actions");
-    actions.append(this._action("Play / Test", "arcade-go", () => this._beginPlay()));
-    actions.append(this._action("Save", "arcade-quiet", () => this._save()));
-    actions.append(this._action("Export log (JSON)", "arcade-quiet", () => this._export()));
-    actions.append(this._action("Back", "arcade-quiet", () => {
-      this.mode = "start";
-      this._render();
-    }));
+    actions.append(this._action("Back", "arcade-quiet", () => this._stepBy(-1)));
+    const last = index === EDIT_STEPS.length - 1;
+    actions.append(this._action(last ? "Done" : "Next", "arcade-go", () => this._stepBy(1)));
     body.append(actions);
+    return body;
+  }
 
-    const side = h("div", "arcade-side");
+  _stepBy(dir) {
+    const index = EDIT_STEPS.indexOf(this.editStep);
+    const next = index + dir;
+    this.editStep = next < 0 || next >= EDIT_STEPS.length ? null : EDIT_STEPS[next];
+    this._render();
+  }
 
-    side.append(h("div", "arcade-label", "Stickers"));
-    const library = h("div", "arcade-stickers");
-    for (const sticker of [STICKERS.ghost, STICKERS.cat, STICKERS.door, STICKERS.bed, STICKERS.tree, STICKERS.chest, STICKERS.painting]) {
-      const button = h("button", "arcade-sticker", `${sticker.emoji} ${sticker.label}`);
-      button.type = "button";
-      button.addEventListener("click", () => this._useSticker(sticker));
-      library.append(button);
+  _setKey(id) {
+    const obstacle = this.spec.obstacles[0];
+    obstacle.keyHidesIn = { value: id, author: "child" };
+    if (read(obstacle.treasureHidesIn) === id) {
+      const other = HIDE_SPOTS.find((spot) => spot.id !== id);
+      obstacle.treasureHidesIn = { value: other.id, author: "child" };
     }
-    side.append(library);
+    this.log.add("edit", { field: "keyHidesIn", value: id }, "child");
+    this._render();
+  }
 
-    side.append(this._labeledField("Goal", read(spec.goal), authorOf(spec.goal), (value) => {
-      spec.goal = { value, author: "child" };
-      this.log.add("edit", { field: "goal", value }, "child");
-      this._emitScreen();
-    }));
+  _setTreasure(id) {
+    if (id === read(this.spec.obstacles[0].keyHidesIn)) {
+      this._toast("The treasure needs its own place.");
+      return;
+    }
+    this.spec.obstacles[0].treasureHidesIn = { value: id, author: "child" };
+    this.log.add("edit", { field: "treasureHidesIn", value: id }, "child");
+    this._render();
+  }
 
-    side.append(this._spotSelect("Key hides", read(spec.obstacles[0].keyHidesIn), (id) => {
-      const obstacle = spec.obstacles[0];
-      obstacle.keyHidesIn = { value: id, author: "child" };
-      if (read(obstacle.treasureHidesIn) === id) {
-        const other = HIDE_SPOTS.find((spot) => spot.id !== id);
-        obstacle.treasureHidesIn = { value: other.id, author: "child" };
-      }
-      this.log.add("edit", { field: "keyHidesIn", value: id }, "child");
+  _playDock() {
+    const spec = this.spec;
+    const dock = h("div", "arcade-dock");
+    const clue = this.play?.clueForStep() || read(spec.goal);
+    dock.append(h("p", "arcade-clue", clue));
+    const message = this.play?.state?.won ? "You did it!" : (this._screenMessage || "Tap a picture.");
+    dock.append(h("p", `arcade-message${this.play?.state?.won ? " is-won" : ""}`, message));
+    dock.append(this._action("Back", "arcade-quiet", () => {
+      this.mode = "edit";
       this._render();
     }));
-    side.append(this._spotSelect("Treasure hides", read(spec.obstacles[0].treasureHidesIn), (id) => {
-      if (id === read(spec.obstacles[0].keyHidesIn)) {
-        this._toast("The treasure needs its own hiding place.");
-        return false;
-      }
-      spec.obstacles[0].treasureHidesIn = { value: id, author: "child" };
-      this.log.add("edit", { field: "treasureHidesIn", value: id }, "child");
+    return dock;
+  }
+
+  _menu() {
+    const wrap = h("div", "arcade-menu");
+    const button = h("button", "arcade-menu-btn", "Menu");
+    button.type = "button";
+    button.setAttribute("aria-expanded", this.menuOpen ? "true" : "false");
+    button.addEventListener("click", () => {
+      this.menuOpen = !this.menuOpen;
+      this._render();
+    });
+    wrap.append(button);
+    if (this.menuOpen) {
+      const panel = h("div", "arcade-menu-panel");
+      if (this.spec) panel.append(this._action("Save", "arcade-menu-item", () => this._save()));
+      panel.append(this._action("Export JSON", "arcade-menu-item", () => this._export()));
+      panel.append(this._action("Authorship log", "arcade-menu-item", () => {
+        this.showLog = true;
+        this.menuOpen = false;
+        this._render();
+      }));
+      panel.append(this._action("Start over", "arcade-menu-item", () => {
+        this.mode = "start";
+        this.editStep = null;
+        this.menuOpen = false;
+        this.showLog = false;
+        this.play = null;
+        this._render();
+      }));
+      wrap.append(panel);
+    }
+    return wrap;
+  }
+
+  _logView() {
+    const data = saveAuthorshipLog(this.log, { specId: this.spec?.id, lessonId: this.lesson.id });
+    const body = h("div", "arcade-body");
+    body.append(h("h2", "arcade-title", "Authorship log"));
+    const pre = h("pre", "arcade-log");
+    pre.textContent = JSON.stringify({ version: data.version, events: data.events }, null, 2);
+    body.append(pre);
+    body.append(this._action("Close", "arcade-go", () => {
+      this.showLog = false;
       this._render();
     }));
-
-    side.append(h("div", "arcade-label", "Order of steps"));
-    const order = h("div", "arcade-order");
-    this._paintOrder(order, spec);
-    side.append(order);
-
-    side.append(this._clueField("Clue for the key", spec.clues[0]));
-    side.append(this._clueField("Clue for the treasure", spec.clues[1]));
-    side.append(h("p", "arcade-frame", `Lesson frame: ${this.lesson.grammar.frame}`));
-    body.append(side);
     return body;
   }
 
@@ -299,51 +467,6 @@ export class ArcadeEditor {
     button.type = "button";
     button.addEventListener("click", onClick);
     return button;
-  }
-
-  _labeledField(label, value, author, onChange) {
-    const wrap = h("label", "arcade-field");
-    wrap.append(h("span", "arcade-label", `${label} · ${who(author)}`));
-    const input = h("input", "arcade-input");
-    input.value = value || "";
-    input.addEventListener("change", () => onChange(input.value.trim()));
-    wrap.append(input);
-    return wrap;
-  }
-
-  _spotSelect(label, value, onChange) {
-    const wrap = h("label", "arcade-field");
-    wrap.append(h("span", "arcade-label", label));
-    const select = h("select", "arcade-input");
-    for (const spot of HIDE_SPOTS) {
-      const option = h("option", "", spot.phrase);
-      option.value = spot.id;
-      if (spot.id === value) option.selected = true;
-      select.append(option);
-    }
-    select.addEventListener("change", () => {
-      const ok = onChange(select.value);
-      if (ok === false) select.value = value;
-    });
-    wrap.append(select);
-    return wrap;
-  }
-
-  _clueField(label, clue) {
-    const wrap = h("label", "arcade-field");
-    wrap.append(h("span", "arcade-label", `${label} · ${who(clue.author)}`));
-    const area = h("textarea", "arcade-type");
-    area.rows = 2;
-    area.value = clue.text || "";
-    area.addEventListener("change", () => {
-      clue.text = area.value.trim();
-      clue.author = "child";
-      wrap.querySelector(".arcade-label").textContent = `${label} · you`;
-      this.log.add("edit", { field: clue.id, value: clue.text }, "child");
-      this._emitScreen();
-    });
-    wrap.append(area);
-    return wrap;
   }
 
   _paintOrder(order, spec) {
@@ -386,7 +509,7 @@ export class ArcadeEditor {
 
   /** Drag on the machine screen. `commit` logs the drop. */
   moveOnScreen(id, x, y, commit) {
-    if (this.mode !== "edit" || !this.spec) return false;
+    if (this.mode !== "edit" || this.editStep || !this.spec) return false;
     const object = this.spec.objects.find((item) => item.id === id);
     if (!object) return false;
     object.x = x;
@@ -402,30 +525,11 @@ export class ArcadeEditor {
   _beginPlay() {
     this.play = createTreasurePlay(this.spec);
     this.mode = "play";
-    this._screenMessage = "Tap a thing on the screen.";
+    this.editStep = null;
+    this.menuOpen = false;
+    this._screenMessage = "Tap a picture.";
     this.log.add("play", { id: this.spec.id }, "child");
     this._render();
-  }
-
-  _playView() {
-    const spec = this.spec;
-    const body = h("div", "arcade-body");
-    body.append(h("h2", "arcade-title", read(spec.title)));
-    const clue = h("p", "arcade-clue", this.play.clueForStep() || read(spec.goal));
-    body.append(clue);
-    body.append(h("p", "arcade-lead", "Tap the pictures on the machine."));
-    const message = h("p", "arcade-message", this._screenMessage || "Tap a thing on the screen.");
-    body.append(message);
-    this._playClue = clue;
-    this._playMessage = message;
-    const back = h("button", "arcade-quiet", "Back to edit");
-    back.type = "button";
-    back.addEventListener("click", () => {
-      this.mode = "edit";
-      this._render();
-    });
-    body.append(back);
-    return body;
   }
 
   hitPlay(objectId) {
@@ -438,10 +542,8 @@ export class ArcadeEditor {
     if (!this.play) return;
     const result = this.play.click(objectId);
     this._screenMessage = result.message;
-    if (this._playMessage) this._playMessage.textContent = result.message;
-    if (this._playClue) this._playClue.textContent = this.play.clueForStep() || (result.won ? "You did it!" : this._playClue.textContent);
     this.log.add("play", { click: objectId, won: !!result.won, message: result.message }, "child");
-    this._emitScreen();
+    this._render();
   }
 
   _emitScreen() {
@@ -450,21 +552,27 @@ export class ArcadeEditor {
     else if (this.mode === "ask" && (this.answers.idea || this.answers.keyPlace || this.answers.clue)) {
       spec = templateArcadeStitch(this.lesson, this.answers);
     }
+    const chrome = this._chrome();
+    this._chromeSent = chrome;
     this.onScreen?.({
       spec,
       mode: this.mode,
       message: this._screenMessage || "",
       clue: this.mode === "play" && this.play ? (this.play.clueForStep() || "") : "",
       won: !!this.play?.state?.won,
+      chrome,
     });
   }
 
   _save() {
+    if (!this.spec) return;
     localStorage.setItem(SAVE_KEY, JSON.stringify(this.spec));
     saveAuthorshipLog(this.log, { specId: this.spec?.id, lessonId: this.lesson.id });
     this.log.add("save", { id: this.spec.id }, "child");
     saveAuthorshipLog(this.log, { specId: this.spec?.id, lessonId: this.lesson.id });
-    this._toast("Saved in this browser");
+    this.menuOpen = false;
+    this._pendingToast = "Saved in this browser";
+    this._render();
   }
 
   _export() {
@@ -472,25 +580,19 @@ export class ArcadeEditor {
     this.log.add("export", { events: data.events.length }, "child");
     const fresh = saveAuthorshipLog(this.log, { specId: this.spec?.id, lessonId: this.lesson.id });
     downloadJson("pibo-arcade-log.json", fresh);
-    this._toast("Exported authorship log");
-    this._showLog(fresh);
-  }
-
-  _showLog(data) {
-    let pre = this.root.querySelector(".arcade-log");
-    if (!pre) {
-      pre = h("pre", "arcade-log");
-      this.root.querySelector(".arcade-card")?.append(pre);
-    }
-    pre.textContent = JSON.stringify({ version: data.version, events: data.events }, null, 2);
+    this.menuOpen = false;
+    this.showLog = true;
+    this._pendingToast = "Exported the log";
+    this._render();
   }
 
   _toast(text) {
-    let note = this.root.querySelector(".arcade-toast");
-    if (!note) {
+    this._pendingToast = text;
+    let note = this.screenEl?.querySelector(".arcade-toast");
+    if (!note && this.screenEl) {
       note = h("div", "arcade-toast");
-      this.root.querySelector(".arcade-card")?.append(note);
+      this.screenEl.append(note);
     }
-    note.textContent = text;
+    if (note) note.textContent = text;
   }
 }
