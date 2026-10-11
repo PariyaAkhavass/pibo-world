@@ -88,8 +88,16 @@ export class UI {
     this._renderCollection();
 
     this.el.collectionBtn.addEventListener("click", () => this.toggleCollection());
-    this.el.lighthouseGo?.addEventListener("click", () => this.onGoToLighthouse?.());
-    this.el.arcadeGo?.addEventListener("click", () => this.onGoToArcade?.());
+    this.el.lighthouseGo?.addEventListener("click", (e) => {
+      this.onGoToLighthouse?.();
+      e.currentTarget.blur();
+      document.getElementById("scene")?.focus();
+    });
+    this.el.arcadeGo?.addEventListener("click", (e) => {
+      this.onGoToArcade?.();
+      e.currentTarget.blur();
+      document.getElementById("scene")?.focus();
+    });
     this.el.mapBtn?.addEventListener("click", () => {
       if (this.isMapOpen) this.closeMap();
       else this.openMap();
@@ -333,12 +341,13 @@ export class UI {
   setLighthouseGuide({ hidden, x = 0, y = 0, distance = 0, rotation = 0 } = {}) {
     const marker = this.el.lighthouseMarker;
     const go = this.el.lighthouseGo;
-    const conceal = !!hidden || this.isStudioOpen || this.isArcadeOpen;
+    const indoors = this.isStudioOpen || this.isArcadeOpen;
+    const concealMarker = !!hidden || indoors;
     if (marker) {
-      marker.classList.toggle("hidden", conceal);
-      marker.setAttribute("aria-hidden", conceal ? "true" : "false");
+      marker.classList.toggle("hidden", concealMarker);
+      marker.setAttribute("aria-hidden", concealMarker ? "true" : "false");
     }
-    if (go) go.classList.toggle("hidden", conceal);
+    if (go) go.classList.toggle("hidden", indoors);
     if (hidden || !marker) return;
     marker.style.left = `${x}px`;
     marker.style.top = `${y}px`;

@@ -1,146 +1,128 @@
-import { latLonToDir } from "../core/SphereMath.js";
-
 /**
- * The handcrafted layout of the starter planet, in lat/lon degrees.
- * lat 0 = north pole = where Pibo wakes up. Kept in one place so props, the
- * garden, and the camera framing all agree, and so future planets are just a
- * different layout object.
+ * Flat layout of the home island, in world units.
+ * x grows east, z grows south (toward the camera). North is −z.
+ * Every prop id here is listed in src/data/assets.js.
  */
-export const LAYOUT = {
-  start: { lat: 0, lon: 0 },
 
-  home: { lat: 24, lon: 20, yaw: -0.5 },
-  workshop: { lat: 27, lon: -48, yaw: 0.7 },
-  observatory: { lat: 18, lon: -108, yaw: 0.2 },
-  planetarium: { lat: 55, lon: -104, yaw: -0.35 },
-  cafe: { lat: 49, lon: 14, yaw: 0.55 },
-  library: { lat: 57, lon: -226, yaw: -0.15 },
-  windmill: { lat: 61, lon: 220, yaw: 0.6 },
-  well: { lat: 53, lon: -146, yaw: 0.25 },
-  picnic: { lat: 39, lon: -12, yaw: -0.45 },
-  pond: { lat: 33, lon: -158 },
-  landing: { lat: 36, lon: 66 },
-  ufo: { lat: 36, lon: 66 },
-  // arcade cabinet on the village grass, door one step downhill so E is outside the walls
-  arcade: { lat: 18, lon: 168, yaw: 0.2 },
-  arcadeDoor: { lat: 30, lon: 168 },
-  // striped lighthouse in the middle of the open ocean (south of the village cap)
-  lighthouse: { lat: 110, lon: 82, yaw: 0.45 },
-  // signs that point across the water, including one in the opening view
-  lighthouseSigns: [
-    { lat: 13, lon: 58 },
-    { lat: 31, lon: 52 },
-  ],
-  // walkable dock beside the islet (outside the tower collider so the ship can land)
-  lighthousePad: { lat: 102, lon: 64 },
-  lighthouseIsland: { lat: 106, lon: 73 },
-  lighthousePath: [
-    { lat: 104, lon: 70 }, { lat: 107, lon: 76 },
-  ],
-  // grassy island on the far side — companion meadow stays dry
-  meadowIsland: { lat: 128, lon: 188 },
+export const GROUND_Y = 2.35;
+export const WATER_Y = 0.16;
 
-  // far green side — a quiet meadow opposite the starting village
-  companion: { lat: 122, lon: 204 },
-  pino: { lat: 119, lon: 211 },
-  familyShip: { lat: 136, lon: 168 },
-
-  // three planting spots in the garden patch, spread so they never overlap
-  // (longitude compresses toward the pole, so spacing mostly uses latitude)
-  garden: [
-    { lat: 14, lon: 116 },
-    { lat: 30, lon: 128 },
-    { lat: 46, lon: 118 },
-  ],
-
-  // reward pieces (hidden until earned)
-  bridge: { lat: 40, lon: -178, yaw: 0.3 },
-  rewardBloom: { lat: 6, lon: 250 },
-
-  // decorative nature, hand-placed for good silhouettes
-  trees: [
-    { lat: 34, lon: 8 }, { lat: 40, lon: -20 }, { lat: 30, lon: 44 },
-    { lat: 46, lon: -78 }, { lat: 44, lon: 150 }, { lat: 52, lon: 100 },
-    { lat: 38, lon: -128 }, { lat: 58, lon: -38 }, { lat: 56, lon: 58 },
-    { lat: 48, lon: 142 }, { lat: 48, lon: -212 },
-  ],
-  rocks: [
-    { lat: 30, lon: -70 }, { lat: 48, lon: 30 }, { lat: 26, lon: 96 },
-    { lat: 50, lon: -150 }, { lat: 42, lon: 180 }, { lat: 50, lon: -176 },
-    { lat: 52, lon: 86 }, { lat: 36, lon: -224 },
-  ],
-  // a few stones out in the open water so the sea doesn't read as a flat void
-  seaRocks: [
-    { lat: 88, lon: 120 }, { lat: 94, lon: 28 }, { lat: 78, lon: -36 },
-    { lat: 132, lon: 86 }, { lat: 86, lon: 160 },
-  ],
-  flowers: [
-    { lat: 16, lon: 40 }, { lat: 22, lon: -10 }, { lat: 28, lon: 60 },
-    { lat: 34, lon: -30 }, { lat: 18, lon: 150 }, { lat: 30, lon: 170 },
-    { lat: 24, lon: -90 }, { lat: 40, lon: 96 }, { lat: 12, lon: 90 },
-    { lat: 54, lon: -18 }, { lat: 52, lon: 32 }, { lat: 50, lon: 118 },
-    { lat: 48, lon: -206 }, { lat: 20, lon: -172 },
-    { lat: 117, lon: 200 }, { lat: 120, lon: 208 }, { lat: 124, lon: 212 },
-  ],
-  lanterns: [
-    { lat: 39, lon: -100 }, { lat: 50, lon: -118 }, { lat: 43, lon: 36 },
-    { lat: 54, lon: -4 }, { lat: 42, lon: 132 }, { lat: 55, lon: 172 },
-  ],
-  mushrooms: [
-    { lat: 22, lon: -140 }, { lat: 24, lon: -148 }, { lat: 48, lon: -52 },
-    { lat: 52, lon: 72 }, { lat: 58, lon: 212 }, { lat: 38, lon: 222 },
-  ],
-  benches: [
-    { lat: 43, lon: -162, yaw: 0.8 },
-    { lat: 45, lon: 42, yaw: -0.55 },
-  ],
-  starStones: [
-    { lat: 31, lon: -108 }, { lat: 37, lon: -110 }, { lat: 44, lon: -109 },
-    { lat: 50, lon: -106 },
-  ],
-  mailboxes: [
-    { lat: 26, lon: 36, yaw: -0.55 },
-    { lat: 48, lon: 92, yaw: 0.2 },
-    { lat: 54, lon: -212, yaw: -0.35 },
-  ],
-  signposts: [
-    { lat: 35, lon: -64, yaw: 0.35 },
-    { lat: 42, lon: 78, yaw: -0.25 },
-    { lat: 50, lon: -132, yaw: 0.75 },
-  ],
-  crystals: [
-    { lat: 52, lon: -70 }, { lat: 52, lon: 24 }, { lat: 50, lon: 190 },
-    { lat: 45, lon: 238 },
-  ],
+/** Texture coverage for the island-top image. Keep in sync with ASSETS.md. */
+export const GROUND_BOUNDS = {
+  minX: -12,
+  maxX: 18,
+  minZ: -12,
+  maxZ: 10,
 };
 
-export function dirOf(entry) {
-  return latLonToDir(entry.lat, entry.lon);
-}
+/**
+ * Walkable land. The home outline is an irregular cliff. The two islets are
+ * circles. Anything outside these shapes is water.
+ */
+export const LAND = {
+  home: [
+    [-8.7, -3.2],
+    [-7.6, -5.6],
+    [-4.8, -6.7],
+    [-1.4, -6.3],
+    [1.8, -5.4],
+    [4.6, -4.0],
+    [6.8, -2.2],
+    [7.9, 0.2],
+    [7.5, 2.6],
+    [5.8, 4.6],
+    [3.2, 5.8],
+    [0.2, 6.4],
+    [-3.0, 5.8],
+    [-5.8, 4.4],
+    [-7.8, 2.2],
+    [-8.9, -0.4],
+  ],
+  lighthouse: { x: 12.6, z: -8.0, r: 2.35 },
+  arcade: { x: 15.2, z: 2.8, r: 2.05 },
+};
+
+export const LAYOUT = {
+  start: { x: 0.15, z: 1.05 },
+  home: { x: -5.45, z: -1.05 },
+  tealHouse: { x: -0.45, z: -3.75 },
+  patio: { x: 1.2, z: -2.05 },
+  shed: { x: 4.85, z: -0.45 },
+  crate: { x: 3.4, z: 0.62 },
+  picnic: { x: 2.85, z: 3.4 },
+  lighthouse: { x: 12.6, z: -8.0 },
+  lighthousePad: { x: 11.45, z: -6.7 },
+  arcade: { x: 15.2, z: 2.8 },
+  arcadeDoor: { x: 13.95, z: 3.45 },
+  companion: { x: -6.35, z: 3.05 },
+  pino: { x: -5.55, z: 3.65 },
+  garden: [
+    { x: -4.15, z: 2.25 },
+    { x: -2.75, z: 3.15 },
+    { x: -5.05, z: 3.45 },
+  ],
+  bridge: { x: 0.9, z: 5.35 },
+  rewardBloom: { x: -1.5, z: 4.45 },
+};
 
 /**
- * Solid footprints for surface collision. Radii are world units on the
- * sphere. Garden beds, the pond, ocean, landing pads, and flowers stay
- * walkable so you can still reach them (including the lighthouse dock).
+ * Everything drawn as a swappable sprite. `hidden` stays out of view until a
+ * system shows it. `sky` sprites float and do not collide.
  */
-export function collidersOf(layout = LAYOUT) {
+export const PLACEMENTS = [
+  { id: "tree-west", asset: "tree", x: -7.35, z: -1.55 },
+  { id: "tree-cottage-back", asset: "tree", x: -4.05, z: -4.05 },
+  { id: "tree-north", asset: "treeSmall", x: -2.45, z: -5.45 },
+  { id: "tree-south", asset: "treeSmall", x: -6.35, z: 1.85 },
+  { id: "cottage", asset: "cottage", x: -5.45, z: -1.05 },
+  { id: "teal-house", asset: "tealHouse", x: -0.45, z: -3.75 },
+  { id: "patio", asset: "patio", x: 1.2, z: -2.05 },
+  { id: "lamp-patio", asset: "lamp", x: 2.55, z: -1.25 },
+  { id: "lamp-path", asset: "lamp", x: 0.15, z: 2.45 },
+  { id: "shed", asset: "shed", x: 4.85, z: -0.45 },
+  { id: "crate", asset: "crate", x: 3.4, z: 0.62 },
+  { id: "tree-shed", asset: "tree", x: 6.55, z: 0.05 },
+  { id: "picnic", asset: "picnic", x: 2.85, z: 3.4 },
+  { id: "bush-1", asset: "bush", x: -6.7, z: 0.35 },
+  { id: "bush-2", asset: "bush", x: 5.7, z: 1.85 },
+  { id: "bush-3", asset: "bush", x: -1.7, z: -1.15 },
+  { id: "bush-4", asset: "bush", x: 0.85, z: -5.15 },
+  { id: "flowers-1", asset: "flowers", x: -6.85, z: -3.15 },
+  { id: "flowers-2", asset: "flowersPink", x: -3.15, z: -2.15 },
+  { id: "flowers-3", asset: "flowers", x: 0.55, z: -0.15 },
+  { id: "flowers-4", asset: "flowersPink", x: 6.05, z: 2.55 },
+  { id: "flowers-5", asset: "flowers", x: -2.35, z: 4.35 },
+  { id: "flowers-6", asset: "flowersPink", x: 4.55, z: 4.55 },
+  { id: "flowers-7", asset: "flowers", x: -7.55, z: 0.85 },
+  { id: "flowers-8", asset: "flowersPink", x: -5.4, z: -3.55 },
+  { id: "rock-1", asset: "rock", x: -8.15, z: -1.35 },
+  { id: "rock-2", asset: "rock", x: 6.35, z: 3.15 },
+  { id: "rock-3", asset: "rockSmall", x: 6.15, z: -1.85 },
+  { id: "rock-4", asset: "rockSmall", x: -3.6, z: 5.45 },
+  { id: "rock-5", asset: "rock", x: -6.7, z: -5.15 },
+  { id: "rock-6", asset: "rockSmall", x: 3.55, z: -3.7 },
+  { id: "lighthouse", asset: "lighthouse", x: 12.6, z: -8.0 },
+  { id: "arcade", asset: "arcade", x: 15.2, z: 2.8 },
+  { id: "bloom", asset: "bloom", x: -1.5, z: 4.45, hidden: true },
+  { id: "bridge", asset: "bridge", x: 0.9, z: 5.35, hidden: true },
+  { id: "cloud-1", asset: "cloud", x: -7.5, z: -10.2, y: 8.2, sky: true },
+  { id: "cloud-2", asset: "cloud", x: 2.4, z: -11.4, y: 9.1, sky: true },
+  { id: "cloud-3", asset: "cloud", x: 13.5, z: -11.8, y: 8.4, sky: true },
+  { id: "cloud-4", asset: "cloud", x: 8.2, z: -9.6, y: 10.2, sky: true },
+];
+
+export function collidersFromPlacements(placements, assets) {
   const out = [];
-  const add = (entry, radius) => {
-    if (!entry || !radius) return;
-    out.push({ dir: dirOf(entry), radius });
-  };
-  add(layout.home, 1.5);
-  add(layout.workshop, 1.45);
-  add(layout.observatory, 2.0);
-  add(layout.planetarium, 1.65);
-  add(layout.cafe, 1.55);
-  add(layout.arcade, 1.25);
-  add(layout.library, 1.35);
-  add(layout.windmill, 1.35);
-  add(layout.well, 1.0);
-  add(layout.lighthouse, 1.5);
-  for (const t of layout.trees ?? []) add(t, 0.72);
-  for (const r of layout.rocks ?? []) add(r, 0.58);
-  for (const b of layout.benches ?? []) add(b, 0.55);
+  for (const place of placements) {
+    if (place.hidden || place.sky) continue;
+    const footprint = assets[place.asset]?.footprint;
+    if (!footprint?.radius) continue;
+    out.push({
+      id: place.id,
+      x: place.x,
+      z: place.z,
+      radius: footprint.radius,
+    });
+  }
   return out;
 }

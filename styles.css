@@ -26,29 +26,18 @@ html, body {
   touch-action: none;
 }
 
-/* Dreamy toy-diorama sky behind the floating planet */
+/* Soft daytime sky. The island and sea are drawn in the WebGL view. */
 #sky {
   position: fixed;
   inset: 0;
   z-index: 0;
   background:
-    radial-gradient(120% 90% at 50% 18%, #fff2d8 0%, rgba(255, 242, 216, 0) 42%),
-    radial-gradient(140% 120% at 50% 120%, #ffd9b8 0%, rgba(255, 217, 184, 0) 55%),
-    linear-gradient(180deg, #b7e4ff 0%, #cdeafd 40%, #ffe7cf 100%);
+    radial-gradient(ellipse 22% 10% at 16% 18%, #fff 0%, rgba(255, 255, 255, 0) 72%),
+    radial-gradient(ellipse 26% 11% at 72% 14%, #fff 0%, rgba(255, 255, 255, 0) 70%),
+    radial-gradient(ellipse 16% 7% at 46% 26%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 72%),
+    linear-gradient(180deg, #d7f2fc 0%, #c5e8f6 46%, #b9e0f2 100%);
 }
-/* soft glow halo behind the planet */
-#sky::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 54%;
-  width: 78vmin;
-  height: 78vmin;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%);
-  filter: blur(4px);
-}
+#sky::after { content: none; }
 
 #scene {
   position: fixed;
@@ -524,41 +513,44 @@ html, body {
 }
 .galaxy #sky::after { opacity: 0.15; }
 
-/* Lighthouse studio — visible from spawn */
-.lighthouse-go {
+/* Travel buttons — flat rounded rectangles, top left, side by side */
+.travel-bar {
   position: absolute;
-  top: max(18px, env(safe-area-inset-top));
-  left: max(18px, env(safe-area-inset-left));
+  top: max(14px, env(safe-area-inset-top));
+  left: max(14px, env(safe-area-inset-left));
+  right: 132px;
   z-index: 4;
-  border: none;
-  border-radius: 999px;
-  padding: 10px 14px;
-  background: var(--card);
-  box-shadow: var(--shadow);
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--ink);
-  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  pointer-events: none;
 }
-.lighthouse-go:hover { transform: translateY(-2px); }
+.travel-bar > * { pointer-events: auto; }
+.lighthouse-go,
 .arcade-go-btn {
-  position: absolute;
-  top: calc(max(18px, env(safe-area-inset-top)) + 46px);
-  left: max(18px, env(safe-area-inset-left));
-  z-index: 4;
-  border: none;
-  border-radius: 999px;
-  padding: 10px 14px;
-  background: var(--card);
-  box-shadow: var(--shadow);
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid #5c4a3e;
+  border-radius: 14px;
+  padding: 8px 14px 8px 10px;
+  background: #fff8ee;
+  box-shadow: 0 2px 0 rgba(92, 74, 62, 0.08);
   font-family: inherit;
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--ink);
+  font-weight: 600;
+  font-size: 15px;
+  color: #5c4a3e;
   cursor: pointer;
 }
+.lighthouse-go:hover,
 .arcade-go-btn:hover { transform: translateY(-2px); }
+.btn-icon {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: block;
+}
 #ui > .lighthouse-marker { pointer-events: none; }
 .lighthouse-marker {
   position: absolute;
@@ -600,21 +592,21 @@ html, body {
 /* Map — top right, clear of Go to lighthouse */
 .map-btn {
   position: absolute;
-  top: max(18px, env(safe-area-inset-top));
-  right: max(18px, env(safe-area-inset-right));
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
   z-index: 5;
   display: flex;
   align-items: center;
   gap: 6px;
-  border: none;
-  border-radius: 999px;
-  padding: 10px 14px 10px 10px;
-  background: var(--card);
-  box-shadow: var(--shadow);
+  border: 2px solid #5c4a3e;
+  border-radius: 14px;
+  padding: 8px 14px 8px 10px;
+  background: #fff8ee;
+  box-shadow: 0 2px 0 rgba(92, 74, 62, 0.08);
   font-family: inherit;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 15px;
-  color: var(--ink);
+  color: #5c4a3e;
   cursor: pointer;
 }
 .map-btn:hover { transform: translateY(-2px); }
@@ -675,21 +667,45 @@ html, body {
 }
 .map-disc {
   position: relative;
-  width: min(280px, 78vw);
-  aspect-ratio: 1;
+  width: min(300px, 82vw);
+  aspect-ratio: 1.15;
   margin: 4px auto 10px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 38% 32%, #9adcf0, #2f8fbe 72%);
-  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.55), 0 8px 18px rgba(40, 80, 110, 0.18);
+  border-radius: 28px;
+  background:
+    radial-gradient(ellipse at 30% 40%, #b7e4f4, #6eb8d8 70%);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.55), 0 8px 18px rgba(40, 80, 110, 0.16);
+  overflow: hidden;
 }
 .map-land {
   position: absolute;
-  left: 50%;
-  top: 50%;
+  left: 38%;
+  top: 52%;
+  width: 52%;
+  height: 46%;
   transform: translate(-50%, -50%);
+  border-radius: 46% 54% 48% 52% / 42% 46% 58% 50%;
+  background: radial-gradient(circle at 40% 35%, #d7f5b4, #8fce74 74%);
+  box-shadow: inset 0 0 0 3px rgba(255, 244, 214, 0.75);
+}
+.map-land::before,
+.map-land::after {
+  content: "";
+  position: absolute;
+  background: #d7f5b4;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #d7f5b4, #7fbf63 74%);
-  box-shadow: inset 0 0 0 3px rgba(255, 244, 214, 0.7);
+  box-shadow: inset 0 0 0 2px rgba(255, 244, 214, 0.8);
+}
+.map-land::before {
+  width: 22%;
+  height: 26%;
+  left: 108%;
+  top: 8%;
+}
+.map-land::after {
+  width: 16%;
+  height: 20%;
+  left: 128%;
+  top: 58%;
 }
 .map-ocean-label,
 .map-pin,
@@ -776,12 +792,13 @@ html, body {
   gap: 8px;
   margin-top: 8px;
 }
+.island-card,
 .planet-card {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px;
-  border: none;
+  border: 2px solid transparent;
   border-radius: 14px;
   background: #fff;
   text-align: left;
@@ -790,20 +807,26 @@ html, body {
   cursor: pointer;
   box-shadow: 0 2px 0 rgba(90, 60, 40, 0.06);
 }
-.planet-card.is-home { outline: 2px solid #7fbf63; }
+.island-card.is-home,
+.planet-card.is-home { border-color: #7fbf63; }
+.island-card.is-locked,
 .planet-card.is-locked {
-  filter: grayscale(0.9);
-  opacity: 0.78;
+  filter: grayscale(0.85);
+  opacity: 0.82;
 }
+.island-blob,
 .planet-orb {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 26px;
   flex: none;
-  border-radius: 50%;
-  box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.08);
+  border-radius: 46% 54% 48% 52% / 42% 48% 58% 52%;
+  box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.06);
 }
+.island-copy,
 .planet-copy { display: flex; flex-direction: column; min-width: 0; }
+.island-name,
 .planet-name { font-weight: 700; font-size: 13px; }
+.island-note,
 .planet-note { font-size: 11px; font-weight: 600; color: var(--ink-soft); }
 
 /* Collection — sits under the Map button */
@@ -1190,4 +1213,12 @@ html, body {
 @media (max-width: 520px) {
   .cards { flex-direction: column; }
   .panel { width: min(360px, 92vw); }
+  .travel-bar { right: 96px; gap: 6px; }
+  .lighthouse-go,
+  .arcade-go-btn,
+  .map-btn {
+    font-size: 13px;
+    padding: 7px 10px 7px 8px;
+  }
+  .btn-icon { width: 18px; height: 18px; }
 }

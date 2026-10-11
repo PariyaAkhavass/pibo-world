@@ -1,56 +1,55 @@
-import * as THREE from "three";
-import { tangentAt } from "./SphereMath.js";
-
 /**
- * Surface collision on a tiny planet. Obstacles are circles on the sphere
- * (a direction + a keep-out radius in world units). Movement stays on the
- * surface: if Pibo steps inside a circle we push them back out along the
- * great circle, which also lets them slide around houses instead of sticking.
+ * Flat keep-out circles on the island. Pibo slides around a building instead
+ * of sticking to it. Water is not a collider — stepping off land starts a swim.
  */
 export class Collision {
-  constructor(planetRadius, obstacles = []) {
-    this.R = planetRadius;
+  constructor(obstacles = []) {
     this.obstacles = obstacles.map((o) => ({
-      dir: o.dir.clone().normalize(),
+      id: o.id || "",
+      x: o.x,
+      z: o.z,
       radius: o.radius,
     }));
   }
 
-  add(dir, radius) {
-    this.obstacles.push({ dir: dir.clone().normalize(), radius });
+  add(x, z, radius, id = "") {
+    this.obstacles.push({ id, x, z, radius });
+  }
+
+  remove(id) {
+    this.obstacles = this.obstacles.filter((o) => o.id !== id);
   }
 
   /**
-   * Push a surface direction out of any overlapping obstacles.
-   * `padding` is Pibo's own radius so we test center-to-center.
+   * Push a point out of any overlapping circle.
+   * `padding` is Pibo's own radius.
    */
-  resolve(dir, padding = 0.5) {
-    let out = dir.clone().normalize();
+  resolve(x, z, padding = 0.45) {
+    let px = x;
+    let pz = z;
     for (let pass = 0; pass < 4; pass++) {
       let hit = false;
       for (const o of this.obstacles) {
-        const next = pushOut(out, o, padding, this.R);
-        if (next) {
-          out = next;
-          hit = true;
-        }
+        let dx = px - o.x;
+        let dz = pz - o.z;
+        const min = o.radius + padding;
+        const d2 = dx * dx + dz * dz;
+        if (d2 >= min * min) continue;
+        const d = Math.sqrt(d2) || 0.0001;
+        const push = (min - d) / d;
+        px += dx * push;
+        pz += dz * push;
+        hit = true;
       }
       if (!hit) break;
     }
-    return out;
+
+    const limit = 33;
+    const r = Math.hypot(px, pz);
+    if (r > limit) {
+      px *= limit / r;
+      pz *= limit / r;
+    }
+    return { x: px, z: pz };
   }
-}
-
-/** If `dir` overlaps `obstacle`, return the nearest legal direction; else null. */
-function pushOut(dir, obstacle, padding, R) {
-  const a = dir.clone().normalize();
-  const b = obstacle.dir;
-  const ang = a.angleTo(b);
-  const minAng = (obstacle.radius + padding) / R;
-  if (ang >= minAng - 1e-5) return null;
-
-  let axis = new THREE.Vector3().crossVectors(b, a);
-  if (axis.lengthSq() < 1e-10) axis = tangentAt(b);
-  axis.normalize();
-  return b.clone().applyAxisAngle(axis, minAng).normalize();
 }

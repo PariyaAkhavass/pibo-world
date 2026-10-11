@@ -1,27 +1,25 @@
 import * as THREE from "three";
 import { Input } from "./Input.js";
-import { latLonOf, tangentToward } from "./SphereMath.js";
 import { Collision } from "./Collision.js";
-import { Planet } from "../world/Planet.js";
-import { Environment } from "../world/Environment.js";
-import { Props } from "../world/Props.js";
-import { Ambient } from "../world/Ambient.js";
+import { Island } from "../world/Island.js";
+import { SpriteSet } from "../world/SpriteSet.js";
+import { isoBasis, orthoSize } from "../world/iso.js";
+import { LAYOUT, PLACEMENTS, GROUND_Y, collidersFromPlacements } from "../world/layout.js";
+import { ASSETS, collectSources } from "../data/assets.js";
+import { loadTextureSet, textureSizes } from "../world/textures.js";
 import { GardenSystem } from "../systems/GardenSystem.js";
 import { TvStudio } from "../systems/TvStudio.js";
 import { ArcadeRoom } from "../systems/ArcadeRoom.js";
 import { Pibo } from "../entities/Pibo.js";
-import { Ufo } from "../entities/Ufo.js";
-import { Galaxy } from "../world/Galaxy.js";
-import { LAYOUT, dirOf, collidersOf } from "../world/layout.js";
 import { getPlant } from "../data/plants.js";
 import { SHOW_VILLAGE_FRIENDS } from "../config.js";
-import { UI } from "../ui/UI.js";
+
+const ENTER_RANGE = 2.15;
 
 /**
- * Top-level orchestrator. Owns the renderer, the planet and its systems, the
- * player, and the update loop, and mediates the tiny interaction contract
- * between Pibo, the garden, and the UI. Deliberately small: each subsystem is
- * self-contained so future planets, entities, and systems slot in here.
+ * Isometric island. The camera angle stays fixed; it only slides to follow
+ * Pibo. Props are images from the asset manifest. Studio, arcade, garden,
+ * and the hidden friends keep their old jobs.
  */
 export class Game {
   constructor(canvas, ui) {
@@ -29,26 +27,27 @@ export class Game {
     this.ui = ui;
     this.clock = new THREE.Clock();
     this.started = false;
+    this.basis = isoBasis(48);
 
     this._initRenderer();
     this._initScene();
-    this._initWorld();
-    this._initPlayer();
-    this._initCamera();
-
     this.input = new Input();
     this.ui.attachInput(this.input);
     window.addEventListener("resize", () => this._onResize());
+    window.addEventListener("keydown", (e) => {
+      if (!["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) return;
+      this.started = true;
+      this.ui.hideIntro();
+    });
 
-    this._camUp = this.pibo.dir.clone();
-    this._camForward = this.pibo.forward.clone();
-    this._camTarget = this.pibo.worldPosition();
-    this._lighthouseDir = dirOf(LAYOUT.lighthouse);
+    this._focus = new THREE.Vector3(LAYOUT.start.x, 0.6, LAYOUT.start.z);
+    this._isoOffset = this.basis.offset.clone();
     this._guideTip = new THREE.Vector3();
     this._guideNdc = new THREE.Vector3();
-    this._guideCam = new THREE.Vector3();
+    this._wasSwimming = false;
+
     this.ui.onGoToLighthouse = () => this._goToLighthouse();
-    this.ui.onMapHere = () => this._playerLatLon();
+    this.ui.onMapHere = () => this._playerMapPos();
     this.ui.onGoToArcade = () => this._goToArcade();
     this.ui.onMapTravel = (placeId) => {
       if (placeId === "lighthouse") this._goToLighthouse();
@@ -56,9 +55,16 @@ export class Game {
     };
   }
 
-  _playerLatLon() {
-    const subject = this.familyShip?.riding ? this.familyShip : this.ufo?.riding ? this.ufo : this.pibo;
-    return latLonOf(subject.dir);
+  async preload() {
+    const sources = collectSources(ASSETS);
+    this.textures = await loadTextureSet(sources, textureSizes(ASSETS));
+    this._initWorld();
+    this._initPlayer();
+    this._initCamera();
+  }
+
+  _playerMapPos() {
+    return { x: this.pibo.x, z: this.pibo.z };
   }
 
   _initRenderer() {
@@ -69,27 +75,23 @@ export class Game {
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearAlpha(0); // let the CSS sky show through
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.NoToneMapping;
+    renderer.sortObjects = true;
     this.renderer = renderer;
   }
 
   _initScene() {
     this.scene = new THREE.Scene();
-    this.env = new Environment(this.scene, 10);
   }
 
   _initWorld() {
-    this.planet = new Planet({ radius: 10 });
-    this.scene.add(this.planet.group);
+    this.island = new Island(this.scene, this.textures, this.basis);
+    this.sprites = new SpriteSet(this.scene, this.textures, this.basis);
+    this.collision = new Collision(collidersFromPlacements(PLACEMENTS, ASSETS));
 
-    this.props = new Props(this.planet).build();
-
-    this.garden = new GardenSystem(this.planet).build();
+    this.garden = new GardenSystem(this.scene, { isoQuat: this.basis.quaternion }).build();
     this.garden.onBloom = (spot) => {
       const plant = getPlant(spot.plantId);
       this.ui.addGrown(plant);
@@ -97,85 +99,62 @@ export class Game {
     };
     this.garden.onAllGrown = () => this._reward();
 
-    this.ambient = new Ambient(this.scene, 10);
-    this.galaxy = new Galaxy(this.scene);
-    this.studio = new TvStudio(this.planet, { outdoorScreen: this.props.tvScreen });
+    this.studio = new TvStudio(null, { outdoorScreen: null });
     this.arcadeRoom = new ArcadeRoom(this.canvas);
     this.arcadeRoom.onPlay = (id) => this.ui.arcade?.hitPlay(id);
     this.arcadeRoom.onMove = (id, x, y, commit) => this.ui.arcade?.moveOnScreen(id, x, y, commit);
     this.ui.arcade.onScreen = (view) => this.arcadeRoom.show(view);
     this.ui.onArcadeLeave = () => this._leaveArcade();
-    this.collision = new Collision(this.planet.radius, collidersOf(LAYOUT));
-    if (this.props.landingBeacon) this.props.landingBeacon.visible = false;
   }
 
   _initPlayer() {
-    const start = dirOf(LAYOUT.start);
-    const forward = tangentToward(start, dirOf(LAYOUT.ufo));
-    this.pibo = new Pibo(this.planet, start, forward);
-
-    const pad = dirOf(LAYOUT.ufo);
-    this.ufo = new Ufo(this.planet, pad, tangentToward(pad, start));
-
-    const friendDir = dirOf(LAYOUT.companion);
-    const pinoDir = dirOf(LAYOUT.pino);
-    this.companion = new Pibo(this.planet, friendDir, tangentToward(friendDir, start), {
-      controllable: false,
-      palette: {
-        pot: 0x7eb6f5,
-        potDark: 0x5a94d6,
-        smile: 0x4a6a8a,
-        leaves: [0x5fae55, 0x74c266, 0x6ab85e],
-        leafTall: 0x6fbf5f,
-      },
+    const start = LAYOUT.start;
+    this.pibo = new Pibo({
+      textures: this.textures,
+      basis: this.basis,
+      x: start.x,
+      z: start.z,
     });
-    this.pino = new Pibo(this.planet, pinoDir, tangentToward(pinoDir, friendDir), {
-      controllable: false,
-      scale: 0.38,
-      palette: {
-        pot: 0xfff6ea,
-        potDark: 0xe8dcc8,
-        smile: 0xc4b8a8,
-        leaves: [0xc6e8b8, 0xd4f0c4, 0xb8dca8],
-        leafTall: 0xd8f2c8,
-      },
-    });
+    this.scene.add(this.pibo.group);
+
     this.friendsVisible = SHOW_VILLAGE_FRIENDS;
+    this.companion = new Pibo({
+      textures: this.textures,
+      basis: this.basis,
+      x: LAYOUT.companion.x,
+      z: LAYOUT.companion.z,
+      controllable: false,
+      tint: 0x9ec8f8,
+    });
+    this.pino = new Pibo({
+      textures: this.textures,
+      basis: this.basis,
+      x: LAYOUT.pino.x,
+      z: LAYOUT.pino.z,
+      controllable: false,
+      scale: 0.62,
+      tint: 0xfff6ea,
+    });
+    this.scene.add(this.companion.group);
+    this.scene.add(this.pino.group);
     if (!this.friendsVisible) {
       this.companion.setVisible(false);
       this.pino.setVisible(false);
     }
-
-    const shipDir = dirOf(LAYOUT.familyShip);
-    this.familyShip = new Ufo(this.planet, shipDir, tangentToward(shipDir, friendDir), {
-      scale: 1.85,
-      hidden: true,
-      voyage: true,
-      canLand: false,
-      crew: true,
-      boardLabel: "Hop on together",
-      interactRange: 3.8,
-    });
     this.letterRead = false;
-    this.voyaging = false;
   }
 
   _initCamera() {
-    this.camera = new THREE.PerspectiveCamera(
-      34,
-      window.innerWidth / window.innerHeight,
+    const { viewW, viewH } = orthoSize(window.innerWidth, window.innerHeight);
+    this.camera = new THREE.OrthographicCamera(
+      -viewW / 2,
+      viewW / 2,
+      viewH / 2,
+      -viewH / 2,
       0.1,
-      400
+      220
     );
-    this.camHeight = 9.5;
-    this.camBack = 13.5;
-    // seed a sensible starting pose
-    const p = this.pibo.worldPosition();
-    this.camera.position.copy(p)
-      .add(this.pibo.dir.clone().multiplyScalar(this.camHeight))
-      .add(this.pibo.forward.clone().multiplyScalar(-this.camBack));
-    this.camera.up.copy(this.pibo.dir);
-    this.camera.lookAt(p);
+    this._frameCameraOnPibo();
   }
 
   start() {
@@ -192,8 +171,9 @@ export class Game {
         return;
       }
       if (!q.has("studio") && !q.has("dock")) return;
-      const here = dirOf(LAYOUT.lighthousePad);
-      this.pibo.placeAt(here, tangentToward(here, dirOf(LAYOUT.lighthouse)), this.collision);
+      const pad = LAYOUT.lighthousePad;
+      const face = this._faceToward(pad, LAYOUT.lighthouse);
+      this.pibo.placeAt(pad.x, pad.z, face.x, face.z, this.collision);
       this.started = true;
       this.ui.hideIntro();
       this._frameCameraOnPibo();
@@ -227,102 +207,37 @@ export class Game {
       this.companion.update(dt, null, { frozen: true });
       this.pino.update(dt, null, { frozen: true });
     }
-    this.familyShip.update(dt, null, { frozen });
 
-    if (this.familyShip.riding) {
-      this.ufo.update(dt, null, { frozen });
-    } else if (this.ufo.riding) {
-      this.ufo.update(dt, this.input, { frozen });
-    } else {
-      this.pibo.update(dt, this.input, { frozen, collision: this.collision });
-      this.ufo.update(dt, null, { frozen });
-    }
+    this.pibo.update(dt, this.input, { frozen, collision: this.collision });
 
-    if (!this.started && (this.pibo.moving || this.ufo.riding)) {
+    if (!this.started && this.pibo.moving) {
       this.started = true;
       this.ui.hideIntro();
     }
-    if (!this.ufo.riding && !this.familyShip.riding) {
-      if (this.pibo.inWater && !this._wasSwimming) {
-        this.ui.toast("Splash — Pibo swims!", 1600);
-      }
-      this._wasSwimming = this.pibo.inWater;
+    if (this.pibo.inWater && !this._wasSwimming) {
+      this.ui.toast("Splash — Pibo swims!", 1600);
     }
+    this._wasSwimming = this.pibo.inWater;
 
     this._updateCamera(dt);
     this._updateLighthouseGuide();
     this._handleInteraction();
 
-    this.env.update(dt);
-    this.planet.update(dt);
-    this.props.update(dt);
+    this.island.update(dt);
+    this.sprites.update(dt);
     this.garden.update(dt);
-    this.ambient.update(dt);
-    this.galaxy.update(dt);
 
     this.input.endFrame();
     this.renderer.render(this.scene, this.camera);
   }
 
   _updateCamera(dt) {
-    const k = 1 - Math.exp(-6 * dt); // smoothing factor
-    const ship = this.familyShip.riding ? this.familyShip : this.ufo.riding ? this.ufo : null;
-    const flying = !!ship;
-    const subject = ship || this.pibo;
-    const p = subject.worldPosition();
-    const up = ship ? ship.dir : this.pibo.dir;
-    const fwd = ship ? ship.forward : this.pibo.forward;
-    const voyaging = ship && ship.mode === "voyage";
-
-    this._camUp.lerp(up, k).normalize();
-    this._camForward.lerp(fwd, k * (flying ? 0.85 : 0.6)).normalize();
-
-    const alt = ship ? ship.altitude : 0;
-    const space = THREE.MathUtils.smoothstep(alt, 10, 26);
-    const height = flying ? 4.2 + alt * 0.22 : this.camHeight;
-    const back = flying ? 11 + alt * (0.85 + space * 0.55) : this.camBack;
-
-    let desired;
-    if (voyaging && ship.heading && alt >= 36) {
-      const away = ship.heading.clone();
-      const camUp = (ship.voyageUp || ship.dir).clone();
-      camUp.sub(away.clone().multiplyScalar(camUp.dot(away)));
-      if (camUp.lengthSq() < 1e-6) camUp.set(0, 1, 0);
-      camUp.normalize();
-      this._camUp.lerp(camUp, k).normalize();
-      this._camForward.lerp(away, k).normalize();
-      desired = p.clone()
-        .add(away.clone().multiplyScalar(-18 - (alt - 36) * 0.4))
-        .add(camUp.clone().multiplyScalar(6));
-    } else {
-      desired = p.clone()
-        .add(this._camUp.clone().multiplyScalar(height))
-        .add(this._camForward.clone().multiplyScalar(-back));
-    }
-
-    this.camera.position.lerp(desired, flying ? k * 0.85 : k);
-    this.camera.up.copy(this._camUp);
-
-    let lookAt;
-    if (voyaging && alt >= 36) {
-      lookAt = p.clone().add(this._camForward.clone().multiplyScalar(16));
-    } else {
-      const lookShip = p.clone()
-        .add(this._camUp.clone().multiplyScalar(flying ? 0.4 : 1.6))
-        .add(this._camForward.clone().multiplyScalar(flying ? 2.2 : 1.4));
-      const lookPlanet = new THREE.Vector3(0, 0, 0);
-      lookAt = lookShip.lerp(lookPlanet, space * 0.55);
-    }
-    this._camTarget.lerp(lookAt, k);
-    this.camera.lookAt(this._camTarget);
-
-    const wantFov = voyaging ? 52
-      : flying ? THREE.MathUtils.lerp(36, 50, THREE.MathUtils.clamp(alt / 34, 0, 1))
-      : 34;
-    if (Math.abs(this.camera.fov - wantFov) > 0.05) {
-      this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, wantFov, k);
-      this.camera.updateProjectionMatrix();
-    }
+    const k = 1 - Math.exp(-3.4 * dt);
+    const look = new THREE.Vector3(this.pibo.x, 0.7, this.pibo.z);
+    this._focus.lerp(look, k);
+    this.camera.position.copy(this._focus).add(this._isoOffset);
+    this.camera.up.set(0, 1, 0);
+    this.camera.lookAt(this._focus);
   }
 
   _handleInteraction() {
@@ -340,7 +255,6 @@ export class Game {
       return;
     }
 
-    // While a panel/fact is open, route only modal keys.
     if (ui.isModalOpen) {
       ui.hidePrompt();
       if (ui.isPanelOpen) {
@@ -348,22 +262,9 @@ export class Game {
         else if (this.input.consume("Digit2", "Numpad2")) ui.pickByIndex(1);
         else if (this.input.consume("Digit3", "Numpad3")) ui.pickByIndex(2);
         else if (this.input.consume("Escape")) ui.closePanel();
-      } else {
-        if (this.input.consume("Escape", "KeyE", "Enter")) ui.closeFact();
+      } else if (this.input.consume("Escape", "KeyE", "Enter")) {
+        ui.closeFact();
       }
-      return;
-    }
-
-    if (this.familyShip.riding) {
-      ui.hidePrompt();
-      return;
-    }
-
-    if (this.ufo.riding) {
-      const pad = dirOf(LAYOUT.lighthousePad);
-      const nearDock = this.ufo.dir.angleTo(pad) * this.planet.radius < 5.2;
-      ui.setPrompt(nearDock ? "Land at lighthouse" : "Land");
-      if (this.input.consume("KeyE", "Enter")) this._landShip();
       return;
     }
 
@@ -375,51 +276,46 @@ export class Game {
       return;
     }
 
-    const arcade = this._arcadeInteractable(p);
+    const arcade = this._near(p, LAYOUT.arcadeDoor, ENTER_RANGE)
+      ? { label: "Enter arcade" }
+      : null;
     if (arcade) {
       ui.setPrompt(arcade.label);
       if (this.input.consume("KeyE", "Enter")) this._enterArcade();
       return;
     }
 
-    const family = this.familyShip.getInteractable(p);
-    if (family) {
-      ui.setPrompt(family.label);
-      if (this.input.consume("KeyE", "Enter")) this._boardFamily();
-      return;
-    }
-
-    if (this.friendsVisible && p.distanceTo(this.companion.worldPosition()) < 2.6) {
+    if (this.friendsVisible && Math.hypot(p.x - this.companion.x, p.z - this.companion.z) < 1.8) {
       ui.setPrompt("Talk");
       if (this.input.consume("KeyE", "Enter")) this._talkToCompanion();
       return;
     }
 
-    const ship = this.ufo.getInteractable(p);
-    if (ship) {
-      ui.setPrompt(ship.label);
-      if (this.input.consume("KeyE", "Enter")) this._boardShip();
-      return;
-    }
-
     const it = this.garden.getInteractable(p);
-
     if (!it) {
       ui.hidePrompt();
       return;
     }
-
     ui.setPrompt(it.label);
     if (it.disabled) return;
-
     if (this.input.consume("KeyE", "Enter")) {
       if (it.kind === "plant") {
         ui.openPlantPanel((plantId) => this.garden.plant(it.spot, plantId));
       } else if (it.kind === "inspect") {
-        const plant = this.garden.factFor(it.spot);
-        ui.showFact(plant);
+        ui.showFact(this.garden.factFor(it.spot));
       }
     }
+  }
+
+  _near(p, spot, range) {
+    return Math.hypot(p.x - spot.x, p.z - spot.z) < range;
+  }
+
+  _faceToward(from, to) {
+    const x = to.x - from.x;
+    const z = to.z - from.z;
+    const len = Math.hypot(x, z) || 1;
+    return { x: x / len, z: z / len };
   }
 
   _talkToCompanion() {
@@ -435,25 +331,7 @@ export class Game {
   _revealFamilyShip() {
     if (this.letterRead) return;
     this.letterRead = true;
-    this.familyShip.reveal();
-    this.ui.toast("A bigger pot-ship appears ✨", 2800);
-  }
-
-  _boardFamily() {
-    this.pibo.setVisible(false);
-    this.companion.setVisible(false);
-    this.pino.setVisible(false);
-    this.familyShip.board();
-    this.voyaging = true;
-    this.galaxy.begin(this.familyShip.dir);
-    document.documentElement.classList.add("galaxy");
-    this.camera.far = 2500;
-    this.camera.updateProjectionMatrix();
-    this.ui.setFlying(false);
-    this.ui.hideIntro();
-    this.started = true;
-    this.ui.toast("Me + you + Pino ✨", 2600);
-    setTimeout(() => this.ui.showBeyond(), 8500);
+    this.ui.toast("They dream of a voyage together", 2800);
   }
 
   _handleArcadeInteraction() {
@@ -514,22 +392,7 @@ export class Game {
     this.ui.closeStudio();
     this.renderer.setClearColor(0x000000, 0);
     this._frameCameraOnPibo();
-    this.ui.toast("Back on your planet 🌍", 2000);
-  }
-
-  _boardShip() {
-    this.pibo.setVisible(false);
-    this.ufo.board();
-    this.ui.setFlying(true);
-    this.ui.hideIntro();
-    this.started = true;
-    this.ui.toast("Follow the gold beam, or tap Go to lighthouse 🌊", 2800);
-  }
-
-  _arcadeInteractable(p) {
-    const center = dirOf(LAYOUT.arcade).multiplyScalar(this.planet.radius);
-    if (p.distanceTo(center) < 3.4) return { label: "Enter arcade" };
-    return null;
+    this.ui.toast("Back on your island", 2000);
   }
 
   _enterArcade() {
@@ -556,69 +419,46 @@ export class Game {
   }
 
   _goToArcade() {
-    if (this.ui.isIdeaOpen) this.ui.closeIdeas();
-    if (this.studio.active) this._leaveStudio();
-    this.ui.closeModals();
-    this.ui.closeCollection();
-
-    const pad = dirOf(LAYOUT.arcadeDoor);
-    const forward = tangentToward(pad, dirOf(LAYOUT.arcade));
-    if (this.familyShip.riding) {
-      const home = dirOf(LAYOUT.familyShip);
-      this.familyShip.settle(home, tangentToward(home, dirOf(LAYOUT.companion)));
-    }
-    if (this.ufo.riding) this.ufo.settle(pad, forward);
-    this.pibo.setVisible(true);
-    this.pibo.placeAt(pad, forward, this.collision);
-    this.ui.setFlying(false);
-    this.ui.hideIntro();
-    this.started = true;
-    this._frameCameraOnPibo();
-    this.ui.toast("Arcade. Press E to step inside.", 2800);
+    this._travelTo(LAYOUT.arcadeDoor, LAYOUT.arcade, "Arcade. Press E to step inside.");
   }
 
   _goToLighthouse() {
+    this._travelTo(LAYOUT.lighthousePad, LAYOUT.lighthouse, "Lighthouse dock. Press E to step inside.");
+  }
+
+  _travelTo(pad, look, message) {
     if (this.ui.isIdeaOpen) this.ui.closeIdeas();
     if (this.studio.active) this._leaveStudio();
     this.ui.closeModals();
     this.ui.closeCollection();
-
-    const pad = dirOf(LAYOUT.lighthousePad);
-    const forward = tangentToward(pad, this._lighthouseDir);
-    if (this.familyShip.riding) {
-      const home = dirOf(LAYOUT.familyShip);
-      this.familyShip.settle(home, tangentToward(home, dirOf(LAYOUT.companion)));
-    }
-    if (this.ufo.riding) this.ufo.settle(pad, forward);
+    const face = this._faceToward(pad, look);
     this.pibo.setVisible(true);
-    this.pibo.placeAt(pad, forward, this.collision);
-    this.ui.setFlying(false);
+    this.pibo.placeAt(pad.x, pad.z, face.x, face.z, this.collision);
     this.ui.hideIntro();
     this.started = true;
     this._frameCameraOnPibo();
-    this.ui.toast("Lighthouse dock. Press E to step inside.", 2800);
+    this.ui.toast(message, 2800);
   }
 
   _updateLighthouseGuide() {
-    if (this.studio.active || this.familyShip.mode === "voyage") {
+    if (this.studio.active || this.arcadeRoom.active) {
       this.ui.setLighthouseGuide({ hidden: true });
       return;
     }
-    const from = this.ufo.riding ? this.ufo.dir : this.pibo.dir;
-    const dist = from.angleTo(this._lighthouseDir) * this.planet.radius;
-    if (dist < 5.5) {
+    const spot = LAYOUT.lighthouse;
+    const dist = Math.hypot(this.pibo.x - spot.x, this.pibo.z - spot.z);
+    if (dist < 3.2) {
       this.ui.setLighthouseGuide({ hidden: true });
       return;
     }
 
-    const tip = this._guideTip.copy(this._lighthouseDir).multiplyScalar(this.planet.radius + 52);
-    this.camera.getWorldDirection(this._guideCam);
-    const inFront = tip.clone().sub(this.camera.position).dot(this._guideCam) > 0;
-    this._guideNdc.copy(tip).project(this.camera);
+    this._guideTip.set(spot.x, GROUND_Y + 3.2, spot.z);
+    this._guideNdc.copy(this._guideTip).project(this.camera);
     const w = window.innerWidth;
     const h = window.innerHeight;
     let sx = (this._guideNdc.x * 0.5 + 0.5) * w;
     let sy = (-this._guideNdc.y * 0.5 + 0.5) * h;
+    const inFront = this._guideNdc.z < 1;
     if (!inFront) {
       sx = w - sx;
       sy = h - sy;
@@ -631,7 +471,7 @@ export class Game {
       && sy > marginTop && sy < h - marginBottom;
     const x = onScreen ? sx : Math.min(w - marginX, Math.max(marginX, sx));
     let y = onScreen ? sy - 36 : Math.min(h - marginBottom, Math.max(marginTop, sy));
-    if (!onScreen && x < 240 && y < 130) y = 130;
+    if (!onScreen && x < 280 && y < 130) y = 130;
     if (x > w - 170 && y < 140) y = 140;
     const rotation = onScreen ? -Math.PI / 2 : Math.atan2(sy - h / 2, sx - w / 2);
     this.ui.setLighthouseGuide({
@@ -643,57 +483,33 @@ export class Game {
     });
   }
 
-  _landShip() {
-    const pad = dirOf(LAYOUT.lighthousePad);
-    const nearDock = this.ufo.dir.angleTo(pad) * this.planet.radius < 5.2;
-    if (nearDock) {
-      this.ufo.dir.copy(pad);
-      this.ufo.forward.copy(tangentToward(pad, dirOf(LAYOUT.lighthouse)));
-    }
-    this.ufo.requestLand(() => {
-      this.pibo.placeAt(this.ufo.dir, this.ufo.forward, this.collision);
-      this.ufo.parkAt(this.pibo.dir, this.pibo.forward);
-      this.pibo.setVisible(true);
-      this.ui.setFlying(false);
-      this._frameCameraOnPibo();
-      this.ui.toast(nearDock ? "Docked by the lighthouse 🌊" : "Back on your planet 🌍", 2000);
-    });
-  }
-
   _reward() {
-    const ui = this.ui;
-    ui.toast("The whole garden is blooming ✨", 3000);
-    this.props.setObservatoryLit(true);
+    this.ui.toast("The whole garden is blooming ✨", 3000);
     setTimeout(() => {
-      this.props.revealBridge();
-      ui.toast("A little bridge appears by the water 🌉", 3000);
+      this.sprites.show("bridge");
+      this.ui.toast("A little bridge appears by the water 🌉", 3000);
     }, 1600);
     setTimeout(() => {
-      this.props.revealBloom();
-      ui.toast("Something new is growing in the meadow 🌸", 3200);
+      this.sprites.show("bloom");
+      this.ui.toast("Something new is growing in the meadow 🌸", 3200);
     }, 3400);
   }
 
   _frameCameraOnPibo() {
-    const p = this.pibo.worldPosition();
-    this._camUp.copy(this.pibo.dir);
-    this._camForward.copy(this.pibo.forward);
-    this.camera.position.copy(p)
-      .add(this._camUp.clone().multiplyScalar(this.camHeight))
-      .add(this._camForward.clone().multiplyScalar(-this.camBack));
-    this._camTarget.copy(p)
-      .add(this._camUp.clone().multiplyScalar(1.6))
-      .add(this._camForward.clone().multiplyScalar(1.4));
-    this.camera.up.copy(this._camUp);
-    this.camera.fov = 34;
-    this.camera.lookAt(this._camTarget);
-    this.camera.updateProjectionMatrix();
+    this._focus.set(this.pibo.x, 0.7, this.pibo.z);
+    this.camera.position.copy(this._focus).add(this._isoOffset);
+    this.camera.up.set(0, 1, 0);
+    this.camera.lookAt(this._focus);
   }
 
   _onResize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    this.camera.aspect = w / h;
+    const { viewW, viewH } = orthoSize(w, h);
+    this.camera.left = -viewW / 2;
+    this.camera.right = viewW / 2;
+    this.camera.top = viewH / 2;
+    this.camera.bottom = -viewH / 2;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
     this.studio?.resize(w, h);

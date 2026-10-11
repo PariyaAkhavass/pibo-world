@@ -1,18 +1,19 @@
 /**
- * Planets a player can visit from the map.
+ * Islands a player can visit from the map.
  *
- * `locked` is the switch the map reads today. `unlock` is a placeholder for a
- * later points system — `points` stays null until the rules are chosen.
- * Rename `name` freely. Keep `id` stable so saves and travel can depend on it.
+ * The file name stays `planets.js` so older imports keep working. `PLANETS`
+ * and `ISLANDS` are the same list. `locked` is what the map reads today.
+ * `unlock` is a placeholder for a later points system — `points` stays null
+ * until the rules are chosen. Rename `name` freely. Keep `id` stable.
  */
-export const PLANETS = [
+export const ISLANDS = [
   {
     id: "pibo-world",
-    name: "Pibo World",
+    name: "Pibo Island",
     home: true,
     locked: false,
     unlock: null,
-    blurb: "Your pocket planet",
+    blurb: "Your home island",
     color: "#8fce74",
   },
   {
@@ -21,7 +22,7 @@ export const PLANETS = [
     home: false,
     locked: true,
     unlock: { kind: "points", points: null, label: "Earn points to unlock" },
-    blurb: "A sweet little sea",
+    blurb: "A sweet little island",
     color: "#f2c14e",
   },
   {
@@ -30,7 +31,7 @@ export const PLANETS = [
     home: false,
     locked: true,
     unlock: { kind: "points", points: null, label: "Earn points to unlock" },
-    blurb: "Soft hills under a night sky",
+    blurb: "Soft hills on a night island",
     color: "#c7b6f5",
   },
   {
@@ -39,7 +40,7 @@ export const PLANETS = [
     home: false,
     locked: true,
     unlock: { kind: "points", points: null, label: "Earn points to unlock" },
-    blurb: "Round islands and quiet water",
+    blurb: "Round islets and quiet water",
     color: "#8fd4ea",
   },
   {
@@ -48,12 +49,15 @@ export const PLANETS = [
     home: false,
     locked: true,
     unlock: { kind: "points", points: null, label: "Earn points to unlock" },
-    blurb: "A sparkly sky garden",
+    blurb: "A sparkly sky island",
     color: "#f5a8c8",
   },
 ];
 
-/** What the map should say when a planet cannot be visited yet. */
-export function lockedLabel(planet) {
-  return planet?.unlock?.label || "Earn points to unlock";
+/** Same data as ISLANDS. Kept so existing imports do not break. */
+export const PLANETS = ISLANDS;
+
+/** What the map should say when an island cannot be visited yet. */
+export function lockedLabel(island) {
+  return island?.unlock?.label || "Earn points to unlock";
 }
