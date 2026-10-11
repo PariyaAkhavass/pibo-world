@@ -1,0 +1,28 @@
+# Replacing art on Pibo Island
+
+The island you see is the concept painting, shown flat to the camera so the coastline is not squashed. Tall objects (houses, trees, lamps, the shed, the lighthouse, the arcade) are separate images cut from that same painting. Pibo walks in front of or behind them.
+
+The list of images lives in [`src/data/assets.js`](src/data/assets.js). Where each cutout stands lives in [`src/data/painted.js`](src/data/painted.js) (re-exported by [`src/world/layout.js`](src/world/layout.js)).
+
+## What to draw
+
+Match the concept painting: a front face plus a roof, thin dark outlines, soft color, almost no shading. The camera does not tilt your picture. It shows the image as drawn.
+
+- **Plate** (`assets/painted/plate.png`) — the whole scene: sky, sea, cliffs, foam, grass, path, flowers, and the still gold beam. 1280 × 816, with a little extra sky on top and sea on the bottom.
+- **Cutouts** (`assets/painted/sprites/`) — one PNG per tall object, transparent around the silhouette. The bottom center of the file is the feet.
+- **Walk mask** (`assets/painted/walk-mask.png`) — red where Pibo may walk, blue for the sea, green for cliff and sky. 640 × 360.
+- **Pibo frames** — 200 × 260. The pot stays on the same spot in every frame.
+
+`x` grows to the right of the picture. `z` grows down the picture. The painting is 32 units wide and 18 units tall.
+
+## How to swap one object
+
+1. Export a PNG with a transparent background, the same pixel size as the file you are replacing.
+2. Overwrite that file (for example `assets/painted/sprites/cottage.png`), or put a new file in `assets/paria/` and point `src` at it in `src/data/assets.js`.
+3. Refresh the game. There is no build step.
+
+If it sits too high or too low, change `anchor` (y 0 is the bottom edge). If it is too big, change `width` and `height`. `footprint.radius` is the round solid Pibo walks around.
+
+To replace the whole island, overwrite `assets/painted/plate.png` and paint a new `walk-mask.png` in the same red / blue / green. Keep the lighthouse beam in the plate if you want it to stay still.
+
+The buttons (Go to lighthouse, Go to Arcade, Map) are HTML in `index.html` and `styles.css`, not part of the painting.

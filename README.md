@@ -1,15 +1,15 @@
-# Pibo · Pocket Planet
+# Pibo World
 
-A tiny, charming, social **Pocket Planet** prototype for [pibo.world](https://pibo.world) — the
-first playable sample of an educational MMORPG made of small personal planets.
+A tiny isometric island for [pibo.world](https://pibo.world) — an English language-learning
+game for kids aged 9 to 12. The view is a fixed orthographic three-quarter angle, in a flat
+painterly style. Every prop is a swappable image (see [ASSETS.md](ASSETS.md)).
 
 The goal of this build is one feeling, not a feature list:
 
 > **"I own this tiny world, it feels alive, and I want to keep shaping it."**
 
-You wake up on a handcrafted **cozy learning garden planet**. Walk around it, plant three
-things in the garden, watch them grow, learn a little about each, and your world quietly
-changes in return.
+You wake up on a handcrafted **home island** painted like the concept. Walk the sandy paths, swim the moment you
+touch the water, and visit the lighthouse studio or the arcade.
 
 ## Run it
 
@@ -29,21 +29,16 @@ connection the first time.
 
 ## Play
 
-- **WASD** / **arrow keys** — walk around your planet (Pibo turns to face where it's going)
-- **E** / **Enter** — interact (plant, then later inspect what you grew)
+- **WASD** / **arrow keys** — walk the island. Up the keyboard moves up the picture, and Pibo turns to face the way it is going. The camera stays fixed on the painting.
+- **E** / **Enter** — step inside the lighthouse or the arcade
 - **1 / 2 / 3** — choose a plant
 - **Esc** — step back from a panel
-- **Map** (top-right) — your planet, a “You are here” dot, and other planets that stay locked until a points system exists. Tap the lighthouse, then **Go to the lighthouse**, to use the same trip as the top-left button. Tap **Arcade**, then **Go to Arcade**, for the same trip as the button under Go to lighthouse. Close with **×**, a click outside, or **Esc**.
-- **🪴** (under Map) — see the things you've grown
-- The blue friend and little white Pino are hidden for now. Turn them back on with `SHOW_VILLAGE_FRIENDS` in `src/config.js`.
+- **Map** (top-right) — your island, a “You are here” dot, and other islands that stay locked until a points system exists. Locks read “Earn points to unlock”. Tap the lighthouse, then **Go to the lighthouse**, to use the same trip as the top-left button. Tap **Arcade**, then **Go to Arcade**. Close with **×**, a click outside, or **Esc**.
+- The blue friend and little white Pino are hidden for now. Turn them back on with `SHOW_VILLAGE_FRIENDS` in `src/config.js`. The garden beds and the collection button are hidden too, so the island matches the painting.
 - **Phone / tablet** — a little joystick (bottom-left) steers Pibo; tap **E** (bottom-right) to interact. On-screen prompts and plant cards are tappable too.
-- Houses, the workshop, the observatory, trees, and rocks are solid — Pibo slides around them.
-- New landmarks fill out the walk: a little planetarium, mini café, tiny library,
-  windmill, wishing well, picnic blanket, benches, lanterns, mailboxes, crystals,
-  mushrooms, star-stone paths, and a **lighthouse** standing in the ocean.
-- **Pot-ship** (village landing pad) — press **E** to board. **WASD** flies around the world, **Space** climbs into the toy sky, **Shift** / **F** descends, **E** lands. On a phone, ↑ / ↓ sit above the E button.
-- **Lighthouse studio** — a gold beam rises over the ocean from the moment you wake up. An on-screen marker labeled **Lighthouse Studio** points at it. Tap **Go to lighthouse** (top left) to stand on the dock without the pot-ship, then press **E**. You can still fly there: board the pot-ship and follow the same beam.
-- **Swimming** — the instant Pibo touches blue water it tips forward, lies face-down, and breaststrokes (both arms sweep out and back together, legs kick). Stepping onto grass or the lighthouse dock stands it upright and it walks again.
+- The cottage, teal house, shed, trees, and rocks are solid — Pibo slides around them.
+- **Lighthouse studio** — a gold beam sweeps from the islet. Swim there, or tap **Go to lighthouse** (top left), then press **E**.
+- **Swimming** — the instant Pibo touches blue water it lies face-down and breaststrokes (both arms sweep out and back together, legs kick). It never plays a walking pose in the water. Stepping onto grass or either islet stands it upright and it walks again.
 - **Need an idea?** — inside the lighthouse studio. Rolls a tiny game prompt that stays inside the demo lesson (food words + “I like / I don’t like”). Lock a slot, reroll the rest, then **Use this idea** to drop the hint into the sentence box.
 - **Arcade room** — tap **Go to Arcade** (under Go to lighthouse), or use the map, then press **E** to step inside. The machine's screen shows your game as you choose a template or answer the idea chips. Drag pictures on the screen, set the key, the treasure, the order, and the English clues. **Play / Test** runs on that screen. **Exit** or **Esc** steps back outside. **Save** and **Export log (JSON)** work from the side panel.
 
@@ -127,22 +122,21 @@ Everything is a small, self-contained module so the world can grow later without
 ```
 src/
   core/
-    Game.js         orchestrator: renderer, loop, camera, interaction wiring
+    Game.js         orchestrator: renderer, loop, isometric camera, interaction
     Input.js        keyboard + analog stick (held movement vs. one-shot actions)
-    SphereMath.js   living on a sphere: placement, movement, orientation
-    Collision.js    circular keep-out on the surface (houses, trees, rocks)
+    Collision.js    circular keep-out on the flat island
   world/
-    Planet.js       the Pocket Planet sphere + grass/ocean biomes
-    Environment.js  soft daytime lighting + shadows
-    Props.js        handcrafted structures & nature (home, workshop, observatory, …)
-    Ambient.js      clouds, butterflies — life while you stand still
-    materials.js    shared "clay toy" materials & primitives
-    layout.js       the handcrafted lat/lon layout of this planet
-    biome.js        grass cap, shoreline, and open-ocean coloring
+    Island.js       home cliff, two islets, sea, and sky (textured from the manifest)
+    SpriteSet.js    one camera-facing card per object
+    iso.js          fixed yaw/pitch and the screen-relative move axes
+    layout.js       flat x/z layout, land shapes, placements
+    biome.js        water test: swim the moment the body leaves land
+    textures.js     SVG/PNG → texture
   entities/
-    Pibo.js         the player creature (walks, idles, faces movement)
-    Ufo.js          pot-shaped ship you can board and fly
-    Galaxy.js       stars + hard clay planets for the family voyage
+    Pibo.js         swappable idle / walk / swim frames
+  data/
+    assets.js       id → image, size, anchor, footprint
+    planets.js      island list for the map (ISLANDS, same data as PLANETS)
   systems/
     GardenSystem.js the plant → grow → inspect → reward loop
     TvStudio.js     lighthouse interior + prompt → generate → preview
@@ -170,12 +164,11 @@ src/
 
 The seams are already in place for the real game, but intentionally not built yet:
 
-- **Multiple Pocket Planets** — a `Planet` is a self-contained group built from a `layout`.
-  Instantiate more and place them in the sky.
-- **Ownership / visitors** — the landing pad is where future visitors arrive; the planet is
-  a discrete unit ready to carry an owner id and guests.
-- **Placeable buildings** — `Props` builders are pure factories; a placement system can reuse
-  `planet.placeOnSurface`.
+- **More islands** — add an entry to `ISLANDS` in `src/data/planets.js`. The map already
+  shows locked islands as “Earn points to unlock”.
+- **Art** — replace any image listed in `src/data/assets.js`. See `ASSETS.md`.
+- **Placeable props** — add a row to `PLACEMENTS` in `src/world/layout.js` and an image
+  entry in `src/data/assets.js`.
 - **More educational systems** — `GardenSystem` and `TvStudio` are two systems among
   future ones; `data/` holds content separate from mechanics.
 - **Inventory / NPCs / world events** — slot in as new `systems/` + `entities/`, wired

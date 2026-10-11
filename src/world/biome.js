@@ -1,103 +1,73 @@
-import * as THREE from "three";
-import { LAYOUT, dirOf } from "./layout.js";
-import { tangentToward } from "../core/SphereMath.js";
+import { PLATE_W, PLATE_H } from "./iso.js";
 
 /**
- * Planet-scale biomes. The garden village is a grassy cap around the north
- * pole; the rest of the sphere is open ocean, with two islands (lighthouse +
- * the far meadow) so the empty green hillside reads as sea.
- *
- * lat is degrees from the north pole (same convention as layout.js).
+ * Walk, water, and cliff samples painted from the concept image.
+ * Red = grass and path, blue = sea, green = cliff and sky.
  */
+
+const IMG_W = 1280;
+const IMG_H = 720;
+let mask = null;
+
+export function setWalkMask(data, w, h) {
+  mask = { data, w, h };
+}
+
+export function loadWalkMask(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0);
+      const data = ctx.getImageData(0, 0, img.width, img.height).data;
+      setWalkMask(data, img.width, img.height);
+      resolve();
+    };
+    img.onerror = () => reject(new Error(`Could not load ${url}`));
+    img.src = url;
+  });
+}
+
+function sample(x, z) {
+  if (!mask) return "walk";
+  const px = (x / PLATE_W + 0.5) * IMG_W;
+  const py = (z / PLATE_H + 0.5) * IMG_H;
+  const mx = Math.max(0, Math.min(mask.w - 1, Math.floor(px * mask.w / IMG_W)));
+  const my = Math.max(0, Math.min(mask.h - 1, Math.floor(py * mask.h / IMG_H)));
+  const i = (my * mask.w + mx) * 4;
+  if (mask.data[i] > 200) return "walk";
+  if (mask.data[i + 2] > 200) return "water";
+  return "block";
+}
+
+export function onLand(x, z) {
+  return sample(x, z) === "walk";
+}
+
+export function isBlocked(x, z) {
+  return sample(x, z) === "block";
+}
+
+const BODY = 0.28;
+
+/** Swim as soon as any sample on the pot is in the painted sea. */
+export function isBlueWater(x, z, fx = 0, fz = 0) {
+  const reach = BODY;
+  const points = [
+    [x, z],
+    [x + fx * reach, z + fz * reach],
+    [x + reach, z],
+    [x - reach, z],
+    [x, z + reach],
+    [x, z - reach],
+  ];
+  return points.some(([px, pz]) => sample(px, pz) === "water");
+}
+
 export const OCEAN_LAT = 64;
-export const SHORE_WIDTH = 8;
-
-const ISLANDS = [
-  { dir: dirOf(LAYOUT.lighthouseIsland), radius: 14 },
-  { dir: dirOf(LAYOUT.meadowIsland), radius: 26 },
-];
-
-function islandAmount(dir) {
-  let best = 0;
-  for (const isl of ISLANDS) {
-    const d = THREE.MathUtils.radToDeg(dir.angleTo(isl.dir));
-    const inner = isl.radius - 5;
-    let amt = 0;
-    if (d < inner) amt = 1;
-    else if (d < isl.radius) amt = 1 - (d - inner) / 5;
-    if (amt > best) best = amt;
-  }
-  return best;
-}
-
-function latOf(dir) {
-  return THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(dir.y, -1, 1)));
-}
-
-/**
- * 0 = dry land, 1 = open water. Islands cut holes in the sea so the
- * lighthouse dock and far meadow stay walkable.
- */
-export function oceanAmount(dir) {
-  const n = dir.clone().normalize();
-  const lat = latOf(n);
-  let land;
-  if (lat >= OCEAN_LAT) land = 0;
-  else if (lat <= OCEAN_LAT - SHORE_WIDTH) land = 1;
-  else land = 1 - (lat - (OCEAN_LAT - SHORE_WIDTH)) / SHORE_WIDTH;
-  land = Math.max(land, islandAmount(n));
-  return 1 - land;
-}
-
-/**
- * Latitude where the sandy beach ends and the ground is blue ocean.
- * Shallow water at this line counts as water — there is no wade band.
- */
-export const WATERLINE_LAT = OCEAN_LAT + 6;
-
-const PLANET_R = 10;
-/** How far the pot sticks forward of its center, so swim starts on contact. */
-const BODY_REACH = 0.42;
-
-const _n = new THREE.Vector3();
-const _off = new THREE.Vector3();
-const _right = new THREE.Vector3();
-
-const LAND_DISCS = [
-  { dir: dirOf(LAYOUT.lighthouseIsland), radius: 2.15 },
-  { dir: dirOf(LAYOUT.meadowIsland), radius: 4.4 },
-];
-
-const DOCK_PAD = dirOf(LAYOUT.lighthousePad);
-const DOCK_FWD = tangentToward(DOCK_PAD, dirOf(LAYOUT.lighthouse));
-
-function onDisc(dir, disc) {
-  return dir.angleTo(disc.dir) * PLANET_R <= disc.radius + BODY_REACH;
-}
-
-function onLighthouseDock(dir) {
-  if (dir.angleTo(DOCK_PAD) > 0.45) return false;
-  _off.copy(dir).addScaledVector(DOCK_PAD, -dir.dot(DOCK_PAD));
-  _right.crossVectors(DOCK_PAD, DOCK_FWD);
-  const along = _off.dot(DOCK_FWD) * PLANET_R;
-  const side = _off.dot(_right) * PLANET_R;
-  // Match the visible round deck (radius ~1.7) and the short pier, so the
-  // pot keeps swimming in the blue water beside the wood.
-  const onDeck = along * along + side * side <= 1.78 * 1.78;
-  const onPier = along >= 0.35 && along <= 2.65 && Math.abs(side) <= 0.78;
-  return onDeck || onPier;
-}
-
-/**
- * True when the character is touching the blue ocean — shoreline shallows
- * included. Grass, the beach, the islands, and the lighthouse dock are dry.
- */
-export function isBlueWater(dir) {
-  _n.copy(dir).normalize();
-  if (latOf(_n) <= WATERLINE_LAT - (BODY_REACH / PLANET_R) * (180 / Math.PI)) return false;
-  for (const disc of LAND_DISCS) {
-    if (onDisc(_n, disc)) return false;
-  }
-  if (onLighthouseDock(_n)) return false;
-  return true;
+export function oceanAmount() {
+  return 0;
 }

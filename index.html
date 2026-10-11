@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Pibo · Pocket Planet</title>
+  <title>Pibo World</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -18,12 +18,27 @@
 </head>
 <body>
   <div id="sky"></div>
-  <canvas id="scene"></canvas>
+  <canvas id="scene" tabindex="0" aria-label="Pibo island"></canvas>
 
-  <!-- Minimal UI overlay. The planet itself is the interface. -->
+  <!-- Minimal UI overlay. The island itself is the interface. -->
   <div id="ui">
-    <button type="button" id="lighthouse-go" class="lighthouse-go">Go to lighthouse</button>
-    <button type="button" id="arcade-go" class="arcade-go-btn">Go to Arcade</button>
+    <div class="travel-bar">
+      <button type="button" id="lighthouse-go" class="lighthouse-go">
+        <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2.5l1.2 3.2h2.4l-1.6 4.2h2.2L12 21.5 7.8 9.9h2.2L8.4 5.7h2.4z" fill="#f4d27a" stroke="#5a4638" stroke-width="1.4" stroke-linejoin="round"/>
+          <rect x="10.2" y="9" width="3.6" height="8" rx="0.6" fill="#f7f1e6" stroke="#5a4638" stroke-width="1.4"/>
+        </svg>
+        Go to lighthouse
+      </button>
+      <button type="button" id="arcade-go" class="arcade-go-btn">
+        <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="4" y="6" width="16" height="12" rx="2.5" fill="#8b6ad4" stroke="#5a4638" stroke-width="1.4"/>
+          <rect x="7" y="8.5" width="6.5" height="5" rx="1" fill="#7fd0ea" stroke="#5a4638" stroke-width="1.2"/>
+          <circle cx="16.2" cy="13.2" r="1.1" fill="#f6e27a" stroke="#5a4638" stroke-width="1"/>
+        </svg>
+        Go to Arcade
+      </button>
+    </div>
     <button type="button" id="map-btn" class="map-btn" aria-haspopup="dialog" aria-controls="map-overlay" aria-expanded="false">
       <span class="map-btn-icon" aria-hidden="true">🗺️</span>
       <span>Map</span>
@@ -39,10 +54,10 @@
     <!-- Intro title card -->
     <div id="intro" class="intro">
       <div class="intro-mark">Pibo</div>
-      <div class="intro-sub">your pocket planet</div>
+      <div class="intro-sub">your little island</div>
       <div class="intro-hint">
-        <span class="hint-kb">move with <b>WASD</b> · follow the <b>gold beam</b> · or tap <b>Go to lighthouse</b></span>
-        <span class="hint-touch">use the <b>joystick</b> · follow the <b>gold beam</b> · or tap <b>Go to lighthouse</b></span>
+        <span class="hint-kb">move with <b>WASD</b> · swim to the <b>lighthouse</b> · or tap <b>Go to lighthouse</b></span>
+        <span class="hint-touch">use the <b>joystick</b> · swim to the <b>lighthouse</b> · or tap <b>Go to lighthouse</b></span>
       </div>
     </div>
 
@@ -106,12 +121,12 @@
       </div>
     </div>
 
-    <!-- World map. Home planet plus planets still locked. -->
+    <!-- World map. Home island plus islands still locked. -->
     <div id="map-overlay" class="map-overlay hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="map-title">
       <button type="button" class="map-scrim" data-map-scrim aria-label="Close map"></button>
       <div class="map-card">
         <button type="button" class="map-close" data-map-close aria-label="Close map">×</button>
-        <div class="map-kicker">Your planet</div>
+        <div class="map-kicker">Your island</div>
         <h2 id="map-title" class="map-title">Pibo World</h2>
         <div class="map-disc" data-map-disc>
           <div class="map-land" data-map-land></div>
@@ -122,7 +137,7 @@
           <span data-map-detail-note>Village</span>
           <button type="button" class="map-go hidden" data-map-go>Go to the lighthouse</button>
         </div>
-        <div class="map-kicker">Other planets</div>
+        <div class="map-kicker">Other islands</div>
         <div class="map-galaxy" data-map-galaxy></div>
       </div>
     </div>
@@ -131,7 +146,7 @@
     <div id="arcade-overlay" class="arcade-overlay hidden" role="dialog" aria-modal="true" aria-hidden="true"></div>
 
     <!-- Collection button + drawer -->
-    <button id="collection-btn" class="collection-btn" title="Your collection">🪴</button>
+    <button id="collection-btn" class="collection-btn hidden" title="Your collection">🪴</button>
     <div id="collection" class="collection hidden">
       <div class="collection-title">Things you've grown</div>
       <div class="collection-list" id="collection-list"></div>
