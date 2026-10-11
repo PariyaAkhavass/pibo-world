@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { clay, ball, box, cyl } from "../world/materials.js";
-import { objectAt, paintArcadeScreen, screenPoint } from "./arcadeScreen.js";
+import { SCREEN_INSET, objectAt, paintArcadeScreen, screenPoint } from "./arcadeScreen.js";
 
 /**
  * Interior you step into from the outdoor cabinet, same idea as the lighthouse
@@ -15,9 +15,11 @@ export class ArcadeRoom {
     this._drag = null;
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(28, 1, 0.08, 40);
+    this.camera = new THREE.PerspectiveCamera(32, 1, 0.08, 40);
     this.raycaster = new THREE.Raycaster();
     this._ndc = new THREE.Vector2();
+    this._tmp = new THREE.Vector3();
+    this._fitPoints = [];
 
     this._buildRoom();
     this._buildScreen();
@@ -40,6 +42,7 @@ export class ArcadeRoom {
   resize(w, h) {
     this.camera.aspect = w / Math.max(1, h);
     this.camera.updateProjectionMatrix();
+    this._placeCamera();
   }
 
   show(view = {}) {
@@ -49,6 +52,7 @@ export class ArcadeRoom {
       message: view.message || "",
       clue: view.clue || "",
       won: !!view.won,
+      chrome: view.chrome || 0,
     };
     this._paint();
   }
@@ -59,10 +63,68 @@ export class ArcadeRoom {
   }
 
   _placeCamera() {
-    // Shift left a little so the side panel doesn't cover the screen.
-    this.camera.position.set(-0.42, 1.28, 3.05);
+    if (!this._fitPoints.length) return;
+    // Look slightly down the front of the cabinet so the marquee, screen, and deck all read.
+    const target = new THREE.Vector3(0, 1.38, 0.2);
+    const dir = new THREE.Vector3(0, 0.16, 1).normalize();
+    const limit = 0.9;
+    let lo = 2;
+    let hi = 22;
+    for (let i = 0; i < 18; i++) {
+      const mid = (lo + hi) / 2;
+      if (this._fits(this._fitPoints, target, dir, mid, limit)) hi = mid;
+      else lo = mid;
+    }
+    const dist = hi * 1.04;
+    this.camera.position.copy(target).addScaledVector(dir, dist);
     this.camera.up.set(0, 1, 0);
-    this.camera.lookAt(0.12, 1.22, 0);
+    this.camera.lookAt(target);
+    this.camera.updateProjectionMatrix();
+    this.camera.updateMatrixWorld(true);
+    if (this.scene.fog) {
+      this.scene.fog.near = dist + 2;
+      this.scene.fog.far = dist + 10;
+    }
+  }
+
+  _fits(points, target, dir, dist, limit) {
+    this.camera.position.copy(target).addScaledVector(dir, dist);
+    this.camera.lookAt(target);
+    this.camera.updateMatrixWorld(true);
+    this.camera.updateProjectionMatrix();
+    for (const point of points) {
+      this._tmp.copy(point).project(this.camera);
+      if (this._tmp.z < -1 || this._tmp.z > 1) return false;
+      if (Math.abs(this._tmp.x) > limit || Math.abs(this._tmp.y) > limit) return false;
+    }
+    return true;
+  }
+
+  /** Inner screen rectangle in CSS pixels, matching the painted play area. */
+  screenCssRect(canvas) {
+    if (!this.screen || !canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const geo = this.screen.geometry.parameters;
+    const ix = (geo.width / 2) * (1 - 2 * SCREEN_INSET);
+    const iy = (geo.height / 2) * (1 - 2 * SCREEN_INSET);
+    const corners = [
+      [-ix, iy], [ix, iy], [-ix, -iy], [ix, -iy],
+    ];
+    this.screen.updateWorldMatrix(true, false);
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const [x, y] of corners) {
+      this._tmp.set(x, y, 0).applyMatrix4(this.screen.matrixWorld).project(this.camera);
+      const sx = (this._tmp.x * 0.5 + 0.5) * rect.width + rect.left;
+      const sy = (-this._tmp.y * 0.5 + 0.5) * rect.height + rect.top;
+      minX = Math.min(minX, sx);
+      minY = Math.min(minY, sy);
+      maxX = Math.max(maxX, sx);
+      maxY = Math.max(maxY, sy);
+    }
+    return { left: minX, top: minY, width: maxX - minX, height: maxY - minY };
   }
 
   _buildScreen() {
@@ -80,9 +142,35 @@ export class ArcadeRoom {
       toneMapped: false,
     });
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.72, 1.29), this.screenMat);
-    screen.position.set(0, 1.62, 0.28);
+    screen.position.set(0, 1.58, 0.28);
+    screen.userData.fit = true;
     this.scene.add(screen);
     this.screen = screen;
+    this._collectFit();
+    paintMarquee(this.marquee);
+    document.fonts?.ready?.then(() => paintMarquee(this.marquee));
+  }
+
+  _collectFit() {
+    const points = [];
+    const box = new THREE.Box3();
+    this.scene.updateMatrixWorld(true);
+    this.scene.traverse((obj) => {
+      if (!obj.isMesh || !obj.userData.fit) return;
+      box.setFromObject(obj);
+      const { min, max } = box;
+      points.push(
+        new THREE.Vector3(min.x, min.y, min.z),
+        new THREE.Vector3(min.x, min.y, max.z),
+        new THREE.Vector3(min.x, max.y, min.z),
+        new THREE.Vector3(min.x, max.y, max.z),
+        new THREE.Vector3(max.x, min.y, min.z),
+        new THREE.Vector3(max.x, min.y, max.z),
+        new THREE.Vector3(max.x, max.y, min.z),
+        new THREE.Vector3(max.x, max.y, max.z),
+      );
+    });
+    this._fitPoints = points;
   }
 
   _paint() {
@@ -111,14 +199,15 @@ export class ArcadeRoom {
     if (!this.active || event.button > 0) return;
     const uv = this._uv(event);
     if (!uv || !this.view.spec) return;
-    const object = objectAt(this.view.spec, uv.x, uv.y);
+    const chrome = this.view.chrome || 0;
+    const object = objectAt(this.view.spec, uv.x, uv.y, chrome);
     if (!object) return;
     if (this.view.mode === "play") {
       this.onPlay?.(object.id);
       return;
     }
     if (this.view.mode !== "edit") return;
-    const point = screenPoint(uv.x, uv.y);
+    const point = screenPoint(uv.x, uv.y, chrome);
     this._drag = { id: object.id, x: point.x, y: point.y, moved: false };
   }
 
@@ -126,7 +215,7 @@ export class ArcadeRoom {
     if (!this._drag) return;
     const uv = this._uv(event);
     if (!uv) return;
-    const point = screenPoint(uv.x, uv.y);
+    const point = screenPoint(uv.x, uv.y, this.view.chrome || 0);
     const x = Math.min(92, Math.max(8, point.x));
     const y = Math.min(88, Math.max(12, point.y));
     if (Math.hypot(x - this._drag.x, y - this._drag.y) < 1.2 && !this._drag.moved) return;
@@ -176,27 +265,42 @@ export class ArcadeRoom {
     const red = clay(0xd01224, { roughness: 0.55 });
     const black = clay(0x1a1a1a, { roughness: 0.4 });
 
+    const mark = (obj) => {
+      obj.traverse((child) => {
+        if (child.isMesh) child.userData.fit = true;
+      });
+      return obj;
+    };
+
     for (const sx of [-1, 1]) {
-      const side = box(0.14, 2.35, 0.62, silver);
-      side.position.set(sx * 1.18, 1.28, 0.05);
-      scene.add(side);
-      const trim = box(0.05, 2.2, 0.08, clay(0xf2f3f6, { roughness: 0.35 }));
-      trim.position.set(sx * 1.08, 1.28, 0.32);
-      scene.add(trim);
+      const side = box(0.14, 2.72, 0.62, silver);
+      side.position.set(sx * 1.18, 1.42, 0.05);
+      scene.add(mark(side));
+      const trim = box(0.05, 2.5, 0.08, clay(0xf2f3f6, { roughness: 0.35 }));
+      trim.position.set(sx * 1.08, 1.42, 0.32);
+      scene.add(mark(trim));
     }
 
     const body = box(2.15, 2.2, 0.48, stripe);
-    body.position.set(0, 1.32, -0.08);
-    scene.add(body);
+    body.position.set(0, 1.28, -0.08);
+    scene.add(mark(body));
 
-    const hood = box(2.15, 0.28, 0.5, stripe);
-    hood.position.set(0, 2.28, 0.02);
-    scene.add(hood);
+    const hood = box(2.15, 0.42, 0.5, stripe);
+    hood.position.set(0, 2.52, 0.02);
+    scene.add(mark(hood));
+
+    const marquee = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.62, 0.28),
+      new THREE.MeshBasicMaterial({ color: 0xfff6ee, toneMapped: false })
+    );
+    marquee.position.set(0, 2.52, 0.3);
+    marquee.userData.fit = true;
+    scene.add(marquee);
+    this.marquee = marquee;
 
     const deckPivot = new THREE.Group();
     deckPivot.position.set(0, 0.58, 0.62);
     deckPivot.rotation.x = 0.72;
-    scene.add(deckPivot);
 
     const deck = box(2.2, 0.07, 0.92, red);
     deckPivot.add(deck);
@@ -209,20 +313,21 @@ export class ArcadeRoom {
     deckPivot.add(joystick(0.28));
     deckPivot.add(buttonRow(-0.28));
     deckPivot.add(buttonRow(0.72));
+    scene.add(mark(deckPivot));
 
     const strip = box(2.05, 0.14, 0.08, black);
-    strip.position.set(0, 0.9, 0.34);
-    scene.add(strip);
+    strip.position.set(0, 0.86, 0.34);
+    scene.add(mark(strip));
     for (const sx of [-0.28, 0.28]) {
       const start = cyl(0.045, 0.045, 0.03, clay(0xfff6ee), 12);
       start.rotation.x = Math.PI / 2;
-      start.position.set(sx, 0.9, 0.39);
-      scene.add(start);
+      start.position.set(sx, 0.86, 0.39);
+      scene.add(mark(start));
     }
     for (const sx of [-0.52, 0.52]) {
       const coin = box(0.16, 0.05, 0.02, clay(0x8a9098, { roughness: 0.35 }));
-      coin.position.set(sx, 0.9, 0.39);
-      scene.add(coin);
+      coin.position.set(sx, 0.86, 0.39);
+      scene.add(mark(coin));
     }
 
     // A second cabinet, small and off to the side, so the room reads as an arcade.
@@ -235,6 +340,26 @@ export class ArcadeRoom {
     extra2.rotation.y = -0.35;
     scene.add(extra2);
   }
+}
+
+function paintMarquee(mesh) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 640;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff6ee";
+  ctx.fillRect(0, 0, 640, 128);
+  ctx.fillStyle = "#d01224";
+  ctx.font = "700 78px Fredoka, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("ARCADE", 320, 68);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const previous = mesh.material.map;
+  mesh.material.map = tex;
+  mesh.material.needsUpdate = true;
+  if (previous && previous !== tex) previous.dispose();
 }
 
 function stripeMaterial() {

@@ -5,17 +5,23 @@
 import { STICKERS, BACKGROUNDS } from "../data/arcadeStickers.js";
 import { read } from "./gameSpec.js";
 
-const INSET = 0.075;
+export const SCREEN_INSET = 0.075;
 
-export function screenPoint(u, v) {
-  const x = ((u - INSET) / (1 - 2 * INSET)) * 100;
-  const y = (((1 - v) - INSET) / (1 - 2 * INSET)) * 100;
+/**
+ * `chrome` is the fraction of the play area reserved for the control dock
+ * along the bottom, so taps and pictures share the same region.
+ */
+export function screenPoint(u, v, chrome = 0) {
+  const spanX = 1 - 2 * SCREEN_INSET;
+  const spanY = spanX * (1 - chrome);
+  const x = ((u - SCREEN_INSET) / spanX) * 100;
+  const y = (((1 - v) - SCREEN_INSET) / spanY) * 100;
   return { x, y };
 }
 
-export function objectAt(spec, u, v) {
+export function objectAt(spec, u, v, chrome = 0) {
   if (!spec?.objects) return null;
-  const { x, y } = screenPoint(u, v);
+  const { x, y } = screenPoint(u, v, chrome);
   if (x < -4 || x > 104 || y < -4 || y > 104) return null;
   let best = null;
   let bestD = 14;
@@ -52,28 +58,38 @@ function stripes(ctx, w, h) {
   }
 }
 
-function playArea(w, h) {
-  const x = w * INSET;
-  const y = h * INSET;
-  return { x, y, w: w * (1 - 2 * INSET), h: h * (1 - 2 * INSET) };
+function playArea(w, h, chrome = 0) {
+  const x = w * SCREEN_INSET;
+  const y = h * SCREEN_INSET;
+  const fullH = h * (1 - 2 * SCREEN_INSET);
+  const dock = fullH * chrome;
+  return {
+    x,
+    y,
+    w: w * (1 - 2 * SCREEN_INSET),
+    h: fullH - dock,
+    dock,
+    fullH,
+  };
 }
 
 export function paintArcadeScreen(ctx, w, h, view = {}) {
   const spec = view.spec;
   stripes(ctx, w, h);
-  const area = playArea(w, h);
-  const radius = Math.min(area.w, area.h) * 0.08;
+  const chrome = Math.min(0.5, Math.max(0, view.chrome || 0));
+  const area = playArea(w, h, chrome);
+  const radius = Math.min(area.w, area.fullH) * 0.08;
 
   ctx.save();
   ctx.shadowColor = "rgba(255, 244, 230, 0.85)";
   ctx.shadowBlur = 28;
-  roundRect(ctx, area.x - 10, area.y - 10, area.w + 20, area.h + 20, radius + 10);
+  roundRect(ctx, area.x - 10, area.y - 10, area.w + 20, area.fullH + 20, radius + 10);
   ctx.fillStyle = "#fff6ee";
   ctx.fill();
   ctx.restore();
 
   ctx.save();
-  roundRect(ctx, area.x, area.y, area.w, area.h, radius);
+  roundRect(ctx, area.x, area.y, area.w, area.fullH, radius);
   ctx.clip();
 
   if (!spec) {
@@ -154,7 +170,7 @@ export function paintArcadeScreen(ctx, w, h, view = {}) {
     }
   }
 
-  if (view.mode === "play") {
+  if (view.mode === "play" && chrome === 0) {
     const clue = view.clue || "";
     if (clue) {
       ctx.fillStyle = "rgba(255,246,238,0.94)";
@@ -173,6 +189,11 @@ export function paintArcadeScreen(ctx, w, h, view = {}) {
     ctx.fillStyle = "#fffaf6";
     ctx.font = "700 20px Fredoka, system-ui, sans-serif";
     ctx.fillText(trimLine(message, 48), area.x + area.w / 2, area.y + area.h - 36);
+  }
+
+  if (area.dock > 0) {
+    ctx.fillStyle = "#fff6ee";
+    ctx.fillRect(area.x, area.y + area.h, area.w, area.dock + 2);
   }
 
   ctx.restore();

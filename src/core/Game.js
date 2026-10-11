@@ -208,6 +208,7 @@ export class Game {
 
     if (this.arcadeRoom.active) {
       this.arcadeRoom.update(dt);
+      this.ui.arcade?.place(this.arcadeRoom.screenCssRect(this.canvas));
       this._handleArcadeInteraction();
       this.input.endFrame();
       this.renderer.render(this.arcadeRoom.scene, this.arcadeRoom.camera);
