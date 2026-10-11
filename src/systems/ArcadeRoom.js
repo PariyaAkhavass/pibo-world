@@ -62,40 +62,65 @@ export class ArcadeRoom {
     if (this.glow) this.glow.intensity = 1.35 + Math.sin(this.t * 1.8) * 0.08;
   }
 
+  /**
+   * Straight-on view: the camera sits on the screen's normal, aimed at the
+   * center of the screen mesh. Field of view comes from that same center plus
+   * the cabinet around it, so the screen stays locked to the viewport center
+   * and the whole machine still fits when the window changes size.
+   */
   _placeCamera() {
-    if (!this._fitPoints.length) return;
-    // Look slightly down the front of the cabinet so the marquee, screen, and deck all read.
-    const target = new THREE.Vector3(0, 1.38, 0.2);
-    const dir = new THREE.Vector3(0, 0.16, 1).normalize();
-    const limit = 0.9;
-    let lo = 2;
-    let hi = 22;
-    for (let i = 0; i < 18; i++) {
-      const mid = (lo + hi) / 2;
-      if (this._fits(this._fitPoints, target, dir, mid, limit)) hi = mid;
-      else lo = mid;
+    if (!this.screen || !this._fitPoints.length) return;
+    const bounds = new THREE.Box3().setFromObject(this.screen);
+    const center = bounds.getCenter(new THREE.Vector3());
+    const aspect = Math.max(0.2, this.camera.aspect || 1);
+    const margin = 0.93;
+    const maxFov = 40;
+
+    const fovForDistance = (distance) => {
+      this._aimAtScreen(center, distance, aspect, 50);
+      let lo = 8;
+      let hi = 70;
+      for (let i = 0; i < 14; i++) {
+        const mid = (lo + hi) / 2;
+        this.camera.fov = mid;
+        this.camera.updateProjectionMatrix();
+        if (this._cabinetFits(margin)) hi = mid;
+        else lo = mid;
+      }
+      return hi;
+    };
+
+    let near = 1.6;
+    let far = 20;
+    for (let i = 0; i < 14; i++) {
+      const mid = (near + far) / 2;
+      if (fovForDistance(mid) <= maxFov) far = mid;
+      else near = mid;
     }
-    const dist = hi * 1.04;
-    this.camera.position.copy(target).addScaledVector(dir, dist);
-    this.camera.up.set(0, 1, 0);
-    this.camera.lookAt(target);
-    this.camera.updateProjectionMatrix();
-    this.camera.updateMatrixWorld(true);
+    const distance = far;
+    const fov = fovForDistance(distance);
+    this._aimAtScreen(center, distance, aspect, fov);
     if (this.scene.fog) {
-      this.scene.fog.near = dist + 2;
-      this.scene.fog.far = dist + 10;
+      this.scene.fog.near = distance + 1.5;
+      this.scene.fog.far = distance + 12;
     }
   }
 
-  _fits(points, target, dir, dist, limit) {
-    this.camera.position.copy(target).addScaledVector(dir, dist);
-    this.camera.lookAt(target);
-    this.camera.updateMatrixWorld(true);
+  _aimAtScreen(center, distance, aspect, fov) {
+    this.camera.position.set(center.x, center.y, center.z + distance);
+    this.camera.up.set(0, 1, 0);
+    this.camera.lookAt(center);
+    this.camera.aspect = aspect;
+    this.camera.fov = fov;
     this.camera.updateProjectionMatrix();
-    for (const point of points) {
+    this.camera.updateMatrixWorld(true);
+  }
+
+  _cabinetFits(margin) {
+    for (const point of this._fitPoints) {
       this._tmp.copy(point).project(this.camera);
       if (this._tmp.z < -1 || this._tmp.z > 1) return false;
-      if (Math.abs(this._tmp.x) > limit || Math.abs(this._tmp.y) > limit) return false;
+      if (Math.abs(this._tmp.x) > margin || Math.abs(this._tmp.y) > margin) return false;
     }
     return true;
   }
