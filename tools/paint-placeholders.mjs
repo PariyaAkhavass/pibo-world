@@ -226,16 +226,18 @@ put("lighthouse.svg", svg(360, 640, `
   <circle cx="180" cy="46" r="8" fill="#f6e27a" stroke="${INK}" stroke-width="4"/>
 `, 360, 600));
 
-put("lighthouse-beam.svg", svg(640, 200, `
+put("lighthouse-beam.svg", svg(640, 280, `
   <defs>
     <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#ffe7a3" stop-opacity="0.9"/>
-      <stop offset="0.45" stop-color="#ffe7a3" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="#ffe7a3" stop-opacity="0"/>
+      <stop offset="0" stop-color="#ffd56a" stop-opacity="0.96"/>
+      <stop offset="0.28" stop-color="#ffe7a3" stop-opacity="0.78"/>
+      <stop offset="0.62" stop-color="#fff1c4" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#fff6dc" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <polygon points="0,100 640,8 640,192" fill="url(#beam)"/>
-`, 640, 200));
+  <polygon points="0,140 640,16 640,264" fill="url(#beam)"/>
+  <polygon points="0,140 480,62 480,218" fill="#ffe08a" opacity="0.42"/>
+`, 640, 280));
 
 put("arcade.svg", svg(420, 460, `
   <ellipse cx="190" cy="390" rx="120" ry="16" fill="#b7a48e" opacity="0.4"/>

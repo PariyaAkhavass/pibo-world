@@ -188,8 +188,8 @@ export const ASSETS = {
     id: "lighthouse-beam",
     src: "assets/placeholders/lighthouse-beam.svg",
     kind: "effect",
-    ...px(640, 200),
-    note: "Wedge of light. The left edge is the lantern; the right edge fades out.",
+    ...px(640, 280),
+    note: "Wedge of light. The left edge is the lantern; the right edge fades out. The game faces this card at the camera.",
   },
   arcade: {
     id: "arcade",

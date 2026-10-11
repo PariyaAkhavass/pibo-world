@@ -68,8 +68,12 @@ export class SpriteSet {
 
   _buildBeam(textures) {
     const tex = textures.get(ASSETS.lighthouseBeam.src);
-    const geo = new THREE.PlaneGeometry(8.5, 1.7);
-    geo.translate(4.25, 0, 0);
+    const w = 11.5;
+    const h = 3.4;
+    const geo = new THREE.PlaneGeometry(w, h);
+    // Left edge of the texture is the lantern. Local +X is screen-right
+    // once the pivot faces the camera, so the wedge grows up and left.
+    geo.translate(-w * 0.5, 0, 0);
     const mat = new THREE.MeshBasicMaterial({
       map: tex,
       transparent: true,
@@ -79,18 +83,17 @@ export class SpriteSet {
       toneMapped: false,
     });
     this.beam = new THREE.Mesh(geo, mat);
-    this.beam.rotation.z = 0.42;
-    this.beam.renderOrder = 20;
+    this.beam.renderOrder = 40;
     this.beamPivot = new THREE.Group();
-    const towardCam = this.basis.offsetDir.clone().normalize();
+    this.beamPivot.quaternion.copy(this.basis.quaternion);
     this.beamPivot.position.set(
-      LAYOUT.lighthouse.x + towardCam.x * 0.35,
-      GROUND_Y + 3.15,
-      LAYOUT.lighthouse.z + towardCam.z * 0.35
+      LAYOUT.lighthouse.x,
+      GROUND_Y + 3.35,
+      LAYOUT.lighthouse.z
     );
     this.beamPivot.add(this.beam);
     this.scene.add(this.beamPivot);
-    this._beamT = 0.6;
+    this._beamT = 0.4;
   }
 
   show(id) {
@@ -98,8 +101,10 @@ export class SpriteSet {
   }
 
   update(dt) {
-    this._beamT += dt * 0.28;
-    this.beamPivot.rotation.y = Math.sin(this._beamT) * 0.9 - 0.4;
+    this._beamT += dt * 0.45;
+    // Negative roll lifts the leftward wedge into the sky. It stays
+    // face-on, so a still frame always shows the beam.
+    this.beam.rotation.z = -0.62 + Math.sin(this._beamT) * 0.16;
 
     const clouds = ["cloud-1", "cloud-2", "cloud-3", "cloud-4"];
     clouds.forEach((id, i) => {

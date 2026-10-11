@@ -34,7 +34,7 @@ Recommended pixel sizes (also listed as `pixelWidth` / `pixelHeight` on each ent
 | Island surface | 1500 × 1100 | Top-down. Covers the bounds below. |
 | Cliff | 512 × 256 | Repeats sideways. Top edge is the grassy lip. |
 | Ocean | 1024 × 1024 | Soft blue. Fade the outer edge so it melts into the sky. |
-| Light beam | 640 × 200 | Left edge bright, right edge fades out. |
+| Light beam | 640 × 280 | Left edge bright (the lantern), right edge fades out. The game keeps this card facing the camera. |
 
 Name files in kebab-case and match the `id` in the manifest: `teal-house.png`, `pibo-swim-2.png`.
 
