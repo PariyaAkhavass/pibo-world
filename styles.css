@@ -1213,12 +1213,28 @@ html, body {
 @media (max-width: 520px) {
   .cards { flex-direction: column; }
   .panel { width: min(360px, 92vw); }
-  .travel-bar { right: 96px; gap: 6px; }
+  .travel-bar {
+    right: auto;
+    max-width: calc(100vw - 108px);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
   .lighthouse-go,
   .arcade-go-btn,
   .map-btn {
     font-size: 13px;
-    padding: 7px 10px 7px 8px;
+    padding: 6px 10px 6px 8px;
+    white-space: nowrap;
   }
   .btn-icon { width: 18px; height: 18px; }
+  .collection-btn,
+  .touch-ui .collection-btn {
+    top: auto;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    right: max(14px, env(safe-area-inset-right));
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+  }
 }
