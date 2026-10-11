@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { clay, blob, ball, box, cyl, cone, shade } from "../world/materials.js";
-import { GROUND_Y, LAYOUT } from "../world/layout.js";
+import { LAYOUT } from "../world/layout.js";
 import { generateClip, createMockClip } from "./videoGen.js";
 
 const INTERACT_RANGE = 3.8;
@@ -30,7 +30,7 @@ export class TvStudio {
 
   worldAnchor() {
     const spot = LAYOUT.lighthouse;
-    return new THREE.Vector3(spot.x, GROUND_Y + 0.6, spot.z);
+    return new THREE.Vector3(spot.x, 0, spot.z);
   }
 
   getInteractable(piboPos) {

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { ASSETS } from "../data/assets.js";
-import { GROUND_Y, WATER_Y } from "../world/layout.js";
-import { isBlueWater } from "../world/biome.js";
+import { isBlocked, isBlueWater } from "../world/biome.js";
+import { placeOnPlate } from "../world/iso.js";
 
 /**
  * Pibo on the flat island. The body is a swappable sprite sheet (idle, walk,
@@ -19,7 +19,9 @@ export class Pibo {
     this.charScale = scale;
     this.x = x;
     this.z = z;
-    this.y = GROUND_Y;
+    this.y = 0;
+    this._safeX = x;
+    this._safeZ = z;
     this.faceX = basis.screenUp.x;
     this.faceZ = basis.screenUp.z;
     this.radius = 0.42 * scale;
@@ -61,7 +63,7 @@ export class Pibo {
   }
 
   worldPosition(target = new THREE.Vector3()) {
-    return target.set(this.x, this.y, this.z);
+    return target.set(this.x, 0, this.z);
   }
 
   setVisible(v) {
@@ -75,8 +77,8 @@ export class Pibo {
     const len = Math.hypot(faceX, faceZ) || 1;
     this.faceX = faceX / len;
     this.faceZ = faceZ / len;
+    this._keepOnLand();
     this.inWater = isBlueWater(this.x, this.z, this.faceX, this.faceZ);
-    this.y = this.inWater ? WATER_Y : GROUND_Y;
     this._animate(0);
     this._apply();
   }
@@ -111,12 +113,10 @@ export class Pibo {
       this.x = p.x;
       this.z = p.z;
     }
+    this._keepOnLand();
 
     const wasWater = this.inWater;
     this.inWater = isBlueWater(this.x, this.z, this.faceX, this.faceZ);
-    const targetY = this.inWater ? WATER_Y : GROUND_Y;
-    const rise = 1 - Math.exp(-16 * dt);
-    this.y += (targetY - this.y) * rise;
     if (!wasWater && this.inWater) this.swimPhase = 0;
 
     this._animate(dt);
@@ -155,7 +155,17 @@ export class Pibo {
     this.mesh.position.y = this.restLocalY + bob;
   }
 
+  _keepOnLand() {
+    if (!isBlocked(this.x, this.z)) {
+      this._safeX = this.x;
+      this._safeZ = this.z;
+      return;
+    }
+    this.x = this._safeX;
+    this.z = this._safeZ;
+  }
+
   _apply() {
-    this.group.position.set(this.x, this.y, this.z);
+    placeOnPlate(this.group, this.x, this.z, 0.045);
   }
 }

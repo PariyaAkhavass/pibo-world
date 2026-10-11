@@ -4,7 +4,8 @@ import { Collision } from "./Collision.js";
 import { Island } from "../world/Island.js";
 import { SpriteSet } from "../world/SpriteSet.js";
 import { isoBasis, orthoSize } from "../world/iso.js";
-import { LAYOUT, PLACEMENTS, GROUND_Y, collidersFromPlacements } from "../world/layout.js";
+import { loadWalkMask } from "../world/biome.js";
+import { LAYOUT, PLACEMENTS, collidersFromPlacements } from "../world/layout.js";
 import { ASSETS, collectSources } from "../data/assets.js";
 import { loadTextureSet, textureSizes } from "../world/textures.js";
 import { GardenSystem } from "../systems/GardenSystem.js";
@@ -57,7 +58,11 @@ export class Game {
 
   async preload() {
     const sources = collectSources(ASSETS);
-    this.textures = await loadTextureSet(sources, textureSizes(ASSETS));
+    const [textures] = await Promise.all([
+      loadTextureSet(sources, textureSizes(ASSETS)),
+      loadWalkMask(ASSETS.walkMask.src),
+    ]);
+    this.textures = textures;
     this._initWorld();
     this._initPlayer();
     this._initCamera();
@@ -87,11 +92,12 @@ export class Game {
   }
 
   _initWorld() {
-    this.island = new Island(this.scene, this.textures, this.basis);
-    this.sprites = new SpriteSet(this.scene, this.textures, this.basis);
+    this.island = new Island(this.scene, this.textures);
+    this.sprites = new SpriteSet(this.scene, this.textures);
     this.collision = new Collision(collidersFromPlacements(PLACEMENTS, ASSETS));
 
-    this.garden = new GardenSystem(this.scene, { isoQuat: this.basis.quaternion }).build();
+    // Garden beds are not in the concept painting, so they stay off the island.
+    this.garden = new GardenSystem(this.scene, { isoQuat: this.basis.quaternion });
     this.garden.onBloom = (spot) => {
       const plant = getPlant(spot.plantId);
       this.ui.addGrown(plant);
@@ -231,13 +237,11 @@ export class Game {
     this.renderer.render(this.scene, this.camera);
   }
 
-  _updateCamera(dt) {
-    const k = 1 - Math.exp(-3.4 * dt);
-    const look = new THREE.Vector3(this.pibo.x, 0.7, this.pibo.z);
-    this._focus.lerp(look, k);
-    this.camera.position.copy(this._focus).add(this._isoOffset);
+  _updateCamera() {
+    // Fixed on the painting so the coastline stays framed like the concept.
+    this.camera.position.set(0, 0, 40);
     this.camera.up.set(0, 1, 0);
-    this.camera.lookAt(this._focus);
+    this.camera.lookAt(0, 0, 0);
   }
 
   _handleInteraction() {
@@ -452,7 +456,7 @@ export class Game {
       return;
     }
 
-    this._guideTip.set(spot.x, GROUND_Y + 3.2, spot.z);
+    this._guideTip.set(spot.x, -spot.z, 0.2);
     this._guideNdc.copy(this._guideTip).project(this.camera);
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -496,10 +500,7 @@ export class Game {
   }
 
   _frameCameraOnPibo() {
-    this._focus.set(this.pibo.x, 0.7, this.pibo.z);
-    this.camera.position.copy(this._focus).add(this._isoOffset);
-    this.camera.up.set(0, 1, 0);
-    this.camera.lookAt(this._focus);
+    this._updateCamera();
   }
 
   _onResize() {

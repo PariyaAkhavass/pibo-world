@@ -9,16 +9,15 @@ import { ISLANDS, lockedLabel } from "../data/planets.js";
 const PLACES = [
   { id: "village", name: "Village", at: LAYOUT.start, featured: true },
   { id: "home", name: "Cottage", at: LAYOUT.home },
-  { id: "garden", name: "Garden", at: LAYOUT.garden[1] },
   { id: "lighthouse", name: "Lighthouse Studio", short: "Lighthouse", at: LAYOUT.lighthouse, featured: true, travel: "lighthouse" },
   { id: "arcade", name: "Arcade", at: LAYOUT.arcade, featured: true, travel: "arcade" },
 ];
 
-/** Map the island's world box into the card. */
+/** Map the painted plate into the card. */
 function project(x, z) {
   return {
-    left: 50 + (x / 20) * 38,
-    top: 48 + (z / 16) * 32,
+    left: 50 + (x / 16) * 34,
+    top: 44 + (z / 9) * 30,
   };
 }
 

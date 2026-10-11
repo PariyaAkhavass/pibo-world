@@ -44,7 +44,7 @@ export class Collision {
       if (!hit) break;
     }
 
-    const limit = 33;
+    const limit = 15.6;
     const r = Math.hypot(px, pz);
     if (r > limit) {
       px *= limit / r;

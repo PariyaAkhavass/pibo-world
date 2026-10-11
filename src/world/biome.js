@@ -1,58 +1,72 @@
-import { LAND } from "./layout.js";
+import { PLATE_W, PLATE_H } from "./iso.js";
 
 /**
- * Flat-island water test. Land is the home cliff polygon plus two round islets.
- * The pot counts as touching water the moment any sample on its body leaves land,
- * so it never keeps a walking pose while a foot is in the sea.
+ * Walk, water, and cliff samples painted from the concept image.
+ * Red = grass and path, blue = sea, green = cliff and sky.
  */
 
-const BODY = 0.4;
+const IMG_W = 1280;
+const IMG_H = 720;
+let mask = null;
 
-function pointInPoly(x, z, poly) {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const xi = poly[i][0];
-    const zi = poly[i][1];
-    const xj = poly[j][0];
-    const zj = poly[j][1];
-    const hit = (zi > z) !== (zj > z)
-      && x < ((xj - xi) * (z - zi)) / (zj - zi + 0.0000001) + xi;
-    if (hit) inside = !inside;
-  }
-  return inside;
+export function setWalkMask(data, w, h) {
+  mask = { data, w, h };
 }
 
-function onDisc(x, z, disc) {
-  const dx = x - disc.x;
-  const dz = z - disc.z;
-  return dx * dx + dz * dz <= disc.r * disc.r;
+export function loadWalkMask(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0);
+      const data = ctx.getImageData(0, 0, img.width, img.height).data;
+      setWalkMask(data, img.width, img.height);
+      resolve();
+    };
+    img.onerror = () => reject(new Error(`Could not load ${url}`));
+    img.src = url;
+  });
 }
 
-/** True when this point is on grass, sand, or an islet — not open water. */
+function sample(x, z) {
+  if (!mask) return "walk";
+  const px = (x / PLATE_W + 0.5) * IMG_W;
+  const py = (z / PLATE_H + 0.5) * IMG_H;
+  const mx = Math.max(0, Math.min(mask.w - 1, Math.floor(px * mask.w / IMG_W)));
+  const my = Math.max(0, Math.min(mask.h - 1, Math.floor(py * mask.h / IMG_H)));
+  const i = (my * mask.w + mx) * 4;
+  if (mask.data[i] > 200) return "walk";
+  if (mask.data[i + 2] > 200) return "water";
+  return "block";
+}
+
 export function onLand(x, z) {
-  if (pointInPoly(x, z, LAND.home)) return true;
-  if (onDisc(x, z, LAND.lighthouse)) return true;
-  if (onDisc(x, z, LAND.arcade)) return true;
-  return false;
+  return sample(x, z) === "walk";
 }
 
-/**
- * Swim as soon as the body touches blue water.
- * `fx, fz` is the facing direction (unit vector). The forward sample is the
- * pot's nose, so stepping off a cliff starts the stroke immediately.
- */
+export function isBlocked(x, z) {
+  return sample(x, z) === "block";
+}
+
+const BODY = 0.28;
+
+/** Swim as soon as any sample on the pot is in the painted sea. */
 export function isBlueWater(x, z, fx = 0, fz = 0) {
-  if (!onLand(x, z)) return true;
   const reach = BODY;
-  if (!onLand(x + fx * reach, z + fz * reach)) return true;
-  if (!onLand(x + reach, z)) return true;
-  if (!onLand(x - reach, z)) return true;
-  if (!onLand(x, z + reach)) return true;
-  if (!onLand(x, z - reach)) return true;
-  return false;
+  const points = [
+    [x, z],
+    [x + fx * reach, z + fz * reach],
+    [x + reach, z],
+    [x - reach, z],
+    [x, z + reach],
+    [x, z - reach],
+  ];
+  return points.some(([px, pz]) => sample(px, pz) === "water");
 }
 
-/** Kept so older sphere modules still import. The live world does not use it. */
 export const OCEAN_LAT = 64;
 export function oceanAmount() {
   return 0;

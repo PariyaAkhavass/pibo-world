@@ -8,9 +8,8 @@ The goal of this build is one feeling, not a feature list:
 
 > **"I own this tiny world, it feels alive, and I want to keep shaping it."**
 
-You wake up on a handcrafted **home island**. Walk the sandy paths, swim the moment you
-touch the water, plant three things in the garden, and visit the lighthouse studio or the
-arcade.
+You wake up on a handcrafted **home island** painted like the concept. Walk the sandy paths, swim the moment you
+touch the water, and visit the lighthouse studio or the arcade.
 
 ## Run it
 
@@ -30,13 +29,12 @@ connection the first time.
 
 ## Play
 
-- **WASD** / **arrow keys** — walk the island. Up the keyboard moves up the picture, and Pibo turns to face the way it is going. The camera stays isometric and follows.
-- **E** / **Enter** — interact (plant, then later inspect what you grew, or step inside)
+- **WASD** / **arrow keys** — walk the island. Up the keyboard moves up the picture, and Pibo turns to face the way it is going. The camera stays fixed on the painting.
+- **E** / **Enter** — step inside the lighthouse or the arcade
 - **1 / 2 / 3** — choose a plant
 - **Esc** — step back from a panel
 - **Map** (top-right) — your island, a “You are here” dot, and other islands that stay locked until a points system exists. Locks read “Earn points to unlock”. Tap the lighthouse, then **Go to the lighthouse**, to use the same trip as the top-left button. Tap **Arcade**, then **Go to Arcade**. Close with **×**, a click outside, or **Esc**.
-- **🪴** (under Map) — see the things you've grown
-- The blue friend and little white Pino are hidden for now. Turn them back on with `SHOW_VILLAGE_FRIENDS` in `src/config.js`.
+- The blue friend and little white Pino are hidden for now. Turn them back on with `SHOW_VILLAGE_FRIENDS` in `src/config.js`. The garden beds and the collection button are hidden too, so the island matches the painting.
 - **Phone / tablet** — a little joystick (bottom-left) steers Pibo; tap **E** (bottom-right) to interact. On-screen prompts and plant cards are tappable too.
 - The cottage, teal house, shed, trees, and rocks are solid — Pibo slides around them.
 - **Lighthouse studio** — a gold beam sweeps from the islet. Swim there, or tap **Go to lighthouse** (top left), then press **E**.
