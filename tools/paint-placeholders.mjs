@@ -322,32 +322,42 @@ put("pibo-walk-3.svg", svg(200, 260, potBody({ leg: -1, squash: 0.96, arm: 0.6 }
 put("pibo-walk-4.svg", svg(200, 260, potBody({ leg: -0.2, squash: 1.05, arm: -0.2 })));
 
 function swimFrame(phase) {
-  // phase 0 reach, 1 sweep, 2 pull+kick, 3 recovery
-  const spread = [18, 58, 36, 16][phase];
-  const fwd = [34, 10, -18, 8][phase];
-  const kick = [8, 10, 36, 14][phase];
-  const armY = [118, 128, 122, 116][phase];
+  // Face-down, seen from above. The pot lies horizontal.
+  // phase 0 reach forward, 1 arms sweep out, 2 pull back + frog kick, 3 recovery.
+  const arms = [
+    { ax: 58, ay: 168, rot: -70, len: 34 },
+    { ax: 78, ay: 150, rot: -20, len: 46 },
+    { ax: 118, ay: 168, rot: 55, len: 40 },
+    { ax: 70, ay: 162, rot: -50, len: 36 },
+  ][phase];
+  const kick = [6, 8, 28, 10][phase];
+  const mirror = (rot) => -rot;
+  const arm = (x, y, rot) => `
+    <ellipse cx="${x}" cy="${y}" rx="${arms.len / 2}" ry="7" fill="${POT}" stroke="${INK}" stroke-width="4"
+      transform="rotate(${rot} ${x} ${y})"/>`;
   return `
-  <ellipse cx="100" cy="168" rx="78" ry="16" fill="#9fd4ea" opacity="0.55"/>
-  <ellipse cx="100" cy="160" rx="54" ry="10" fill="#ffffff" opacity="0.35"/>
-  <ellipse cx="${70 - fwd * 0.15}" cy="${armY}" rx="${16 + spread * 0.15}" ry="8" fill="${POT}" stroke="${INK}" stroke-width="4" transform="rotate(${-20 - spread * 0.15} ${70 - spread} ${armY})"/>
-  <ellipse cx="${130 + fwd * 0.15}" cy="${armY}" rx="${16 + spread * 0.15}" ry="8" fill="${POT}" stroke="${INK}" stroke-width="4" transform="rotate(${20 + spread * 0.15} ${130 + spread} ${armY})"/>
-  <ellipse cx="100" cy="132" rx="46" ry="26" fill="${POT}" stroke="${INK}" stroke-width="6"/>
-  <ellipse cx="100" cy="122" rx="18" ry="7" fill="#6b4a32"/>
-  <path d="M86 112 Q74 86 84 70" stroke="${LEAF_DARK}" stroke-width="6" stroke-linecap="round"/>
-  <path d="M114 112 Q126 84 116 66" stroke="${LEAF}" stroke-width="6" stroke-linecap="round"/>
-  <ellipse cx="84" cy="70" rx="10" ry="5" fill="${LEAF}" stroke="${INK}" stroke-width="3"/>
-  <ellipse cx="118" cy="66" rx="10" ry="5" fill="#b6de8e" stroke="${INK}" stroke-width="3"/>
-  <ellipse cx="${78 - fwd}" cy="128" rx="8" ry="6" fill="${POT_DARK}" stroke="${INK}" stroke-width="3"/>
-  <ellipse cx="${70 - fwd}" cy="134" rx="4" ry="3" fill="${INK}"/>
-  <ellipse cx="${86 - fwd}" cy="134" rx="4" ry="3" fill="${INK}"/>
-  <path d="M${148} 140 Q${162 + kick} ${128 - kick * 0.2} ${170 + kick} 146" stroke="${POT_DARK}" stroke-width="8" stroke-linecap="round"/>
-  <path d="M${148} 148 Q${160 + kick} ${160 + kick * 0.3} ${168 + kick} 140" stroke="${POT}" stroke-width="8" stroke-linecap="round"/>
-  <path d="M${148} 140 Q${162 + kick} ${128 - kick * 0.2} ${170 + kick} 146" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
-  <path d="M${148} 148 Q${160 + kick} ${160 + kick * 0.3} ${168 + kick} 140" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="100" cy="228" rx="86" ry="14" fill="#ffffff" opacity="0.45"/>
+  <ellipse cx="100" cy="222" rx="70" ry="10" fill="#9fd4ea" opacity="0.7"/>
+  ${arm(arms.ax, arms.ay, arms.rot)}
+  ${arm(200 - arms.ax, 400 - arms.ay - 176, mirror(arms.rot))}
+  <ellipse cx="108" cy="196" rx="62" ry="24" fill="${POT}" stroke="${INK}" stroke-width="6"/>
+  <ellipse cx="108" cy="184" rx="28" ry="9" fill="#6b4a32" stroke="${INK}" stroke-width="3"/>
+  <path d="M96 186 Q86 162 92 150" stroke="${LEAF_DARK}" stroke-width="6" stroke-linecap="round"/>
+  <path d="M118 184 Q128 158 122 146" stroke="${LEAF}" stroke-width="6" stroke-linecap="round"/>
+  <ellipse cx="90" cy="150" rx="11" ry="5" fill="${LEAF}" stroke="${INK}" stroke-width="3" transform="rotate(-20 90 150)"/>
+  <ellipse cx="124" cy="146" rx="11" ry="5" fill="#b6de8e" stroke="${INK}" stroke-width="3" transform="rotate(18 124 146)"/>
+  <ellipse cx="52" cy="196" rx="16" ry="14" fill="${POT_DARK}" stroke="${INK}" stroke-width="5"/>
+  <ellipse cx="46" cy="194" rx="3.5" ry="3" fill="${INK}"/>
+  <ellipse cx="56" cy="194" rx="3.5" ry="3" fill="${INK}"/>
+  <path d="M44 202 Q40 210 48 208" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>
+  <path d="M158 190 Q${176 + kick} ${176 - kick} ${184 + kick} 198" stroke="${POT}" stroke-width="9" stroke-linecap="round"/>
+  <path d="M158 204 Q${176 + kick} ${214 + kick * 0.3} ${182 + kick} 196" stroke="${POT_DARK}" stroke-width="9" stroke-linecap="round"/>
+  <path d="M158 190 Q${176 + kick} ${176 - kick} ${184 + kick} 198" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+  <path d="M158 204 Q${176 + kick} ${214 + kick * 0.3} ${182 + kick} 196" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
 `;
 }
-for (let i = 0; i < 4; i++) put(`pibo-swim-${i + 1}.svg`, svg(200, 260, swimFrame(i)));
+// pibo-swim-1..4.svg are hand-tuned face-down breaststroke frames.
+// They are not regenerated here, so a rerun does not flatten the stroke.
 
 function pointInPoly(x, z, poly) {
   let inside = false;

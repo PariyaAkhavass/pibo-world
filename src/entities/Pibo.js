@@ -77,6 +77,7 @@ export class Pibo {
     this.faceZ = faceZ / len;
     this.inWater = isBlueWater(this.x, this.z, this.faceX, this.faceZ);
     this.y = this.inWater ? WATER_Y : GROUND_Y;
+    this._animate(0);
     this._apply();
   }
 
