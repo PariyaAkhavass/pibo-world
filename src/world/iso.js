@@ -26,17 +26,34 @@ export function placeOnPlate(object, x, z, bias = 0) {
 }
 
 /**
- * Frame the whole painting. 1920×1080 matches it exactly. A slightly taller
- * window (1280×800) shows a little extra sky and sea. A phone keeps the
+ * Frame the painting.
+ * contain — desktop and portrait. 1920×1080 matches the picture. A taller
+ * window shows a little extra sky and sea. A portrait phone keeps the
  * island as wide as the screen.
+ * cover — phone landscape. The picture fills the viewport edge to edge
+ * and the extra height is cropped instead of leaving bars beside the island.
  */
-export function orthoSize(width, height) {
+export function orthoSize(width, height, options = {}) {
   const aspect = width / Math.max(1, height);
   const plateAspect = PLATE_W / PLATE_H;
+  const cover = options.cover === true;
+  if (cover) {
+    if (aspect >= plateAspect) {
+      const viewW = PLATE_W;
+      return { viewW, viewH: viewW / aspect };
+    }
+    const viewH = PLATE_H;
+    return { viewW: viewH * aspect, viewH };
+  }
   if (aspect >= plateAspect) {
     const viewH = PLATE_H;
     return { viewW: viewH * aspect, viewH };
   }
   const viewW = PLATE_W;
   return { viewW, viewH: viewW / aspect };
+}
+
+/** Short landscape windows are phones held sideways, not a desktop monitor. */
+export function isPhoneLandscape(width, height) {
+  return width > height && height > 0 && height <= 520;
 }

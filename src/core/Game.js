@@ -3,7 +3,7 @@ import { Input } from "./Input.js";
 import { Collision } from "./Collision.js";
 import { Island } from "../world/Island.js";
 import { SpriteSet } from "../world/SpriteSet.js";
-import { isoBasis, orthoSize } from "../world/iso.js";
+import { PLATE_W, isoBasis, isPhoneLandscape, orthoSize } from "../world/iso.js";
 import { loadWalkMask } from "../world/biome.js";
 import { LAYOUT, PLACEMENTS, collidersFromPlacements } from "../world/layout.js";
 import { ASSETS, collectSources } from "../data/assets.js";
@@ -35,6 +35,8 @@ export class Game {
     this.input = new Input();
     this.ui.attachInput(this.input);
     window.addEventListener("resize", () => this._onResize());
+    window.visualViewport?.addEventListener("resize", () => this._onResize());
+    window.visualViewport?.addEventListener("scroll", () => this._onResize());
     window.addEventListener("keydown", (e) => {
       if (!["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) return;
       this.started = true;
@@ -46,6 +48,11 @@ export class Game {
     this._guideTip = new THREE.Vector3();
     this._guideNdc = new THREE.Vector3();
     this._wasSwimming = false;
+    this._viewW = PLATE_W;
+    this._viewH = 18;
+    this._phoneLandscape = false;
+    this._camX = 0;
+    this._camY = 0;
 
     this.ui.onGoToLighthouse = () => this._goToLighthouse();
     this.ui.onMapHere = () => this._playerMapPos();
@@ -79,7 +86,8 @@ export class Game {
       alpha: true,
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    const { w, h } = this._viewport();
+    renderer.setSize(w, h, false);
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.NoToneMapping;
@@ -150,17 +158,17 @@ export class Game {
     this.letterRead = false;
   }
 
+  _viewport() {
+    const vv = window.visualViewport;
+    return {
+      w: Math.round(vv?.width || window.innerWidth),
+      h: Math.round(vv?.height || window.innerHeight),
+    };
+  }
+
   _initCamera() {
-    const { viewW, viewH } = orthoSize(window.innerWidth, window.innerHeight);
-    this.camera = new THREE.OrthographicCamera(
-      -viewW / 2,
-      viewW / 2,
-      viewH / 2,
-      -viewH / 2,
-      0.1,
-      220
-    );
-    this._frameCameraOnPibo();
+    this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 220);
+    this._onResize();
   }
 
   start() {
@@ -238,11 +246,25 @@ export class Game {
     this.renderer.render(this.scene, this.camera);
   }
 
-  _updateCamera() {
-    // Fixed on the painting so the coastline stays framed like the concept.
-    this.camera.position.set(0, 0, 40);
+  _updateCamera(dt = 0) {
+    // Desktop and portrait stay locked on the whole painting.
+    // Phone landscape crops the picture, so the view slides to keep Pibo inside it.
+    let x = 0;
+    let y = 0;
+    if (this._phoneLandscape && this.pibo) {
+      const plateH = ASSETS.plate.height;
+      const limitX = Math.max(0, (PLATE_W - this._viewW) / 2);
+      const limitY = Math.max(0, (plateH - this._viewH) / 2);
+      const focusY = -this.pibo.z + (this.pibo.asset?.height || 2) * 0.35;
+      x = Math.min(limitX, Math.max(-limitX, this.pibo.x));
+      y = Math.min(limitY, Math.max(-limitY, focusY));
+    }
+    const k = dt > 0 ? 1 - Math.exp(-dt * 7) : 1;
+    this._camX += (x - this._camX) * k;
+    this._camY += (y - this._camY) * k;
+    this.camera.position.set(this._camX, this._camY, 40);
     this.camera.up.set(0, 1, 0);
-    this.camera.lookAt(0, 0, 0);
+    this.camera.lookAt(this._camX, this._camY, 0);
   }
 
   _handleInteraction() {
@@ -505,16 +527,28 @@ export class Game {
   }
 
   _onResize() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const { viewW, viewH } = orthoSize(w, h);
+    const { w, h } = this._viewport();
+    const phone = isPhoneLandscape(w, h);
+    const { viewW, viewH } = orthoSize(w, h, { cover: phone });
+    this._viewW = viewW;
+    this._viewH = viewH;
+    this._phoneLandscape = phone;
+    document.documentElement.classList.toggle("phone-landscape", phone);
+    if (!phone) {
+      this._camX = 0;
+      this._camY = 0;
+    }
+    if (!this.camera) return;
     this.camera.left = -viewW / 2;
     this.camera.right = viewW / 2;
     this.camera.top = viewH / 2;
     this.camera.bottom = -viewH / 2;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h);
+    this.renderer.setSize(w, h, false);
+    this.canvas.style.width = "100%";
+    this.canvas.style.height = "100%";
     this.studio?.resize(w, h);
     this.arcadeRoom?.resize(w, h);
+    this._updateCamera(0);
   }
 }
