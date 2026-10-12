@@ -51,11 +51,8 @@ export function isBlocked(x, z) {
   return sample(x, z) === "block";
 }
 
-const BODY = 0.28;
-
 /** Swim as soon as any sample on the pot is in the painted sea. */
-export function isBlueWater(x, z, fx = 0, fz = 0) {
-  const reach = BODY;
+export function isBlueWater(x, z, fx = 0, fz = 0, reach = 0.5) {
   const points = [
     [x, z],
     [x + fx * reach, z + fz * reach],

@@ -8,6 +8,7 @@ Run: python3 tools/cut-concept.py
 import json
 import struct
 import subprocess
+import sys
 import zlib
 from pathlib import Path
 
@@ -37,9 +38,8 @@ RECTS = [
 
 # UI buttons painted into the sky. Covered so the real HTML buttons are the only ones.
 BUTTONS = [(36, 8, 430, 78), (1100, 8, 1272, 78)]
-# Painted pot, removed so the live sprite is the only Pibo.
-# A tight box; only non-sand pixels inside it are filled from nearby path.
-POT = (500, 528, 630, 608)
+# The painted pot is removed by tools/cut-pibo.py. The old box sat below
+# the real pot and left it in the picture.
 
 
 def ensure_raw():
@@ -306,22 +306,6 @@ def main():
             row = y * W
             for x in range(x0, x1):
                 holes[row + x] = True
-    px0, py0, px1, py1 = POT
-    # Sand first, then only the pot-colored pixels inside the box become holes,
-    # so the fill copies path instead of smearing the pot or a nearby lamp.
-    sand_at = {}
-    for y in range(py0 - 40, py1 + 20):
-        for x in range(px0 - 30, px1 + 30):
-            if not (0 <= x < W and 0 <= y < H):
-                continue
-            i = (y * W + x) * 3
-            r, g, b = rgb[i], rgb[i + 1], rgb[i + 2]
-            sand = r > 205 and g > 165 and 110 < b < 185 and abs(r - g) < 45 and g > b + 15
-            sand_at[(x, y)] = sand
-    for y in range(py0, py1):
-        for x in range(px0, px1):
-            if not sand_at.get((x, y), False):
-                holes[y * W + x] = True
     plate = inpaint(rgb, holes)
     plate_rgba = bytearray(W * H * 4)
     for i in range(W * H):
@@ -418,6 +402,7 @@ def main():
     }
     (OUT / "cut.json").write_text(json.dumps(data, indent=2))
     print("wrote", OUT)
+    subprocess.check_call([sys.executable, str(Path(__file__).with_name("cut-pibo.py"))])
 
 
 if __name__ == "__main__":

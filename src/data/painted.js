@@ -228,8 +228,8 @@ export const PAINTED_SPRITES = [
 
 export const LAYOUT = {
   "start": {
-    "x": -2,
-    "z": 5.375
+    "x": -1.025,
+    "z": 2.6
   },
   "home": {
     "x": -7,

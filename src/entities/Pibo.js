@@ -24,7 +24,7 @@ export class Pibo {
     this._safeZ = z;
     this.faceX = basis.screenUp.x;
     this.faceZ = basis.screenUp.z;
-    this.radius = 0.42 * scale;
+    this.radius = (this.asset.radius ?? 0.42) * scale;
     this.linSpeed = 4.6;
     this.swimSpeed = 3.15;
     this.moving = false;
@@ -51,7 +51,6 @@ export class Pibo {
     const ax = (this.asset.anchor.x - 0.5) * this.asset.width;
     const ay = (this.asset.anchor.y - 0.5) * this.asset.height;
     this.mesh.position.set(-ax, -ay, 0);
-    this.restLocalY = this.mesh.position.y;
 
     this.pivot = new THREE.Group();
     this.pivot.quaternion.copy(basis.quaternion);
@@ -78,7 +77,7 @@ export class Pibo {
     this.faceX = faceX / len;
     this.faceZ = faceZ / len;
     this._keepOnLand();
-    this.inWater = isBlueWater(this.x, this.z, this.faceX, this.faceZ);
+    this.inWater = isBlueWater(this.x, this.z, this.faceX, this.faceZ, this.asset.waterReach);
     this._animate(0);
     this._apply();
   }
@@ -116,7 +115,7 @@ export class Pibo {
     this._keepOnLand();
 
     const wasWater = this.inWater;
-    this.inWater = isBlueWater(this.x, this.z, this.faceX, this.faceZ);
+    this.inWater = isBlueWater(this.x, this.z, this.faceX, this.faceZ, this.asset.waterReach);
     if (!wasWater && this.inWater) this.swimPhase = 0;
 
     this._animate(dt);
@@ -127,20 +126,32 @@ export class Pibo {
     const fps = this.asset.fps;
     let state = "idle";
     let index = 0;
-    let bob = Math.sin(this.idleT * 2) * 0.03;
     this.idleT += dt;
+
+    let bob = Math.sin(this.idleT * 2.1) * 0.028;
+    let sx = 1;
+    let sy = 1;
+    let tilt = 0;
 
     if (this.inWater) {
       state = "swim";
       const rate = this.moving ? fps.swim : fps.swim * 0.45;
       this.swimPhase += dt * rate;
       index = Math.floor(this.swimPhase) % this.frames.swim.length;
-      bob = Math.sin(this.swimPhase * 1.4) * 0.03;
+      bob = Math.sin(this.swimPhase * 1.5) * 0.03;
+      sx = (this.asset.swimWidth || this.asset.width) / this.asset.width;
+      sy = (this.asset.swimHeight || this.asset.height) / this.asset.height;
     } else if (this.moving) {
       state = "walk";
       this.walkPhase += dt * fps.walk;
       index = Math.floor(this.walkPhase) % this.frames.walk.length;
-      bob = Math.abs(Math.sin(this.walkPhase * Math.PI)) * 0.06;
+      const step = Math.sin(this.walkPhase * Math.PI);
+      const hit = step * step;
+      // Squash on the step, stretch back up, and lean into the walk.
+      sy = 1 - hit * 0.12;
+      sx = 1 + hit * 0.08;
+      bob = (1 - hit) * 0.09;
+      tilt = 0.07 + step * 0.1;
     }
 
     const tex = this.frames[state][index];
@@ -151,8 +162,11 @@ export class Pibo {
 
     const screenRight = this.faceX * this.basis.screenRight.x + this.faceZ * this.basis.screenRight.z;
     const flip = screenRight >= 0 ? 1 : -1;
-    this.mesh.scale.set(flip, 1, 1);
-    this.mesh.position.y = this.restLocalY + bob;
+    this.mesh.scale.set(flip * sx, sy, 1);
+    // Positive rotation leans the top to screen-left, so flip it with facing.
+    this.mesh.rotation.z = state === "walk" ? -flip * tilt : 0;
+    // The plane is centered. Park its base on the ground while it squishes or lies flat.
+    this.mesh.position.y = this.asset.height * sy * 0.5 + bob;
   }
 
   _keepOnLand() {
