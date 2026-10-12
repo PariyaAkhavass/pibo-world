@@ -11,7 +11,7 @@ Match the concept painting: a front face plus a roof, thin dark outlines, soft c
 - **Plate** (`assets/painted/plate.png`) — the whole scene: sky, sea, cliffs, foam, grass, path, flowers, and the still gold beam. 1280 × 816, with a little extra sky on top and sea on the bottom.
 - **Cutouts** (`assets/painted/sprites/`) — one PNG per tall object, transparent around the silhouette. The bottom center of the file is the feet.
 - **Walk mask** (`assets/painted/walk-mask.png`) — red where Pibo may walk, blue for the sea, green for cliff and sky. 640 × 360.
-- **Pibo** (`assets/pibo/pibo.png`) — the painted pot, cut out of the concept at the same size it has in the picture. The bottom edge is the base. Walk bob, squash, and tilt are drawn in code. `pibo-swim-1.png` through `pibo-swim-4.png` are that same pot lying flat, stroking. Replace `pibo.png` with your own pot and keep the pixel size, or change `width` and `height` in `src/data/assets.js`.
+- **Pibo** (`assets/pibo/pibo.png`) — the painted pot, cut out of the concept at the same size it has in the picture, leaves included. The bottom edge is the base. Walk bob, squash, and tilt are drawn in code. `pibo-swim-1.png` through `pibo-swim-4.png` are that same pot lying flat, leaves and all, stroking. Replace `pibo.png` with your own pot and keep the pixel size, or change `width` and `height` in `src/data/assets.js`.
 
 `x` grows to the right of the picture. `z` grows down the picture. The painting is 32 units wide and 18 units tall.
 
