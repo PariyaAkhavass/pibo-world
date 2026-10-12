@@ -95,11 +95,14 @@ def lum(r, g, b):
 
 
 def is_yellow(r, g, b):
-    return r > 200 and g > 145 and b < 155 and g > b + 18 and r + 15 > g
+    return r > 200 and 150 < g < 230 and b < 130 and g > b + 40 and r > g
 
 
 def is_leaf(r, g, b):
-    return g > r + 8 and g > b + 5 and 60 < g < 220 and r < 200 and b < 180 and lum(r, g, b) < 200
+    """Painted leaf green, including the yellow-green tips. Not the sand."""
+    if b > 150 or is_yellow(r, g, b):
+        return False
+    return g >= r and g >= b - 5 and g > 45 and g < 210 and r < 185 and (g - r) > 2 and lum(r, g, b) < 190
 
 
 def is_ink(r, g, b):
@@ -107,11 +110,11 @@ def is_ink(r, g, b):
 
 
 def is_sand(r, g, b):
-    return r > 168 and g > 128 and 80 < b < 200 and r + 18 >= g and g > b + 4 and not is_yellow(r, g, b)
+    return r > 175 and g > 140 and b > 110 and r + 10 >= g and not is_yellow(r, g, b)
 
 
 def pot_pixels(rgb):
-    """Yellow body, the leaves sitting on it, and the outline touching those."""
+    """The whole plant: yellow pot, every leaf on top, and the dark outline."""
     def at(x, y):
         i = (y * W + x) * 3
         return rgb[i], rgb[i + 1], rgb[i + 2]
@@ -119,29 +122,38 @@ def pot_pixels(rgb):
     sx, sy = 595, 442
     body = {(sx, sy)}
     stack = [(sx, sy)]
+    neigh8 = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1))
     while stack:
         x, y = stack.pop()
-        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        for dx, dy in neigh8:
             nx, ny = x + dx, y + dy
             if (nx, ny) in body:
                 continue
-            if not (540 <= nx < 660 and 400 <= ny < 510):
+            # The pot body only. The path around it is a yellower sand.
+            if not (555 <= nx < 640 and 415 <= ny < 475):
                 continue
             if is_yellow(*at(nx, ny)):
                 body.add((nx, ny))
                 stack.append((nx, ny))
+    bx0 = min(p[0] for p in body)
+    by0 = min(p[1] for p in body)
+    bx1 = max(p[0] for p in body)
+    # Leaves are the plant above the rim, not the bushes farther up the path.
+    leaf_box = (bx0 - 25, by0 - 90, bx1 + 40, by0 + 12)
     pot = set(body)
-    # Leaves grow upward from the rim. Stop after a short climb so nearby
-    # bushes are not pulled in through a chain of dark pixels.
-    for _ in range(10):
+    for _ in range(80):
         add = []
-        for x, y in list(pot):
-            for dy in range(-2, 3):
-                for dx in range(-2, 3):
+        for x, y in pot:
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
                     nx, ny = x + dx, y + dy
-                    if (nx, ny) in pot or not (520 <= nx < 680 and 360 <= ny < 500):
+                    if (nx, ny) in pot:
                         continue
-                    if is_leaf(*at(nx, ny)) or is_yellow(*at(nx, ny)):
+                    if not (leaf_box[0] <= nx < leaf_box[2] and leaf_box[1] <= ny < leaf_box[3]):
+                        continue
+                    if ny > by0 + 8:
+                        continue
+                    if is_leaf(*at(nx, ny)):
                         add.append((nx, ny))
         if not add:
             break
@@ -153,7 +165,10 @@ def pot_pixels(rgb):
                 nx, ny = x + dx, y + dy
                 if (nx, ny) in pot or not (0 <= nx < W and 0 <= ny < H):
                     continue
-                if is_ink(*at(nx, ny)):
+                r, g, b = at(nx, ny)
+                if is_sand(r, g, b):
+                    continue
+                if lum(r, g, b) < 150:
                     outline.append((nx, ny))
     pot.update(outline)
     return pot
@@ -246,7 +261,7 @@ def cut_sprite(rgb, pot):
             comp = [(x, y)]
             while stack:
                 cx, cy = stack.pop()
-                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)):
                     nx, ny = cx + dx, cy + dy
                     if not (0 <= nx < bw and 0 <= ny < bh):
                         continue
@@ -469,8 +484,9 @@ def ellipse(dst, dw, dh, cx, cy, rx, ry, color, outline=None):
 
 def make_swim(stand, sw, sh):
     """Four frames of the same pot lying flat, arms stroking forward (to the right)."""
-    # Leaves point to the right. A little short of flat so the face stays readable.
-    turned, tw, th = rotate_deg(stand, sw, sh, 78)
+    # The leaves are the top of the plant. Counterclockwise lays that top to the
+    # right, which is the direction he swims before the sprite flips.
+    turned, tw, th = rotate_deg(stand, sw, sh, -78)
     flat_h = max(8, int(th * 0.78))
     flat = bytearray(tw * flat_h * 4)
     for y in range(flat_h):
@@ -567,16 +583,24 @@ def main():
     print(f"sprite {pw}x{ph} feet pixel ({feet_x:.1f},{feet_y}) world ({world_x:.3f},{world_z:.3f})")
     print(f"stand world {world_w:.3f} x {world_h:.3f}")
     print(f"swim {swim_w}x{swim_h} world {swim_world_w:.3f} x {swim_world_h:.3f}")
-    # Leftover bright yellow inside the old pot box?
-    left = 0
-    for y in range(390, 500):
-        for x in range(540, 660):
-            if (x, y) in hole:
-                py = y + PAD
-                r, g, b = plate_rows[py][x * 4:x * 4 + 3]
-                if is_yellow(r, g, b):
-                    left += 1
-    print("yellow left in hole", left)
+    greens = yellows = 0
+    for y in range(360, 490):
+        for x in range(540, 670):
+            if (x, y) not in hole:
+                continue
+            py = y + PAD
+            r, g, b = plate_rows[py][x * 4:x * 4 + 3]
+            if is_leaf(r, g, b):
+                greens += 1
+            if is_yellow(r, g, b):
+                yellows += 1
+    leaf_px = 0
+    for i in range(0, len(sprite), 4):
+        r, g, b, a = sprite[i:i + 4]
+        if a > 20 and is_leaf(r, g, b):
+            leaf_px += 1
+    print(f"leaf pixels in sprite {leaf_px}")
+    print(f"green left in hole {greens} yellow left {yellows}")
 
 
 if __name__ == "__main__":
