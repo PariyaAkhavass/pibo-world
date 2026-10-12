@@ -316,70 +316,208 @@ def cut_sprite(rgb, pot):
 
 
 def inpaint_pot(plate_rows, plate_w, hole):
-    """Copy sandy path from below the pot, then blend the seam."""
-    # Distance from each hole pixel back to the nearest plate pixel.
-    dist = {}
-    src_of = {}
+    """Paint the pot, its leaves, and its cast shadow back to path sand.
+
+    A feathered copy left a pale blur and the pot's shadow on the path.
+    This stamps real sand patches into the hole, then continues that grain
+    out to the edge so the seam matches the path. Nothing is blended.
+    """
+    import numpy as np
     from collections import deque
+
+    plate = np.zeros((H, W, 3), np.int16)
+    for y in range(H):
+        row = np.frombuffer(bytes(plate_rows[y + PAD]), dtype=np.uint8)
+        plate[y] = row.reshape(W, 4)[:, :3]
+    # The plate's untouched pixels are the painting. Sources must match them.
+    concept = np.frombuffer(Path("/tmp/concept.raw").read_bytes(), dtype=np.uint8).reshape(H, W, 3).astype(np.int16)
+    same = np.abs(plate - concept).sum(2) <= 15
+
+    mask = np.zeros((H, W), np.uint8)
+    for x, y in hole:
+        if 0 <= x < W and 0 <= y < H:
+            mask[y, x] = 1
+    lum = plate[:, :, 0] * 0.2126 + plate[:, :, 1] * 0.7152 + plate[:, :, 2] * 0.0722
+    med = float(np.median(lum[400:470, 670:750]))
+    by0 = min(y for x, y in hole)
+    seen = set(hole)
     q = deque()
     for x, y in hole:
         for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             nx, ny = x + dx, y + dy
-            if (nx, ny) in hole or not (0 <= nx < W and 0 <= ny < H):
-                continue
-            if (x, y) not in dist:
-                dist[(x, y)] = 1
-                src_of[(x, y)] = (nx, ny)
+            if (nx, ny) not in seen and 0 <= nx < W and 0 <= ny < H:
+                seen.add((nx, ny))
+                q.append((nx, ny, 1))
+    while q:
+        x, y, d = q.popleft()
+        if d > 32 or y < by0 - 6:
+            continue
+        r, g, b = (int(plate[y, x, 0]), int(plate[y, x, 1]), int(plate[y, x, 2]))
+        L = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        if L < med - 14 and r > 140 and r + 10 >= g and g + 5 >= b and b < r:
+            mask[y, x] = 1
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)):
+                nx, ny = x + dx, y + dy
+                if (nx, ny) not in seen and 0 <= nx < W and 0 <= ny < H:
+                    seen.add((nx, ny))
+                    q.append((nx, ny, d + 1))
+    grown = mask.copy()
+    ys, xs = np.where(grown == 1)
+    for y, x in zip(ys.tolist(), xs.tolist()):
+        for dy in range(-2, 3):
+            for dx in range(-2, 3):
+                if dx * dx + dy * dy <= 5 and 0 <= x + dx < W and 0 <= y + dy < H:
+                    mask[y + dy, x + dx] = 1
+
+    r, g, b = plate[:, :, 0], plate[:, :, 1], plate[:, :, 2]
+    sand = (
+        (r > 168) & (g > 145) & (b > 100) & (r + 14 >= g) & (g + 6 >= b)
+        & (lum >= 172) & (lum <= 218) & same & (mask == 0)
+        & ~((g > r + 12) & (g > b + 12))
+    )
+    sand[:340, :] = False
+    sand[640:, :] = False
+    sand[:, :380] = False
+    sand[:, 980:] = False
+
+    dist = np.zeros((H, W), np.int16)
+    q = deque()
+    ys, xs = np.where(mask == 1)
+    for y, x in zip(ys.tolist(), xs.tolist()):
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < W and 0 <= ny < H and mask[ny, nx] == 0:
+                dist[y, x] = 1
                 q.append((x, y))
+                break
     while q:
         x, y = q.popleft()
         for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             nx, ny = x + dx, y + dy
-            if (nx, ny) not in hole or (nx, ny) in dist:
+            if 0 <= nx < W and 0 <= ny < H and mask[ny, nx] == 1 and dist[ny, nx] == 0:
+                dist[ny, nx] = dist[y, x] + 1
+                q.append((nx, ny))
+
+    wins = []
+    for y in range(350, 620, 6):
+        for x in range(390, 960, 6):
+            win = sand[y:y + 9, x:x + 9]
+            if win.shape != (9, 9) or int(win.sum()) < 78:
                 continue
-            dist[(nx, ny)] = dist[(x, y)] + 1
-            src_of[(nx, ny)] = src_of[(x, y)]
-            q.append((nx, ny))
-
-    def plate_at(x, y):
-        py = y + PAD
-        o = x * 4
-        row = plate_rows[py]
-        return row[o], row[o + 1], row[o + 2]
-
-    def donor(x, y):
-        for off in (112, 124, 100, 136, 88):
-            sy = y + off
-            if not (0 <= sy < H) or (x, sy) in hole:
+            if mask[y:y + 9, x:x + 9].any():
                 continue
-            if is_sand(*plate_at(x, sy)):
-                return plate_at(x, sy)
-        # Spiral for any sand outside the hole.
-        for rad in range(1, 48):
-            for yy in (y - rad, y + rad):
-                for xx in range(x - rad, x + rad + 1):
-                    if 0 <= xx < W and 0 <= yy < H and (xx, yy) not in hole and is_sand(*plate_at(xx, yy)):
-                        return plate_at(xx, yy)
-            for xx in (x - rad, x + rad):
-                for yy in range(y - rad + 1, y + rad):
-                    if 0 <= xx < W and 0 <= yy < H and (xx, yy) not in hole and is_sand(*plate_at(xx, yy)):
-                        return plate_at(xx, yy)
-        return plate_at(*src_of.get((x, y), (x, min(H - 1, y + 1))))
+            pix = lum[y:y + 9, x:x + 9]
+            mu, sd = float(pix.mean()), float(pix.std())
+            if not (190 <= mu <= 212) or sd < 6 or sd > 18 or float(pix.min()) < 168:
+                continue
+            wins.append((x, y))
+    rng = np.random.default_rng(11)
+    color = plate.copy()
+    srcx = np.full((H, W), -1, np.int16)
+    srcy = np.full((H, W), -1, np.int16)
+    known = mask == 0
+    used = np.zeros((H, W), np.uint8)
+    interior = np.argwhere((mask == 1) & (dist >= 10))
+    rng.shuffle(interior)
+    order = rng.permutation(len(wins)) if wins else []
+    wi = 0
+    planted = 0
+    for y, x in interior:
+        if planted >= 28 or wi >= len(order):
+            break
+        if used[y, x]:
+            continue
+        wx, wy = wins[int(order[wi])]
+        wi += 1
+        ox, oy = int(x) - 4, int(y) - 4
+        if ox < 0 or oy < 0 or ox + 9 > W or oy + 9 > H:
+            continue
+        if not ((mask[oy:oy + 9, ox:ox + 9] == 1).all() and (dist[oy:oy + 9, ox:ox + 9] >= 6).all()):
+            continue
+        if used[oy:oy + 9, ox:ox + 9].any():
+            continue
+        color[oy:oy + 9, ox:ox + 9] = plate[wy:wy + 9, wx:wx + 9]
+        for dy in range(9):
+            srcy[oy + dy, ox:ox + 9] = wy + dy
+            srcx[oy + dy, ox:ox + 9] = np.arange(wx, wx + 9)
+        known[oy:oy + 9, ox:ox + 9] = True
+        used[oy:oy + 9, ox:ox + 9] = 1
+        planted += 1
 
-    for x, y in hole:
-        grain = donor(x, y)
-        edge = plate_at(*src_of.get((x, y), (x, y)))
-        d = dist.get((x, y), 8)
-        if d <= 5:
-            t = d / 6
-            color = tuple(int(edge[i] * (1 - t) + grain[i] * t) for i in range(3))
+    offs = []
+    weights = []
+    for dy in range(-3, 4):
+        for dx in range(-3, 4):
+            if dx == 0 and dy == 0:
+                continue
+            offs.append((dx, dy))
+            weights.append(float(np.exp(-(dx * dx + dy * dy) / (2 * 1.8 * 1.8))))
+    py, px = np.where(sand)
+    keep = ((px + py) % 2) == 0
+    px, py = px[keep], py[keep]
+    remain = [(int(x), int(y)) for y, x in zip(*np.where((mask == 1) & ~known))]
+    remain.sort(key=lambda p: int(dist[p[1], p[0]]))
+    neigh = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1))
+
+    def consider(sx, sy, x, y):
+        if not (3 <= sx < W - 3 and 3 <= sy < H - 3):
+            return None
+        if mask[sy, sx] or not sand[sy, sx]:
+            return None
+        err = 0.0
+        wsum = 0.0
+        for (dx, dy), w in zip(offs, weights):
+            tx, ty = x + dx, y + dy
+            if not (0 <= tx < W and 0 <= ty < H) or not known[ty, tx]:
+                continue
+            ssx, ssy = sx + dx, sy + dy
+            if not (0 <= ssx < W and 0 <= ssy < H) or mask[ssy, ssx]:
+                continue
+            if int(plate[ssy, ssx, 0]) < 160:
+                continue
+            err += w * (
+                abs(int(color[ty, tx, 0]) - int(plate[ssy, ssx, 0]))
+                + abs(int(color[ty, tx, 1]) - int(plate[ssy, ssx, 1]))
+                + abs(int(color[ty, tx, 2]) - int(plate[ssy, ssx, 2]))
+            )
+            wsum += w
+        if wsum < 1.2:
+            return None
+        return err / wsum
+
+    for x, y in remain:
+        coh = None
+        ce = 1e18
+        for dx, dy in neigh:
+            nx, ny = x + dx, y + dy
+            if not (0 <= nx < W and 0 <= ny < H) or srcx[ny, nx] < 0:
+                continue
+            e = consider(int(srcx[ny, nx]) - dx, int(srcy[ny, nx]) - dy, x, y)
+            if e is not None and e < ce:
+                ce = e
+                coh = (int(srcx[ny, nx]) - dx, int(srcy[ny, nx]) - dy)
+        rnd = None
+        re = 1e18
+        for k in rng.integers(0, len(px), size=10):
+            e = consider(int(px[k]), int(py[k]), x, y)
+            if e is not None and e < re:
+                re = e
+                rnd = (int(px[k]), int(py[k]))
+        if coh is not None and (rnd is None or ce <= re * 1.15 + 6):
+            best = coh
+        elif rnd is not None:
+            best = rnd
         else:
-            color = grain
-        # The copied strip sits a little lighter than the path around the pot.
-        color = tuple(max(0, color[i] - bias) for i, bias in enumerate((8, 6, 10)))
-        py = y + PAD
-        o = x * 4
-        plate_rows[py][o:o + 3] = bytes(color)
+            k = int(rng.integers(0, len(px)))
+            best = (int(px[k]), int(py[k]))
+        color[y, x] = plate[best[1], best[0]]
+        srcx[y, x] = best[0]
+        srcy[y, x] = best[1]
+        known[y, x] = True
+
+    for y, x in zip(*np.where(mask == 1)):
+        o = int(x) * 4
+        plate_rows[int(y) + PAD][o:o + 3] = bytes(int(v) for v in color[y, x])
 
 
 def paint_mask(mask_rows, mw, hole):
