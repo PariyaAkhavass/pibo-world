@@ -34,15 +34,20 @@ export const ASSETS = {
   pibo: {
     id: "pibo",
     kind: "character",
-    width: 1.22,
-    height: 1.58,
-    anchor: { x: 0.5, y: 0.05 },
-    ...px(200, 260),
-    fps: { idle: 2, walk: 8, swim: 5 },
+    // Cut from the concept at the painted pot's size. The bottom edge is the base.
+    width: 1.675,
+    height: 1.475,
+    swimWidth: 2.975,
+    swimHeight: 1.975,
+    radius: 0.52,
+    waterReach: 0.5,
+    anchor: { x: 0.5, y: 0 },
+    ...px(67, 59),
+    fps: { idle: 2, walk: 7, swim: 5 },
     states: {
-      idle: ["assets/placeholders/pibo-idle.svg"],
-      walk: [1, 2, 3, 4].map((i) => `assets/placeholders/pibo-walk-${i}.svg`),
-      swim: [1, 2, 3, 4].map((i) => `assets/placeholders/pibo-swim-${i}.svg`),
+      idle: ["assets/pibo/pibo.png"],
+      walk: ["assets/pibo/pibo.png"],
+      swim: [1, 2, 3, 4].map((i) => `assets/pibo/pibo-swim-${i}.png`),
     },
   },
 };
