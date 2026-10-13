@@ -10,35 +10,63 @@ export const GROUND_Y = 0;
 export const WATER_Y = 0;
 
 /**
- * Keep-outs are only the house bases and a few big trunks.
- * dx/dz shift the shape off the sprite's feet, up the picture into the
- * base or the trunk, and away from the roof and the canopy.
- * halfW/halfD and radius are the solid itself; Pibo adds a thin skin.
+ * Keep-outs are the house footprints and a few big trunks.
+ * A house is the polygon of its walls on the ground, large enough that
+ * Pibo cannot overlap a wall from any side. Trunk circles sit on the
+ * trunk, not the canopy. Pibo adds his own body radius when he resolves.
  */
-const KEEPOUTS = {
-  // The near face sits just up the picture from the feet, on the wall.
-  cottage: { type: "box", dx: -0.1, dz: -0.72, halfW: 1.15, halfD: 0.35 },
-  "teal-house": { type: "box", dx: 0.15, dz: -2.85, halfW: 0.8, halfD: 0.3 },
-  shed: { type: "box", dx: -0.35, dz: -1.12, halfW: 0.95, halfD: 0.32 },
-  "tree-west": { type: "circle", dx: 0.25, dz: -0.35, radius: 0.28 },
-  "tree-back": { type: "circle", dx: -0.55, dz: -0.7, radius: 0.24 },
-  "tree-shed": { type: "circle", dx: 0.45, dz: -0.18, radius: 0.18 },
+const HOUSES = {
+  cottage: [
+    [-8.85, -0.55],
+    [-5.35, -0.2],
+    [-4.15, -1.4],
+    [-4.2, -2.8],
+    [-8.5, -3.05],
+    [-8.95, -1.6],
+  ],
+  "teal-house": [
+    [-1.5, -2.05],
+    [1.6, -1.95],
+    [1.65, -3.55],
+    [-1.4, -3.7],
+  ],
+  shed: [
+    [4.6, 1.2],
+    [8.75, 1.3],
+    [8.9, 0.15],
+    [8.8, -1.35],
+    [5.15, -1.6],
+    [4.5, -0.45],
+  ],
+};
+
+const TRUNKS = {
+  "tree-west": { dx: 0.25, dz: -0.35, radius: 0.28 },
+  "tree-back": { dx: -0.55, dz: -0.7, radius: 0.24 },
+  "tree-shed": { dx: 0.45, dz: -0.18, radius: 0.18 },
 };
 
 export function collidersFromPlacements(placements = PLACES) {
   const byId = new Map(placements.map((place) => [place.id, place]));
   const out = [];
-  for (const [id, shape] of Object.entries(KEEPOUTS)) {
+  for (const [id, ring] of Object.entries(HOUSES)) {
     const place = byId.get(id);
     if (!place || place.hidden || place.sky) continue;
     out.push({
       id,
-      type: shape.type,
+      type: "poly",
+      points: ring.map(([x, z]) => ({ x, z })),
+    });
+  }
+  for (const [id, shape] of Object.entries(TRUNKS)) {
+    const place = byId.get(id);
+    if (!place || place.hidden || place.sky) continue;
+    out.push({
+      id,
+      type: "circle",
       x: place.x + shape.dx,
       z: place.z + shape.dz,
       radius: shape.radius,
-      halfW: shape.halfW,
-      halfD: shape.halfD,
     });
   }
   return out;
