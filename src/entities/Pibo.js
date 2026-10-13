@@ -25,6 +25,8 @@ export class Pibo {
     this.faceX = basis.screenUp.x;
     this.faceZ = basis.screenUp.z;
     this.radius = (this.asset.radius ?? 0.42) * scale;
+    // Thin skin on houses and trunks. The full pot radius made every wall huge.
+    this.blockSkin = 0.2 * scale;
     this.linSpeed = 4.6;
     this.swimSpeed = 3.15;
     this.moving = false;
@@ -70,7 +72,7 @@ export class Pibo {
   }
 
   placeAt(x, z, faceX = 0, faceZ = -1, collision = null) {
-    const p = collision ? collision.resolve(x, z, this.radius) : { x, z };
+    const p = collision ? collision.resolve(x, z, this.blockSkin) : { x, z };
     this.x = p.x;
     this.z = p.z;
     const len = Math.hypot(faceX, faceZ) || 1;
@@ -108,7 +110,7 @@ export class Pibo {
     }
 
     if (collision) {
-      const p = collision.resolve(this.x, this.z, this.radius);
+      const p = collision.resolve(this.x, this.z, this.blockSkin);
       this.x = p.x;
       this.z = p.z;
     }
@@ -173,6 +175,19 @@ export class Pibo {
     if (!isBlocked(this.x, this.z)) {
       this._safeX = this.x;
       this._safeZ = this.z;
+      return;
+    }
+    const nx = this.x;
+    const nz = this.z;
+    // Slide along the sky edge instead of snapping the whole step back.
+    if (!isBlocked(nx, this._safeZ)) {
+      this.z = this._safeZ;
+      this._safeX = nx;
+      return;
+    }
+    if (!isBlocked(this._safeX, nz)) {
+      this.x = this._safeX;
+      this._safeZ = nz;
       return;
     }
     this.x = this._safeX;
