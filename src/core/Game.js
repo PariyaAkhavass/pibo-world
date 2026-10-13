@@ -128,6 +128,7 @@ export class Game {
       basis: this.basis,
       x: start.x,
       z: start.z,
+      scale: 2 / 3,
     });
     this.scene.add(this.pibo.group);
 
@@ -255,7 +256,7 @@ export class Game {
       const plateH = ASSETS.plate.height;
       const limitX = Math.max(0, (PLATE_W - this._viewW) / 2);
       const limitY = Math.max(0, (plateH - this._viewH) / 2);
-      const focusY = -this.pibo.z + (this.pibo.asset?.height || 2) * 0.35;
+      const focusY = -this.pibo.z + (this.pibo.asset?.height || 2) * (this.pibo.charScale || 1) * 0.35;
       x = Math.min(limitX, Math.max(-limitX, this.pibo.x));
       y = Math.min(limitY, Math.max(-limitY, focusY));
     }

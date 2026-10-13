@@ -25,8 +25,9 @@ export class Pibo {
     this.faceX = basis.screenUp.x;
     this.faceZ = basis.screenUp.z;
     this.radius = (this.asset.radius ?? 0.42) * scale;
-    // Thin skin on houses and trunks. The full pot radius made every wall huge.
-    this.blockSkin = 0.2 * scale;
+    this.waterReach = (this.asset.waterReach ?? 0.5) * scale;
+    // Body radius against houses and trunks. Scales with the pot.
+    this.blockSkin = 0.32 * scale;
     this.linSpeed = 4.6;
     this.swimSpeed = 3.15;
     this.moving = false;
@@ -79,7 +80,7 @@ export class Pibo {
     this.faceX = faceX / len;
     this.faceZ = faceZ / len;
     this._keepOnLand();
-    this.inWater = isBlueWater(this.x, this.z, this.faceX, this.faceZ, this.asset.waterReach);
+    this.inWater = isBlueWater(this.x, this.z, this.faceX, this.faceZ, this.waterReach);
     this._animate(0);
     this._apply();
   }
@@ -117,7 +118,7 @@ export class Pibo {
     this._keepOnLand();
 
     const wasWater = this.inWater;
-    this.inWater = isBlueWater(this.x, this.z, this.faceX, this.faceZ, this.asset.waterReach);
+    this.inWater = isBlueWater(this.x, this.z, this.faceX, this.faceZ, this.waterReach);
     if (!wasWater && this.inWater) this.swimPhase = 0;
 
     this._animate(dt);
