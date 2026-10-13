@@ -1,16 +1,21 @@
 import { PLATE_W, PLATE_H } from "./iso.js";
+import { PLATE_PIXELS } from "../data/painted.js";
 
 /**
- * Walk, water, and cliff samples painted from the concept image.
- * Red = grass and path, blue = sea, green = cliff and sky.
+ * Walk and water samples painted from the concept image.
+ * Red = grass and path, blue = sea. Green in the mask is everything else
+ * (sky, rocks, flowers, bushes). Only the sky that touches the top of the
+ * picture blocks a step. Rocks, flowers, and the coast stay walkable.
+ * The strip of sea painted under the picture is water, same as the sea.
  */
 
 const IMG_W = 1280;
 const IMG_H = 720;
+const SEA_PAD = (PLATE_PIXELS.worldH - PLATE_H) / 2;
 let mask = null;
 
 export function setWalkMask(data, w, h) {
-  mask = { data, w, h };
+  mask = { data, w, h, sky: skyFromTop(data, w, h) };
 }
 
 export function loadWalkMask(url) {
@@ -31,16 +36,52 @@ export function loadWalkMask(url) {
   });
 }
 
+/** Green pixels connected to the top edge are sky. Interior green is land. */
+function skyFromTop(data, w, h) {
+  const sky = new Uint8Array(w * h);
+  const stack = [];
+  const isGreen = (p) => {
+    const i = p * 4;
+    return data[i] <= 200 && data[i + 2] <= 200;
+  };
+  for (let x = 0; x < w; x++) {
+    if (!isGreen(x)) continue;
+    sky[x] = 1;
+    stack.push(x);
+  }
+  while (stack.length) {
+    const p = stack.pop();
+    const x = p % w;
+    const y = (p - x) / w;
+    if (x > 0) consider(p - 1);
+    if (x + 1 < w) consider(p + 1);
+    if (y > 0) consider(p - w);
+    if (y + 1 < h) consider(p + w);
+  }
+  return sky;
+
+  function consider(n) {
+    if (sky[n] || !isGreen(n)) return;
+    sky[n] = 1;
+    stack.push(n);
+  }
+}
+
 function sample(x, z) {
   if (!mask) return "walk";
+  if (x < -PLATE_W / 2 || x > PLATE_W / 2 || z < -PLATE_H / 2) return "block";
+  if (z > PLATE_H / 2 + SEA_PAD) return "block";
+  if (z > PLATE_H / 2) return "water";
   const px = (x / PLATE_W + 0.5) * IMG_W;
   const py = (z / PLATE_H + 0.5) * IMG_H;
-  const mx = Math.max(0, Math.min(mask.w - 1, Math.floor(px * mask.w / IMG_W)));
-  const my = Math.max(0, Math.min(mask.h - 1, Math.floor(py * mask.h / IMG_H)));
-  const i = (my * mask.w + mx) * 4;
+  const mx = Math.max(0, Math.min(mask.w - 1, Math.floor((px * mask.w) / IMG_W)));
+  const my = Math.max(0, Math.min(mask.h - 1, Math.floor((py * mask.h) / IMG_H)));
+  const p = my * mask.w + mx;
+  const i = p * 4;
   if (mask.data[i] > 200) return "walk";
   if (mask.data[i + 2] > 200) return "water";
-  return "block";
+  if (mask.sky[p]) return "block";
+  return "walk";
 }
 
 export function onLand(x, z) {
