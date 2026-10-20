@@ -25,4 +25,11 @@ If it sits too high or too low, change `anchor` (y 0 is the bottom edge). If it 
 
 To replace the whole island, overwrite `assets/painted/plate.png` and paint a new `walk-mask.png` in the same red / blue / green. Keep the lighthouse beam in the plate if you want it to stay still.
 
-The buttons (Go to lighthouse, Go to Arcade, Map) are HTML in `index.html` and `styles.css`, not part of the painting.
+The buttons (Go to lighthouse, Go to Arcade, Go to Library, Map) are HTML in `index.html` and `styles.css`, not part of the painting.
+
+## Library islet
+
+The library is a small islet in the sea at the top-left, plus a building you can swap.
+
+- **Land** is painted into `assets/painted/plate.png`. The walk mask has red on that islet and blue sea around it, so Pibo swims across.
+- **Building** is `assets/painted/sprites/library.png` (96 × 128). The bottom center is the doorstep. It is the `library` slot in `src/data/assets.js` (`ASSETS.library`). To use your own art, overwrite that PNG, or point `src` at a new file. If the new picture is a different size, change `width` and `height` on the slot. The wall collider lives in `src/world/layout.js` under `library`.

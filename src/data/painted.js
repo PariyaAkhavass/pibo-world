@@ -223,6 +223,24 @@ export const PAINTED_SPRITES = [
     "x": 13.087,
     "z": 3.25,
     "opaqueRatio": 0.249
+  },
+  {
+    "id": "library",
+    "src": "assets/painted/sprites/library.png",
+    "pixelWidth": 96,
+    "pixelHeight": 128,
+    "width": 2.4,
+    "height": 3.2,
+    "anchor": {
+      "x": 0.5,
+      "y": 0
+    },
+    "footprint": {
+      "radius": 0.7
+    },
+    "x": -14.62,
+    "z": -2.58,
+    "opaqueRatio": 0.56
   }
 ];
 
@@ -254,6 +272,14 @@ export const LAYOUT = {
   "arcadeDoor": {
     "x": 11.5,
     "z": 4.5
+  },
+  "library": {
+    "x": -14.62,
+    "z": -3.3
+  },
+  "libraryDoor": {
+    "x": -14.62,
+    "z": -2.5
   },
   "companion": {
     "x": -14,

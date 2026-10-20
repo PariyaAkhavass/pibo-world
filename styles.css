@@ -239,17 +239,28 @@ html, body {
 .in-studio .map-btn,
 .in-studio .lighthouse-go,
 .in-studio .arcade-go-btn,
+.in-studio .library-go-btn,
 .in-studio .lighthouse-marker { display: none; }
 .in-arcade .collection-btn,
 .in-arcade .collection,
 .in-arcade .map-btn,
 .in-arcade .lighthouse-go,
 .in-arcade .arcade-go-btn,
+.in-arcade .library-go-btn,
 .in-arcade .lighthouse-marker { display: none; }
-.in-arcade .joystick {
+.in-library .collection-btn,
+.in-library .collection,
+.in-library .map-btn,
+.in-library .lighthouse-go,
+.in-library .arcade-go-btn,
+.in-library .library-go-btn,
+.in-library .lighthouse-marker { display: none; }
+.in-arcade .joystick,
+.in-library .joystick {
   visibility: hidden;
   pointer-events: none;
 }
+.in-library .mobile-controls { display: none !important; }
 .in-studio .toast { bottom: 40%; }
 .in-studio .joystick {
   visibility: hidden;
@@ -543,7 +554,8 @@ html, body {
 }
 .travel-bar > * { pointer-events: auto; }
 .lighthouse-go,
-.arcade-go-btn {
+.arcade-go-btn,
+.library-go-btn {
   position: static;
   display: inline-flex;
   align-items: center;
@@ -560,7 +572,8 @@ html, body {
   cursor: pointer;
 }
 .lighthouse-go:hover,
-.arcade-go-btn:hover { transform: translateY(-2px); }
+.arcade-go-btn:hover,
+.library-go-btn:hover { transform: translateY(-2px); }
 .btn-icon {
   width: 22px;
   height: 22px;
@@ -1319,6 +1332,7 @@ html, body {
   }
   .lighthouse-go,
   .arcade-go-btn,
+  .library-go-btn,
   .map-btn {
     font-size: 13px;
     padding: 6px 10px 6px 8px;
@@ -1348,6 +1362,7 @@ html.phone-landscape .travel-bar {
 }
 html.phone-landscape .lighthouse-go,
 html.phone-landscape .arcade-go-btn,
+html.phone-landscape .library-go-btn,
 html.phone-landscape .map-btn,
 html.phone-landscape .action-btn,
 html.phone-landscape .flight-btn,
@@ -1436,3 +1451,88 @@ html.phone-landscape .fact,
 html.phone-landscape .collection {
   touch-action: pan-y;
 }
+
+/* Library story maker. The room is behind this card. */
+#ui > .library-overlay { pointer-events: none; }
+.library-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding: max(12px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
+}
+.library-overlay.hidden { display: none; }
+.library-card {
+  pointer-events: auto;
+  width: min(640px, 100%);
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  background: #fff8ee;
+  color: var(--ink);
+  border: 3px solid #5c4a3e;
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 16px 18px 18px;
+}
+.library-bar { display: flex; align-items: center; justify-content: space-between; }
+.library-kicker {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a6a4a;
+}
+.library-title { margin: 8px 0 4px; font-size: 28px; line-height: 1.1; }
+.library-lead, .library-credit, .library-note {
+  margin: 0 0 10px;
+  color: var(--ink-soft);
+  font-size: 15px;
+}
+.library-label { margin: 8px 0 6px; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.library-chips, .library-actions, .library-add { display: flex; flex-wrap: wrap; gap: 8px; }
+.library-add { margin-top: 8px; }
+.library-chip, .library-go, .library-quiet, .library-input {
+  font-family: inherit;
+  border: 2px solid #5c4a3e;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 650;
+}
+.library-chip, .library-quiet, .library-go { cursor: pointer; }
+.library-chip { padding: 6px 12px; font-size: 15px; }
+.library-chip.is-on { background: #ffe08a; }
+.library-input { padding: 8px 12px; min-width: 140px; font-size: 15px; }
+.library-quiet { padding: 8px 14px; background: #fff; }
+.library-go {
+  margin-top: 14px;
+  padding: 10px 16px;
+  background: #e07a55;
+  color: #fffaf4;
+  font-size: 17px;
+  border-radius: 14px;
+}
+.library-go:disabled { opacity: 0.7; }
+.library-story {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: #fff;
+  border-radius: 16px;
+  font-size: 20px;
+  line-height: 1.45;
+}
+.library-word {
+  background: #ffe08a;
+  color: inherit;
+  border-radius: 6px;
+  padding: 0 3px;
+  font-weight: 700;
+}
+.library-actions { margin-top: 10px; }
+html.phone-landscape .library-card {
+  max-height: calc(100dvh - 12px);
+  padding: 10px 12px;
+}
+html.phone-landscape .library-title { font-size: 22px; }
+html.phone-landscape .library-story { font-size: 16px; }

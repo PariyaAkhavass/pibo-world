@@ -11,6 +11,7 @@ const PLACES = [
   { id: "home", name: "Cottage", at: LAYOUT.home },
   { id: "lighthouse", name: "Lighthouse Studio", short: "Lighthouse", at: LAYOUT.lighthouse, featured: true, travel: "lighthouse" },
   { id: "arcade", name: "Arcade", at: LAYOUT.arcade, featured: true, travel: "arcade" },
+  { id: "library", name: "Library", at: LAYOUT.library, featured: true, travel: "library" },
 ];
 
 /** Map the painted plate into the card. */
@@ -124,6 +125,7 @@ export class WorldMap {
       const travelLabel = {
         lighthouse: "Go to the lighthouse",
         arcade: "Go to Arcade",
+        library: "Go to Library",
       };
       this.go.textContent = travelLabel[place.travel] || `Go to ${place.name}`;
       this.go.classList.remove("hidden");

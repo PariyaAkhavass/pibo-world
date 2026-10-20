@@ -65,6 +65,12 @@ for (const sprite of PAINTED_SPRITES) {
   };
 }
 
+// Swappable library on the top-left islet. Replace the PNG; keep the pixel
+// size, or change width and height here. The bottom center is the doorstep.
+ASSETS.library.note =
+  "Cozy library building (book roof, door, stairs). Bottom center sits on the islet. Swap assets/painted/sprites/library.png.";
+ASSETS.library.slot = "library";
+
 export function collectSources(assets = ASSETS) {
   const urls = new Set();
   for (const entry of Object.values(assets)) {
