@@ -65,6 +65,12 @@ for (const sprite of PAINTED_SPRITES) {
   };
 }
 
+// The whole library islet is one transparent cutout, not painted into the plate.
+// Overwrite assets/painted/sprites/library.png to use your own art.
+ASSETS.library.note =
+  "Isometric library islet: rocky cliff, foam, two-walled book house, tree, and lamp. Transparent around the shore. Swap assets/painted/sprites/library.png.";
+ASSETS.library.slot = "library";
+
 export function collectSources(assets = ASSETS) {
   const urls = new Set();
   for (const entry of Object.values(assets)) {

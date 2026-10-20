@@ -223,6 +223,24 @@ export const PAINTED_SPRITES = [
     "x": 13.087,
     "z": 3.25,
     "opaqueRatio": 0.249
+  },
+  {
+    "id": "library",
+    "src": "assets/painted/sprites/library.png",
+    "pixelWidth": 236,
+    "pixelHeight": 217,
+    "width": 4.35,
+    "height": 4.0,
+    "anchor": {
+      "x": 0.5,
+      "y": 0.45
+    },
+    "footprint": {
+      "radius": 1.05
+    },
+    "x": -12.85,
+    "z": -4.75,
+    "opaqueRatio": 0.59
   }
 ];
 
@@ -255,6 +273,14 @@ export const LAYOUT = {
     "x": 11.5,
     "z": 4.5
   },
+  "library": {
+    "x": -12.7,
+    "z": -5.35
+  },
+  "libraryDoor": {
+    "x": -12.75,
+    "z": -4.35
+  },
   "companion": {
     "x": -14,
     "z": 1
@@ -270,4 +296,5 @@ export const PLACEMENTS = PAINTED_SPRITES.map((sprite) => ({
   asset: sprite.id,
   x: sprite.x,
   z: sprite.z,
+  depthBias: sprite.depthBias || 0,
 }));

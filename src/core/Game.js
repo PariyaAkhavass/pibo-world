@@ -11,6 +11,7 @@ import { loadTextureSet, textureSizes } from "../world/textures.js";
 import { GardenSystem } from "../systems/GardenSystem.js";
 import { TvStudio } from "../systems/TvStudio.js";
 import { ArcadeRoom } from "../systems/ArcadeRoom.js";
+import { LibraryRoom } from "../systems/LibraryRoom.js";
 import { Pibo } from "../entities/Pibo.js";
 import { getPlant } from "../data/plants.js";
 import { SHOW_VILLAGE_FRIENDS } from "../config.js";
@@ -57,9 +58,11 @@ export class Game {
     this.ui.onGoToLighthouse = () => this._goToLighthouse();
     this.ui.onMapHere = () => this._playerMapPos();
     this.ui.onGoToArcade = () => this._goToArcade();
+    this.ui.onGoToLibrary = () => this._goToLibrary();
     this.ui.onMapTravel = (placeId) => {
       if (placeId === "lighthouse") this._goToLighthouse();
       else if (placeId === "arcade") this._goToArcade();
+      else if (placeId === "library") this._goToLibrary();
     };
   }
 
@@ -119,6 +122,8 @@ export class Game {
     this.arcadeRoom.onMove = (id, x, y, commit) => this.ui.arcade?.moveOnScreen(id, x, y, commit);
     this.ui.arcade.onScreen = (view) => this.arcadeRoom.show(view);
     this.ui.onArcadeLeave = () => this._leaveArcade();
+    this.libraryRoom = new LibraryRoom();
+    this.ui.onLibraryLeave = () => this._leaveLibrary();
   }
 
   _initPlayer() {
@@ -185,6 +190,11 @@ export class Game {
         this._enterArcade();
         return;
       }
+      if (q.has("library")) {
+        this._goToLibrary();
+        this._enterLibrary();
+        return;
+      }
       if (!q.has("studio") && !q.has("dock")) return;
       const pad = LAYOUT.lighthousePad;
       const face = this._faceToward(pad, LAYOUT.lighthouse);
@@ -207,6 +217,14 @@ export class Game {
       this._handleArcadeInteraction();
       this.input.endFrame();
       this.renderer.render(this.arcadeRoom.scene, this.arcadeRoom.camera);
+      return;
+    }
+
+    if (this.libraryRoom.active) {
+      this.libraryRoom.update(dt);
+      this._handleLibraryInteraction();
+      this.input.endFrame();
+      this.renderer.render(this.libraryRoom.scene, this.libraryRoom.camera);
       return;
     }
 
@@ -301,6 +319,15 @@ export class Game {
     if (tower) {
       ui.setPrompt(tower.label);
       if (this.input.consume("KeyE", "Enter")) this._enterStudio();
+      return;
+    }
+
+    const library = this._near(p, LAYOUT.libraryDoor, 1.45)
+      ? { label: "Library" }
+      : null;
+    if (library) {
+      ui.setPrompt(library.label);
+      if (this.input.consume("KeyE", "Enter")) this._enterLibrary();
       return;
     }
 
@@ -426,6 +453,7 @@ export class Game {
   _enterArcade() {
     if (this.ui.isIdeaOpen) this.ui.closeIdeas();
     if (this.studio.active) this._leaveStudio();
+    if (this.libraryRoom.active) this._leaveLibrary("switch");
     if (this.arcadeRoom.active) this._leaveArcade();
     this.ui.closeModals();
     this.ui.closeCollection();
@@ -450,6 +478,39 @@ export class Game {
     this._travelTo(LAYOUT.arcadeDoor, LAYOUT.arcade, "Arcade. Press E to step inside.");
   }
 
+  _goToLibrary() {
+    this._travelTo(LAYOUT.libraryDoor, LAYOUT.library, "Library. Press E to step inside.");
+  }
+
+  _handleLibraryInteraction() {
+    if (this.input.consume("Escape")) this._leaveLibrary();
+  }
+
+  _enterLibrary() {
+    if (this.ui.isIdeaOpen) this.ui.closeIdeas();
+    if (this.studio.active) this._leaveStudio();
+    if (this.arcadeRoom.active) this._leaveArcade();
+    this.ui.closeModals();
+    this.ui.closeCollection();
+    this.started = true;
+    this.ui.hideIntro();
+    this.libraryRoom.enter();
+    this.ui.openLibrary();
+    this.renderer.setClearColor(0xf6efe2, 1);
+    this.ui.toast("The library is quiet. Make a little story.", 2400);
+  }
+
+  _leaveLibrary(reason = "exit") {
+    if (!this.libraryRoom.active && !this.ui.isLibraryOpen) return;
+    this.libraryRoom.leave();
+    this.ui.closeLibrary();
+    this.renderer.setClearColor(0x000000, 0);
+    this._frameCameraOnPibo();
+    // Only a real exit (the Exit button or Escape) says so, and only briefly.
+    // Closing the room to travel, or opening another place, stays quiet.
+    if (reason === "exit") this.ui.toast("Back outside the library", 1400);
+  }
+
   _goToLighthouse() {
     this._travelTo(LAYOUT.lighthousePad, LAYOUT.lighthouse, "Lighthouse dock. Press E to step inside.");
   }
@@ -457,6 +518,8 @@ export class Game {
   _travelTo(pad, look, message) {
     if (this.ui.isIdeaOpen) this.ui.closeIdeas();
     if (this.studio.active) this._leaveStudio();
+    if (this.libraryRoom?.active) this._leaveLibrary("switch");
+    if (this.arcadeRoom?.active) this._leaveArcade();
     this.ui.closeModals();
     this.ui.closeCollection();
     const face = this._faceToward(pad, look);
@@ -469,7 +532,7 @@ export class Game {
   }
 
   _updateLighthouseGuide() {
-    if (this.studio.active || this.arcadeRoom.active) {
+    if (this.studio.active || this.arcadeRoom.active || this.libraryRoom.active) {
       this.ui.setLighthouseGuide({ hidden: true });
       return;
     }
@@ -550,6 +613,7 @@ export class Game {
     this.canvas.style.height = "100%";
     this.studio?.resize(w, h);
     this.arcadeRoom?.resize(w, h);
+    this.libraryRoom?.resize(w, h);
     this._updateCamera(0);
   }
 }
