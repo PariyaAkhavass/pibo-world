@@ -65,10 +65,13 @@ for (const sprite of PAINTED_SPRITES) {
   };
 }
 
-// Swappable library on the top-left islet. Replace the PNG; keep the pixel
-// size, or change width and height here. The bottom center is the doorstep.
+// Swappable library islet. The ground is its own transparent cutout, not painted
+// into the plate. The building's bottom center is the doorstep.
+ASSETS["library-islet"].note =
+  "Rocky islet under the library: grass top, cliff sides, white foam. Transparent around the shore. Swap assets/painted/sprites/library-islet.png.";
+ASSETS["library-islet"].slot = "library-islet";
 ASSETS.library.note =
-  "Cozy library building (book roof, door, stairs). Bottom center sits on the islet. Swap assets/painted/sprites/library.png.";
+  "Cozy library (book roof, door, stairs), about the same size as the arcade. Bottom center sits on the islet. Swap assets/painted/sprites/library.png.";
 ASSETS.library.slot = "library";
 
 export function collectSources(assets = ASSETS) {

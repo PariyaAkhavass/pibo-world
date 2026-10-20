@@ -29,7 +29,7 @@ The buttons (Go to lighthouse, Go to Arcade, Go to Library, Map) are HTML in `in
 
 ## Library islet
 
-The library is a small islet in the sea at the top-left, plus a building you can swap.
+The library is a small islet in the sea at the top-left, between the left edge and the red cottage, plus a building you can swap. Neither picture is painted into the plate.
 
-- **Land** is painted into `assets/painted/plate.png`. The walk mask has red on that islet and blue sea around it, so Pibo swims across.
-- **Building** is `assets/painted/sprites/library.png` (96 × 128). The bottom center is the doorstep. It is the `library` slot in `src/data/assets.js` (`ASSETS.library`). To use your own art, overwrite that PNG, or point `src` at a new file. If the new picture is a different size, change `width` and `height` on the slot. The wall collider lives in `src/world/layout.js` under `library`.
+- **Land** is `assets/painted/sprites/library-islet.png`. It is a transparent cutout: grass on top, rocky cliffs, white foam where it meets the water. The center of the picture sits on the sea. It is the `library-islet` slot in `src/data/assets.js`. The walk mask has red on that meadow and blue sea around it, so Pibo swims across.
+- **Building** is `assets/painted/sprites/library.png` (150 × 134), about the same size on screen as the arcade. The bottom center is the doorstep. It is the `library` slot (`ASSETS.library`). To use your own art, overwrite that PNG, or point `src` at a new file. If the new picture is a different size, change `width` and `height` on the slot. The wall collider lives in `src/world/layout.js` under `library`.

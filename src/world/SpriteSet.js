@@ -28,8 +28,8 @@ export class IsoSprite {
     this.group.add(this.mesh);
   }
 
-  place(x, z) {
-    placeOnPlate(this.group, x, z, 0);
+  place(x, z, bias = 0) {
+    placeOnPlate(this.group, x, z, bias);
   }
 
   setVisible(v) {
@@ -50,7 +50,7 @@ export class SpriteSet {
       if (!asset?.src || asset.width < 0.4) continue;
       const tex = textures.get(asset.src);
       const sprite = new IsoSprite(asset, tex);
-      sprite.place(place.x, place.z);
+      sprite.place(place.x, place.z, place.depthBias || 0);
       sprite.id = place.id;
       if (place.hidden) sprite.setVisible(false);
       this.group.add(sprite.group);

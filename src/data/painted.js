@@ -225,22 +225,41 @@ export const PAINTED_SPRITES = [
     "opaqueRatio": 0.249
   },
   {
+    "id": "library-islet",
+    "src": "assets/painted/sprites/library-islet.png",
+    "pixelWidth": 103,
+    "pixelHeight": 51,
+    "width": 2.575,
+    "height": 1.275,
+    "anchor": {
+      "x": 0.5,
+      "y": 0.5
+    },
+    "footprint": {
+      "radius": 0.2
+    },
+    "x": -10.062,
+    "z": -4.162,
+    "depthBias": -1.6,
+    "opaqueRatio": 0.59
+  },
+  {
     "id": "library",
     "src": "assets/painted/sprites/library.png",
-    "pixelWidth": 96,
-    "pixelHeight": 128,
-    "width": 2.4,
-    "height": 3.2,
+    "pixelWidth": 150,
+    "pixelHeight": 134,
+    "width": 3.975,
+    "height": 3.5,
     "anchor": {
       "x": 0.5,
       "y": 0
     },
     "footprint": {
-      "radius": 0.7
+      "radius": 0.9
     },
-    "x": -14.62,
-    "z": -2.58,
-    "opaqueRatio": 0.56
+    "x": -10.55,
+    "z": -3.92,
+    "opaqueRatio": 0.71
   }
 ];
 
@@ -274,12 +293,12 @@ export const LAYOUT = {
     "z": 4.5
   },
   "library": {
-    "x": -14.62,
-    "z": -3.3
+    "x": -10.55,
+    "z": -4.7
   },
   "libraryDoor": {
-    "x": -14.62,
-    "z": -2.5
+    "x": -10.55,
+    "z": -4.12
   },
   "companion": {
     "x": -14,
@@ -296,4 +315,5 @@ export const PLACEMENTS = PAINTED_SPRITES.map((sprite) => ({
   asset: sprite.id,
   x: sprite.x,
   z: sprite.z,
+  depthBias: sprite.depthBias || 0,
 }));

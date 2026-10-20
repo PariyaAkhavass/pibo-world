@@ -38,12 +38,12 @@ const HOUSES = {
     [5.15, -1.6],
     [4.5, -0.45],
   ],
-  // Library walls on the top-left islet. The stairs and the path stay open.
+  // Library walls on the top-left islet. The stairs toward the sea stay open.
   library: [
-    [-15.42, -3.25],
-    [-13.72, -3.25],
-    [-13.65, -4.55],
-    [-15.5, -4.6],
+    [-11.30, -4.58],
+    [-9.80, -4.58],
+    [-9.75, -5.00],
+    [-11.35, -5.00],
   ],
 };
 

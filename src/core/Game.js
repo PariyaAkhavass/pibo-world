@@ -453,7 +453,7 @@ export class Game {
   _enterArcade() {
     if (this.ui.isIdeaOpen) this.ui.closeIdeas();
     if (this.studio.active) this._leaveStudio();
-    if (this.libraryRoom.active) this._leaveLibrary();
+    if (this.libraryRoom.active) this._leaveLibrary("switch");
     if (this.arcadeRoom.active) this._leaveArcade();
     this.ui.closeModals();
     this.ui.closeCollection();
@@ -500,13 +500,15 @@ export class Game {
     this.ui.toast("The library is quiet. Make a little story.", 2400);
   }
 
-  _leaveLibrary() {
+  _leaveLibrary(reason = "exit") {
     if (!this.libraryRoom.active && !this.ui.isLibraryOpen) return;
     this.libraryRoom.leave();
     this.ui.closeLibrary();
     this.renderer.setClearColor(0x000000, 0);
     this._frameCameraOnPibo();
-    this.ui.toast("Back outside the library", 2000);
+    // Only a real exit (the Exit button or Escape) says so, and only briefly.
+    // Closing the room to travel, or opening another place, stays quiet.
+    if (reason === "exit") this.ui.toast("Back outside the library", 1400);
   }
 
   _goToLighthouse() {
@@ -516,7 +518,7 @@ export class Game {
   _travelTo(pad, look, message) {
     if (this.ui.isIdeaOpen) this.ui.closeIdeas();
     if (this.studio.active) this._leaveStudio();
-    if (this.libraryRoom?.active) this._leaveLibrary();
+    if (this.libraryRoom?.active) this._leaveLibrary("switch");
     if (this.arcadeRoom?.active) this._leaveArcade();
     this.ui.closeModals();
     this.ui.closeCollection();
