@@ -44,22 +44,37 @@ export class Pibo {
     this.material = new THREE.MeshBasicMaterial({
       map: this.frames.idle[0],
       transparent: true,
-      alphaTest: 0.12,
+      alphaTest: 0.05,
       depthWrite: true,
       side: THREE.DoubleSide,
       color: tint,
     });
     const geo = new THREE.PlaneGeometry(this.asset.width, this.asset.height);
     this.mesh = new THREE.Mesh(geo, this.material);
+    this.mesh.renderOrder = 3;
     const ax = (this.asset.anchor.x - 0.5) * this.asset.width;
     const ay = (this.asset.anchor.y - 0.5) * this.asset.height;
     this.mesh.position.set(-ax, -ay, 0);
+
+    this.shadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(this.asset.width * 0.78, this.asset.height * 0.22),
+      new THREE.MeshBasicMaterial({
+        map: contactShadowTexture(),
+        transparent: true,
+        premultipliedAlpha: true,
+        opacity: 0.58,
+        depthWrite: false,
+      }),
+    );
+    this.shadow.position.set(0, 0.03, 0.02);
+    this.shadow.renderOrder = 2;
 
     this.pivot = new THREE.Group();
     this.pivot.quaternion.copy(basis.quaternion);
     this.pivot.add(this.mesh);
     this.group = new THREE.Group();
     this.group.scale.setScalar(scale);
+    this.group.add(this.shadow);
     this.group.add(this.pivot);
     this._apply();
   }
@@ -170,6 +185,11 @@ export class Pibo {
     this.mesh.rotation.z = state === "walk" ? -flip * tilt : 0;
     // The plane is centered. Park its base on the ground while it squishes or lies flat.
     this.mesh.position.y = this.asset.height * sy * 0.5 + bob;
+    if (this.shadow) {
+      this.shadow.material.opacity = this.inWater ? 0 : 0.58;
+      const spread = state === "walk" ? 1 + (1 - sy) * 1.4 : 1;
+      this.shadow.scale.set(spread, 1, 1);
+    }
   }
 
   _keepOnLand() {
@@ -198,4 +218,33 @@ export class Pibo {
   _apply() {
     placeOnPlate(this.group, this.x, this.z, 0.045);
   }
+}
+
+/** Soft black ellipse. RGB stays black so the feather cannot turn into a light ring. */
+function contactShadowTexture() {
+  const w = 256;
+  const h = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, w, h);
+  const g = ctx.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, h * 0.48);
+  g.addColorStop(0, "rgba(0,0,0,0.95)");
+  g.addColorStop(0.45, "rgba(0,0,0,0.55)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  const img = ctx.getImageData(0, 0, w, h);
+  const data = img.data;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 0;
+    data[i + 1] = 0;
+    data[i + 2] = 0;
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.premultiplyAlpha = true;
+  tex.needsUpdate = true;
+  return tex;
 }
