@@ -228,9 +228,8 @@ export class UI {
   }
 
   hideIntro() {
-    if (this.el.intro.style.opacity === "0") return;
-    this.el.intro.style.opacity = "0";
-    setTimeout(() => this.el.intro.classList.add("hidden"), 1200);
+    // The title used to sit in the sky. It is not drawn.
+    this.el.intro?.classList.add("hidden");
   }
 
   /* prompt --------------------------------------------------------- */
@@ -376,25 +375,15 @@ export class UI {
   }
 
   /* lighthouse guide ----------------------------------------------- */
-  setLighthouseGuide({ hidden, x = 0, y = 0, distance = 0, rotation = 0 } = {}) {
+  setLighthouseGuide({ hidden } = {}) {
+    // The travel buttons are the way to the lighthouse. No distance chip on the island.
     const marker = this.el.lighthouseMarker;
-    const go = this.el.lighthouseGo;
-    const indoors = this.isStudioOpen || this.isArcadeOpen || this.isLibraryOpen;
-    const concealMarker = !!hidden || indoors;
     if (marker) {
-      marker.classList.toggle("hidden", concealMarker);
-      marker.setAttribute("aria-hidden", concealMarker ? "true" : "false");
+      marker.classList.add("hidden");
+      marker.setAttribute("aria-hidden", "true");
     }
-    if (go) go.classList.toggle("hidden", indoors);
-    if (hidden || !marker) return;
-    marker.style.left = `${x}px`;
-    marker.style.top = `${y}px`;
-    if (this.el.lighthouseDistance) {
-      this.el.lighthouseDistance.textContent = `${distance} away`;
-    }
-    if (this.el.lighthouseArrow) {
-      this.el.lighthouseArrow.style.transform = `rotate(${rotation}rad)`;
-    }
+    const indoors = !!hidden && (this.isStudioOpen || this.isArcadeOpen || this.isLibraryOpen);
+    this.el.lighthouseGo?.classList.toggle("hidden", indoors);
   }
 
   /* screen studio -------------------------------------------------- */

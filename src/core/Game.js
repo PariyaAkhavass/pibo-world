@@ -3,7 +3,7 @@ import { Input } from "./Input.js";
 import { Collision } from "./Collision.js";
 import { Island } from "../world/Island.js";
 import { SpriteSet } from "../world/SpriteSet.js";
-import { PLATE_W, isoBasis, isPhoneLandscape, orthoSize } from "../world/iso.js";
+import { PLATE_H, PLATE_W, isoBasis, isPhoneLandscape, orthoSize } from "../world/iso.js";
 import { loadWalkMask } from "../world/biome.js";
 import { LAYOUT, PLACEMENTS, collidersFromPlacements } from "../world/layout.js";
 import { ASSETS, collectSources } from "../data/assets.js";
@@ -266,11 +266,12 @@ export class Game {
   }
 
   _updateCamera(dt = 0) {
-    // Desktop and portrait stay locked on the whole painting.
-    // Phone landscape crops the picture, so the view slides to keep Pibo inside it.
+    // Keep the whole painting on screen. Slide only when the view is smaller
+    // than the picture, which the current frame never is.
     let x = 0;
     let y = 0;
-    if (this._phoneLandscape && this.pibo) {
+    const pictureFits = this._viewW + 0.01 >= PLATE_W && this._viewH + 0.01 >= PLATE_H;
+    if (this._phoneLandscape && this.pibo && !pictureFits) {
       const plateH = ASSETS.plate.height;
       const limitX = Math.max(0, (PLATE_W - this._viewW) / 2);
       const limitY = Math.max(0, (plateH - this._viewH) / 2);
@@ -532,46 +533,9 @@ export class Game {
   }
 
   _updateLighthouseGuide() {
-    if (this.studio.active || this.arcadeRoom.active || this.libraryRoom.active) {
-      this.ui.setLighthouseGuide({ hidden: true });
-      return;
-    }
-    const spot = LAYOUT.lighthouse;
-    const dist = Math.hypot(this.pibo.x - spot.x, this.pibo.z - spot.z);
-    if (dist < 3.2) {
-      this.ui.setLighthouseGuide({ hidden: true });
-      return;
-    }
-
-    this._guideTip.set(spot.x, -spot.z, 0.2);
-    this._guideNdc.copy(this._guideTip).project(this.camera);
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    let sx = (this._guideNdc.x * 0.5 + 0.5) * w;
-    let sy = (-this._guideNdc.y * 0.5 + 0.5) * h;
-    const inFront = this._guideNdc.z < 1;
-    if (!inFront) {
-      sx = w - sx;
-      sy = h - sy;
-    }
-    const marginX = 28;
-    const marginTop = 72;
-    const marginBottom = 120;
-    const onScreen = inFront
-      && sx > marginX && sx < w - marginX
-      && sy > marginTop && sy < h - marginBottom;
-    const x = onScreen ? sx : Math.min(w - marginX, Math.max(marginX, sx));
-    let y = onScreen ? sy - 36 : Math.min(h - marginBottom, Math.max(marginTop, sy));
-    if (!onScreen && x < 280 && y < 130) y = 130;
-    if (x > w - 170 && y < 140) y = 140;
-    const rotation = onScreen ? -Math.PI / 2 : Math.atan2(sy - h / 2, sx - w / 2);
-    this.ui.setLighthouseGuide({
-      hidden: false,
-      x,
-      y,
-      distance: Math.max(1, Math.round(dist)),
-      rotation,
-    });
+    // Travel buttons stay in the HUD. Nothing is drawn on the island.
+    const indoors = this.studio.active || this.arcadeRoom.active || this.libraryRoom.active;
+    this.ui.setLighthouseGuide({ hidden: indoors });
   }
 
   _reward() {
@@ -593,7 +557,7 @@ export class Game {
   _onResize() {
     const { w, h } = this._viewport();
     const phone = isPhoneLandscape(w, h);
-    const { viewW, viewH } = orthoSize(w, h, { cover: phone });
+    const { viewW, viewH } = orthoSize(w, h);
     this._viewW = viewW;
     this._viewH = viewH;
     this._phoneLandscape = phone;
