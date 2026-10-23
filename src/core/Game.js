@@ -562,6 +562,7 @@ export class Game {
     this._viewH = viewH;
     this._phoneLandscape = phone;
     document.documentElement.classList.toggle("phone-landscape", phone);
+    if (phone) this.ui.useTouchControls();
     if (!phone) {
       this._camX = 0;
       this._camY = 0;

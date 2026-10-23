@@ -164,6 +164,10 @@ export class UI {
     }
   }
 
+  useTouchControls() {
+    this._enableTouchUi();
+  }
+
   _enableTouchUi() {
     if (this._touchUi) return;
     this._touchUi = true;
@@ -235,7 +239,14 @@ export class UI {
   /* prompt --------------------------------------------------------- */
   setPrompt(label) {
     this.el.promptLabel.textContent = label;
-    this.el.prompt.classList.remove("hidden");
+    const phone = document.documentElement.classList.contains("phone-landscape")
+      || document.documentElement.classList.contains("touch-ui");
+    // Phones tap the round button. The "E …" pill is the keyboard hint.
+    this.el.prompt.classList.toggle("hidden", phone);
+    if (phone && this.el.actionBtn) {
+      this.el.actionBtn.textContent = "Tap";
+      this.el.actionBtn.setAttribute("aria-label", label);
+    }
     this.el.actionBtn.classList.add("ready");
   }
   hidePrompt() {
