@@ -51,9 +51,9 @@ export const HATS = [
   { id: "beanie", label: "Beanie", src: "assets/pibo/hats/beanie.png", anchorPx: { x: 263, y: 372 }, scale: 1 },
   { id: "strawhat", label: "Straw hat", src: "assets/pibo/hats/strawhat.png", anchorPx: { x: 370, y: 253 }, scale: 1 },
   { id: "wizard", label: "Wizard hat", src: "assets/pibo/hats/wizard.png", anchorPx: { x: 295, y: 382 }, scale: 1 },
-  { id: "crown", label: "Crown", src: "assets/pibo/hats/crown.png", anchorPx: { x: 240, y: 232 }, offset: { x: 0, y: 14 }, scale: 1 },
+  { id: "crown", label: "Crown", src: "assets/pibo/hats/crown.png", anchorPx: { x: 181, y: 232 }, offset: { x: 0, y: 14 }, scale: 1 },
   { id: "cap", label: "Cap", src: "assets/pibo/hats/cap.png", anchorPx: { x: 300, y: 248 }, scale: 1 },
-  { id: "pirate", label: "Pirate hat", src: "assets/pibo/hats/pirate.png", anchorPx: { x: 291, y: 256 }, scale: 1 },
+  { id: "pirate", label: "Pirate hat", src: "assets/pibo/hats/pirate.png", anchorPx: { x: 291, y: 255 }, scale: 1 },
 ];
 
 export const SCARVES = [
