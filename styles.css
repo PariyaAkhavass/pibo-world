@@ -1652,7 +1652,8 @@ html.phone-landscape .library-story { font-size: 16px; }
   display: grid;
   place-items: center;
 }
-.art-choice svg { width: 100%; height: 100%; }
+.art-choice svg,
+.art-choice img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 .art-choice.on {
   background: #fff;
   box-shadow: 0 0 0 3px #fff, 0 0 0 6px #3a2a24;

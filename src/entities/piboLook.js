@@ -29,29 +29,31 @@ export const POTS = [
 ];
 
 /**
- * Extra hair is a transparent PNG, not a drawing in code.
- * Paint each file at HAIR_FRAME (645×360). The bottom center of that image
- * sits on the pot rim. scale 1 is one image pixel per sprite pixel.
- * offset nudges from the rim in sprite pixels (x right, y down).
+ * Extra hair and every hat are transparent PNGs.
+ * anchorPx is the pixel that sits on the middle of the pot rim's top
+ * (x from the left of the file, y from the top). scale 1 is one image
+ * pixel per sprite pixel. offset nudges from the rim in sprite pixels
+ * (x right, y down). Files can be any size.
  * The original tuft is not a file: it is the leaf layer of assets/pibo/pibo.png.
- * Replace a PNG and refresh. No build step.
+ * A hat hides whichever hair is selected.
  */
-export const HAIR_FRAME = { width: 645, height: 360 };
-
 export const HAIRS = [
   { id: "tuft", label: "Big leaf tuft" },
-  { id: "sprout", label: "Two-leaf sprout", src: "assets/pibo/hair/sprout.png", anchor: { x: 0.5, y: 1 }, offset: { x: 0, y: 0 }, scale: 1 },
-  { id: "lily", label: "Lily pads", src: "assets/pibo/hair/lily.png", anchor: { x: 0.5, y: 1 }, offset: { x: 0, y: 0 }, scale: 1 },
-  { id: "aloe", label: "Spiky leaves", src: "assets/pibo/hair/aloe.png", anchor: { x: 0.5, y: 1 }, offset: { x: 0, y: 0 }, scale: 1 },
-  { id: "vine", label: "Curly vine", src: "assets/pibo/hair/vine.png", anchor: { x: 0.5, y: 1 }, offset: { x: 0, y: 0 }, scale: 1 },
-  { id: "flower", label: "Flower", src: "assets/pibo/hair/flower.png", anchor: { x: 0.5, y: 1 }, offset: { x: 0, y: 0 }, scale: 1 },
+  { id: "succulent", label: "Succulent", src: "assets/pibo/hair/succulent.png", anchorPx: { x: 290, y: 389 }, scale: 1 },
+  { id: "fern", label: "Fern", src: "assets/pibo/hair/fern.png", anchorPx: { x: 336, y: 432 }, scale: 1 },
+  { id: "sunflower", label: "Sunflower", src: "assets/pibo/hair/sunflower.png", anchorPx: { x: 294, y: 392 }, scale: 1 },
+  { id: "clover", label: "Clover", src: "assets/pibo/hair/clover.png", anchorPx: { x: 314, y: 396 }, scale: 1 },
+  { id: "palm", label: "Palm", src: "assets/pibo/hair/palm.png", anchorPx: { x: 315, y: 400 }, scale: 1 },
 ];
 
 export const HATS = [
   { id: "none", label: "No hat" },
-  { id: "pink", label: "Pink hat", color: "#ff7eb3" },
-  { id: "blue", label: "Blue hat", color: "#4aa3e8" },
-  { id: "yellow", label: "Yellow hat", color: "#ffd24a" },
+  { id: "beanie", label: "Beanie", src: "assets/pibo/hats/beanie.png", anchorPx: { x: 263, y: 372 }, scale: 1 },
+  { id: "strawhat", label: "Straw hat", src: "assets/pibo/hats/strawhat.png", anchorPx: { x: 370, y: 253 }, scale: 1 },
+  { id: "wizard", label: "Wizard hat", src: "assets/pibo/hats/wizard.png", anchorPx: { x: 295, y: 382 }, scale: 1 },
+  { id: "crown", label: "Crown", src: "assets/pibo/hats/crown.png", anchorPx: { x: 240, y: 232 }, offset: { x: 0, y: 14 }, scale: 1 },
+  { id: "cap", label: "Cap", src: "assets/pibo/hats/cap.png", anchorPx: { x: 300, y: 248 }, scale: 1 },
+  { id: "pirate", label: "Pirate hat", src: "assets/pibo/hats/pirate.png", anchorPx: { x: 291, y: 256 }, scale: 1 },
 ];
 
 export const SCARVES = [
@@ -68,21 +70,21 @@ export const GLASSES = [
 
 const INK = "#3a2a24";
 const layersOf = new WeakMap();
-const hairImages = new Map();
+const spriteImages = new Map();
 const hairListeners = new Set();
 
 if (typeof Image !== "undefined") {
-  for (const hair of HAIRS) {
-    if (!hair.src) continue;
+  for (const item of [...HAIRS, ...HATS]) {
+    if (!item.src) continue;
     const img = new Image();
     img.onload = () => {
-      if (img.naturalWidth) hairImages.set(hair.id, img);
-      for (const fn of hairListeners) fn(hair.id);
+      if (img.naturalWidth) spriteImages.set(item.id, img);
+      for (const fn of hairListeners) fn(item.id);
     };
     img.onerror = () => {
-      hairImages.delete(hair.id);
+      spriteImages.delete(item.id);
     };
-    img.src = hair.src;
+    img.src = item.src;
   }
 }
 
@@ -116,25 +118,49 @@ export function paintLook(source, look, target) {
   const canvas = target || document.createElement("canvas");
   const layers = splitLayers(source);
   const { w, h } = layers;
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, w, h);
   const pot = POTS.find((item) => item.id === look.pot) || POTS[0];
+  const hat = HATS.find((item) => item.id === look.hat);
+  const hairId = HAIRS.some((item) => item.id === look.hair) ? look.hair : "tuft";
+  const hair = HAIRS.find((item) => item.id === hairId);
+  const wearHat = Boolean(hat && hat.id !== "none");
+  const pieces = [];
+  if (wearHat && hat.src) pieces.push(hat);
+  else if (hair?.src) pieces.push(hair);
+  let minX = 0;
+  let minY = 0;
+  let maxX = w;
+  let maxY = h;
+  for (const piece of pieces) {
+    const box = accessoryBounds(layers, piece);
+    if (!box) continue;
+    minX = Math.min(minX, box.x);
+    minY = Math.min(minY, box.y);
+    maxX = Math.max(maxX, box.x + box.dw);
+    maxY = Math.max(maxY, box.y + box.dh);
+  }
+  // Extra width is split on both sides so the pot stays centered.
+  // Extra height is only above the leaves, so the feet stay on the ground.
+  const padX = Math.max(0, Math.ceil(-minX), Math.ceil(maxX - w));
+  const padY = Math.max(0, Math.ceil(-minY));
+  canvas.width = w + padX * 2;
+  canvas.height = h + padY;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(padX, padY);
   ctx.drawImage(potCanvas(layers, pot), 0, 0);
   if (pot.pattern) drawPattern(ctx, layers, pot.pattern);
   ctx.drawImage(layers.eyes, 0, 0);
-  const hat = HATS.find((item) => item.id === look.hat);
-  if (!hat?.color) {
-    const hair = HAIRS.some((item) => item.id === look.hair) ? look.hair : "tuft";
-    if (hair === "tuft") ctx.drawImage(layers.leaves, 0, 0);
-    else drawHairSprite(ctx, layers, hair);
+  if (!wearHat) {
+    if (!hair?.src) ctx.drawImage(layers.leaves, 0, 0);
+    else drawAccessory(ctx, layers, hair);
   }
   const scarf = SCARVES.find((item) => item.id === look.scarf);
   if (scarf?.color) drawScarf(ctx, layers, scarf.color);
   const glasses = GLASSES.find((item) => item.id === look.glasses);
   if (glasses?.color) drawGlasses(ctx, w, h, glasses.color);
-  if (hat?.color) drawHat(ctx, layers, hat.color);
+  if (wearHat) drawAccessory(ctx, layers, hat);
+  ctx.restore();
   return canvas;
 }
 
@@ -326,40 +352,23 @@ function drawPattern(ctx, layers, pattern) {
   ctx.drawImage(scratch, 0, 0);
 }
 
-function drawHairSprite(ctx, layers, id) {
-  const hair = HAIRS.find((item) => item.id === id);
-  const img = hairImages.get(id);
-  if (!hair?.src || !img?.naturalWidth) return;
-  const scale = hair.scale ?? 1;
+function accessoryBounds(layers, item) {
+  const img = spriteImages.get(item?.id);
+  if (!item?.src || !img?.naturalWidth) return null;
+  const scale = item.scale ?? 1;
   const dw = img.naturalWidth * scale;
   const dh = img.naturalHeight * scale;
-  const ax = hair.anchor?.x ?? 0.5;
-  const ay = hair.anchor?.y ?? 1;
-  const ox = hair.offset?.x ?? 0;
-  const oy = hair.offset?.y ?? 0;
-  ctx.drawImage(img, layers.rim.x - dw * ax + ox, layers.rim.y - dh * ay + oy, dw, dh);
+  const ax = item.anchorPx ? item.anchorPx.x * scale : dw * (item.anchor?.x ?? 0.5);
+  const ay = item.anchorPx ? item.anchorPx.y * scale : dh * (item.anchor?.y ?? 1);
+  const x = layers.rim.x - ax + (item.offset?.x ?? 0);
+  const y = layers.rim.y - ay + (item.offset?.y ?? 0);
+  return { x, y, dw, dh };
 }
 
-function drawHat(ctx, layers, color) {
-  const { w, h, rim } = layers;
-  const brimW = rim.width * 1.02;
-  const brimH = h * 0.072;
-  const brimY = rim.y + brimH * 0.2;
-  const crownW = brimW * 0.7;
-  const crownH = h * 0.22;
-  const crownTop = brimY - crownH * 0.86;
-  ctx.save();
-  ctx.fillStyle = color;
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = Math.max(12, w * 0.034);
-  ctx.lineJoin = "round";
-  roundTop(ctx, rim.x - crownW / 2, crownTop, crownW, crownH, crownW * 0.48);
-  ctx.fill();
-  ctx.stroke();
-  ellipse(ctx, rim.x, brimY, brimW, brimH);
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
+function drawAccessory(ctx, layers, item) {
+  const box = accessoryBounds(layers, item);
+  if (!box) return;
+  ctx.drawImage(spriteImages.get(item.id), box.x, box.y, box.dw, box.dh);
 }
 
 function drawScarf(ctx, layers, color) {
@@ -519,17 +528,6 @@ function roundRect(ctx, x, y, rw, rh, r) {
   ctx.arcTo(x + rw, y + rh, x, y + rh, rad);
   ctx.arcTo(x, y + rh, x, y, rad);
   ctx.arcTo(x, y, x + rw, y, rad);
-  ctx.closePath();
-}
-
-function roundTop(ctx, x, y, rw, rh, r) {
-  const rad = Math.min(r, rw / 2, rh);
-  ctx.beginPath();
-  ctx.moveTo(x, y + rh);
-  ctx.lineTo(x, y + rad);
-  ctx.arcTo(x, y, x + rad, y, rad);
-  ctx.arcTo(x + rw, y, x + rw, y + rad, rad);
-  ctx.lineTo(x + rw, y + rh);
   ctx.closePath();
 }
 

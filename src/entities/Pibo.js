@@ -79,6 +79,7 @@ export class Pibo {
     this.group.add(this.pivot);
     this._baseImage = this.frames.idle[0]?.image || null;
     this._lookGrow = 1;
+    this._lookWide = 1;
     this._lookTex = null;
     if (controllable && this._baseImage) this.applyLook(loadLook());
     if (controllable) onHairSprite(() => { if (this.look) this.applyLook(this.look); });
@@ -90,7 +91,9 @@ export class Pibo {
     this.look = look;
     const canvas = paintLook(this._baseImage, look);
     const srcH = this._baseImage.height || this._baseImage.naturalHeight || canvas.height;
+    const srcW = this._baseImage.width || this._baseImage.naturalWidth || canvas.width;
     this._lookGrow = srcH ? canvas.height / srcH : 1;
+    this._lookWide = srcW ? canvas.width / srcW : 1;
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.magFilter = THREE.LinearFilter;
@@ -209,7 +212,8 @@ export class Pibo {
     const flip = screenRight >= 0 ? 1 : -1;
     // A hat adds clear space above the leaves. Swim frames stay the original pot.
     const grow = state === "swim" ? 1 : (this._lookGrow || 1);
-    this.mesh.scale.set(flip * sx, sy * grow, 1);
+    const wide = state === "swim" ? 1 : (this._lookWide || 1);
+    this.mesh.scale.set(flip * sx * wide, sy * grow, 1);
     // Positive rotation leans the top to screen-left, so flip it with facing.
     this.mesh.rotation.z = state === "walk" ? -flip * tilt : 0;
     // The plane is centered. Park its base on the ground while it squishes or lies flat.

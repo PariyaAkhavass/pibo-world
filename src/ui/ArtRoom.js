@@ -182,27 +182,14 @@ function potIcon(item) {
 }
 
 function hairIcon(item) {
-  if (item.id === "sprout") {
-    return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 36c-2-8-10-12-14-10 6-2 10 2 12 8z" fill="#7ec83a" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M24 36c2-8 10-12 14-10-6-2-10 2-12 8z" fill="#7ec83a" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/></svg>`;
-  }
-  if (item.id === "lily") {
-    return `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="16" cy="28" r="9" fill="#7ec83a" stroke="${INK}" stroke-width="3"/><circle cx="32" cy="28" r="9" fill="#7ec83a" stroke="${INK}" stroke-width="3"/><circle cx="24" cy="16" r="8" fill="#7ec83a" stroke="${INK}" stroke-width="3"/></svg>`;
-  }
-  if (item.id === "aloe") {
-    return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 38 L20 16 L24 20 L28 16 Z" fill="#7ec83a" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M24 36 L10 18 L16 24 Z" fill="#7ec83a" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M24 36 L38 18 L32 24 Z" fill="#7ec83a" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/></svg>`;
-  }
-  if (item.id === "vine") {
-    return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 36c8-2 6-12 14-14 4 6-2 10-6 8" fill="none" stroke="#3d8f24" stroke-width="4" stroke-linecap="round"/><path d="M16 36c8-2 6-12 14-14" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><ellipse cx="30" cy="16" rx="6" ry="4" fill="#7ec83a" stroke="${INK}" stroke-width="3"/></svg>`;
-  }
-  if (item.id === "flower") {
-    return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 36V20" stroke="#3d8f24" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="14" r="4" fill="#ff8fb8" stroke="${INK}" stroke-width="2"/><circle cx="18" cy="18" r="4" fill="#ff8fb8" stroke="${INK}" stroke-width="2"/><circle cx="30" cy="18" r="4" fill="#ff8fb8" stroke="${INK}" stroke-width="2"/><circle cx="24" cy="18" r="3" fill="#ffd24a" stroke="${INK}" stroke-width="2"/></svg>`;
-  }
-  return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 30c4-10 10-14 16-14s12 4 16 14c-6-6-10-8-16-8s-10 2-16 8z" fill="#7ec83a" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M14 26c2-6 6-8 10-8s8 2 10 8" fill="#3d8f24" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/></svg>`;
+  const src = item.src || (item.id === "tuft" ? "assets/pibo/hair/tuft-icon.png" : "");
+  if (!src) return noneIcon();
+  return `<img src="${src}" alt="">`;
 }
 
 function hatIcon(item) {
-  if (item.id === "none") return noneIcon();
-  return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 20h16v8a8 8 0 0 1-16 0z" fill="${item.color}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><ellipse cx="24" cy="30" rx="16" ry="6" fill="${item.color}" stroke="${INK}" stroke-width="3"/></svg>`;
+  if (!item.src) return noneIcon();
+  return `<img src="${item.src}" alt="">`;
 }
 
 function scarfIcon(item) {
