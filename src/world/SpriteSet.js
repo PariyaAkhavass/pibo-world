@@ -20,6 +20,8 @@ export class IsoSprite {
       side: THREE.DoubleSide,
     });
     this.mesh = new THREE.Mesh(geo, this.material);
+    // Same layer as Pibo so the closer feet win and he can pass behind.
+    this.mesh.renderOrder = 3;
     const ax = (asset.anchor?.x ?? 0.5) - 0.5;
     const ay = (asset.anchor?.y ?? 0) - 0.5;
     this.mesh.position.set(-ax * asset.width, -ay * asset.height, 0);

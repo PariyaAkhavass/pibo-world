@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { ASSETS } from "../data/assets.js";
 import { isBlocked, isBlueWater } from "../world/biome.js";
 import { placeOnPlate } from "../world/iso.js";
+import { loadLook, paintLook } from "./piboLook.js";
 
 /**
  * Pibo on the flat island. The body is a swappable sprite sheet (idle, walk,
@@ -76,7 +77,26 @@ export class Pibo {
     this.group.scale.setScalar(scale);
     this.group.add(this.shadow);
     this.group.add(this.pivot);
+    this._baseImage = this.frames.idle[0]?.image || null;
+    if (controllable && this._baseImage) this.applyLook(loadLook());
     this._apply();
+  }
+
+  applyLook(look) {
+    if (!this._baseImage) return;
+    this.look = look;
+    const canvas = paintLook(this._baseImage, look);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.magFilter = THREE.LinearFilter;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.needsUpdate = true;
+    this.frames.idle[0] = tex;
+    this.frames.walk[0] = tex;
+    if (!this.inWater) {
+      this.material.map = tex;
+      this.material.needsUpdate = true;
+    }
   }
 
   worldPosition(target = new THREE.Vector3()) {

@@ -261,6 +261,15 @@ html, body {
   pointer-events: none;
 }
 .in-library .mobile-controls { display: none !important; }
+.in-art .collection-btn,
+.in-art .collection,
+.in-art .map-btn,
+.in-art .lighthouse-go,
+.in-art .arcade-go-btn,
+.in-art .library-go-btn,
+.in-art .lighthouse-marker,
+.in-art .prompt { display: none !important; }
+.in-art .mobile-controls { display: none !important; }
 .in-studio .toast { bottom: 40%; }
 .in-studio .joystick {
   visibility: hidden;
@@ -1554,3 +1563,98 @@ html.phone-landscape .library-card {
 }
 html.phone-landscape .library-title { font-size: 22px; }
 html.phone-landscape .library-story { font-size: 16px; }
+
+/* Art room. The painting fills the window. Icons float over it. */
+.art-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: auto;
+  overflow: hidden;
+}
+.art-overlay.hidden { display: none; }
+.art-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+.art-shadow,
+.art-pibo {
+  position: absolute;
+  pointer-events: none;
+}
+.art-shadow {
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.22) 48%, rgba(0, 0, 0, 0) 72%);
+}
+.art-back,
+.art-choice { pointer-events: auto; }
+.art-back {
+  position: absolute;
+  z-index: 2;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  width: 68px;
+  height: 68px;
+  border: 3px solid #3a2a24;
+  border-radius: 50%;
+  background: rgba(255, 248, 238, 0.94);
+  box-shadow: 0 6px 16px rgba(40, 30, 20, 0.28);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.art-back svg { width: 36px; height: 36px; }
+.art-tools {
+  position: absolute;
+  z-index: 2;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: min(292px, 46vw);
+}
+.art-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.art-choice {
+  width: 56px;
+  height: 56px;
+  padding: 6px;
+  border: 3px solid #3a2a24;
+  border-radius: 50%;
+  background: rgba(255, 248, 238, 0.94);
+  box-shadow: 0 4px 10px rgba(40, 30, 20, 0.18);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.art-choice svg { width: 100%; height: 100%; }
+.art-choice.on {
+  background: #fff;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px #3a2a24;
+}
+html.phone-landscape .art-choice {
+  width: 46px;
+  height: 46px;
+  padding: 4px;
+}
+html.phone-landscape .art-back {
+  width: 56px;
+  height: 56px;
+}
+html.phone-landscape .art-tools {
+  gap: 6px;
+  max-width: min(210px, 42vw);
+}
+html.phone-landscape .art-row { gap: 6px; }

@@ -6,6 +6,7 @@ import { IdeaPanel } from "./IdeaPanel.js";
 import { WorldMap } from "./WorldMap.js";
 import { ArcadeEditor } from "./ArcadeEditor.js";
 import { LibraryPanel } from "./LibraryPanel.js";
+import { ArtRoom } from "./ArtRoom.js";
 
 /**
  * Thin controller over the HTML overlay. Keeps the DOM out of gameplay code:
@@ -80,6 +81,15 @@ export class UI {
         this._syncActionBtn();
         this.onLibraryLeave?.();
       },
+    });
+    this.art = new ArtRoom({
+      root: document.getElementById("art-overlay"),
+      onClose: () => {
+        document.documentElement.classList.remove("in-art");
+        this._syncActionBtn();
+        this.onArtLeave?.();
+      },
+      onChange: (look) => this.onArtChange?.(look),
     });
     this.lastIdea = null;
 
@@ -180,6 +190,10 @@ export class UI {
 
   _onAction() {
     if (!this.input) return;
+    if (this.isArtOpen) {
+      this.closeArt();
+      return;
+    }
     if (this.isLibraryOpen) {
       this.closeLibrary();
       return;
@@ -205,7 +219,7 @@ export class UI {
   _syncActionBtn() {
     const btn = this.el.actionBtn;
     if (!btn) return;
-    if (this.isLibraryOpen || this.isArcadeOpen || this.isMapOpen || this.isIdeaOpen || this.isStudioOpen || this.isModalOpen) {
+    if (this.isArtOpen || this.isLibraryOpen || this.isArcadeOpen || this.isMapOpen || this.isIdeaOpen || this.isStudioOpen || this.isModalOpen) {
       btn.textContent = "back";
       btn.classList.add("close-mode");
       btn.classList.remove("ready");
@@ -329,6 +343,7 @@ export class UI {
     this.closeMap();
     this.closeArcade();
     this.closeLibrary();
+    this.closeArt();
   }
 
   /* library -------------------------------------------------------- */
@@ -347,6 +362,26 @@ export class UI {
 
   closeLibrary() {
     this.library?.close();
+  }
+
+  /* art room ------------------------------------------------------- */
+  get isArtOpen() {
+    return !!this.art?.isOpen;
+  }
+
+  openArt() {
+    this.closeMap();
+    this.closeCollection();
+    this.art?.open();
+    document.documentElement.classList.add("in-art");
+    this.hidePrompt();
+    this._syncActionBtn();
+  }
+
+  closeArt() {
+    this.art?.close();
+    document.documentElement.classList.remove("in-art");
+    this._syncActionBtn();
   }
 
   /* arcade editor -------------------------------------------------- */
@@ -393,7 +428,7 @@ export class UI {
       marker.classList.add("hidden");
       marker.setAttribute("aria-hidden", "true");
     }
-    const indoors = !!hidden && (this.isStudioOpen || this.isArcadeOpen || this.isLibraryOpen);
+    const indoors = !!hidden && (this.isStudioOpen || this.isArcadeOpen || this.isLibraryOpen || this.isArtOpen);
     this.el.lighthouseGo?.classList.toggle("hidden", indoors);
   }
 

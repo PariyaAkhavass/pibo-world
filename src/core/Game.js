@@ -124,6 +124,8 @@ export class Game {
     this.ui.onArcadeLeave = () => this._leaveArcade();
     this.libraryRoom = new LibraryRoom();
     this.ui.onLibraryLeave = () => this._leaveLibrary();
+    this.ui.onArtLeave = () => this._leaveArt();
+    this.ui.onArtChange = (look) => this.pibo?.applyLook(look);
   }
 
   _initPlayer() {
@@ -195,6 +197,11 @@ export class Game {
         this._enterLibrary();
         return;
       }
+      if (q.has("art")) {
+        this._goToCottage();
+        this._enterArt();
+        return;
+      }
       if (!q.has("studio") && !q.has("dock")) return;
       const pad = LAYOUT.lighthousePad;
       const face = this._faceToward(pad, LAYOUT.lighthouse);
@@ -217,6 +224,12 @@ export class Game {
       this._handleArcadeInteraction();
       this.input.endFrame();
       this.renderer.render(this.arcadeRoom.scene, this.arcadeRoom.camera);
+      return;
+    }
+
+    if (this.ui.isArtOpen) {
+      this._handleArtInteraction();
+      this.input.endFrame();
       return;
     }
 
@@ -323,6 +336,15 @@ export class Game {
       return;
     }
 
+    const cottage = this._near(p, LAYOUT.cottageDoor, 1.45)
+      ? { label: "Art room" }
+      : null;
+    if (cottage) {
+      ui.setPrompt(cottage.label);
+      if (this.input.consume("KeyE", "Enter")) this._enterArt();
+      return;
+    }
+
     const library = this._near(p, LAYOUT.libraryDoor, 1.45)
       ? { label: "Library" }
       : null;
@@ -408,6 +430,7 @@ export class Game {
   }
 
   _enterStudio() {
+    if (this.ui.isArtOpen) this._leaveArt("switch");
     this.started = true;
     this.ui.hideIntro();
     this.ui.closeModals();
@@ -455,6 +478,7 @@ export class Game {
     if (this.ui.isIdeaOpen) this.ui.closeIdeas();
     if (this.studio.active) this._leaveStudio();
     if (this.libraryRoom.active) this._leaveLibrary("switch");
+    if (this.ui.isArtOpen) this._leaveArt("switch");
     if (this.arcadeRoom.active) this._leaveArcade();
     this.ui.closeModals();
     this.ui.closeCollection();
@@ -483,6 +507,38 @@ export class Game {
     this._travelTo(LAYOUT.libraryDoor, LAYOUT.library, "Library. Press E to step inside.");
   }
 
+  _goToCottage() {
+    this._travelTo(LAYOUT.cottageDoor, { x: LAYOUT.cottageDoor.x, z: 0.2 }, "The art room. Press E to step inside.");
+  }
+
+  _handleArtInteraction() {
+    if (this.input.consume("Escape")) this._leaveArt();
+  }
+
+  _enterArt() {
+    if (this.ui.isIdeaOpen) this.ui.closeIdeas();
+    if (this.studio.active) this._leaveStudio();
+    if (this.libraryRoom.active) this._leaveLibrary("switch");
+    if (this.arcadeRoom.active) this._leaveArcade();
+    this.ui.closeModals();
+    this.ui.closeCollection();
+    this.started = true;
+    this.ui.hideIntro();
+    this.pibo.setVisible(false);
+    this.ui.openArt();
+  }
+
+  _leaveArt(reason = "exit") {
+    if (!this.ui.isArtOpen) return;
+    this.ui.closeArt();
+    const pad = LAYOUT.cottageDoor;
+    const face = this._faceToward(pad, { x: pad.x, z: 0.2 });
+    this.pibo.setVisible(true);
+    this.pibo.placeAt(pad.x, pad.z, face.x, face.z, this.collision);
+    this._frameCameraOnPibo();
+    if (reason === "exit") this.ui.toast("Back outside", 1200);
+  }
+
   _handleLibraryInteraction() {
     if (this.input.consume("Escape")) this._leaveLibrary();
   }
@@ -490,6 +546,7 @@ export class Game {
   _enterLibrary() {
     if (this.ui.isIdeaOpen) this.ui.closeIdeas();
     if (this.studio.active) this._leaveStudio();
+    if (this.ui.isArtOpen) this._leaveArt("switch");
     if (this.arcadeRoom.active) this._leaveArcade();
     this.ui.closeModals();
     this.ui.closeCollection();
@@ -520,6 +577,7 @@ export class Game {
     if (this.ui.isIdeaOpen) this.ui.closeIdeas();
     if (this.studio.active) this._leaveStudio();
     if (this.libraryRoom?.active) this._leaveLibrary("switch");
+    if (this.ui.isArtOpen) this._leaveArt("switch");
     if (this.arcadeRoom?.active) this._leaveArcade();
     this.ui.closeModals();
     this.ui.closeCollection();
@@ -534,7 +592,7 @@ export class Game {
 
   _updateLighthouseGuide() {
     // Travel buttons stay in the HUD. Nothing is drawn on the island.
-    const indoors = this.studio.active || this.arcadeRoom.active || this.libraryRoom.active;
+    const indoors = this.studio.active || this.arcadeRoom.active || this.libraryRoom.active || this.ui.isArtOpen;
     this.ui.setLighthouseGuide({ hidden: indoors });
   }
 
@@ -579,6 +637,7 @@ export class Game {
     this.studio?.resize(w, h);
     this.arcadeRoom?.resize(w, h);
     this.libraryRoom?.resize(w, h);
+    this.ui.art?.layout();
     this._updateCamera(0);
   }
 }
