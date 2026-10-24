@@ -1632,7 +1632,7 @@ html.phone-landscape .library-story { font-size: 16px; }
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
-  max-width: min(292px, 46vw);
+  max-width: min(430px, 48vw);
 }
 .art-row {
   display: flex;
@@ -1658,16 +1658,18 @@ html.phone-landscape .library-story { font-size: 16px; }
   box-shadow: 0 0 0 3px #fff, 0 0 0 6px #3a2a24;
 }
 html.phone-landscape .art-choice {
-  width: 46px;
-  height: 46px;
-  padding: 4px;
+  width: 40px;
+  height: 40px;
+  padding: 3px;
 }
 html.phone-landscape .art-back {
   width: 56px;
   height: 56px;
 }
 html.phone-landscape .art-tools {
-  gap: 6px;
-  max-width: min(210px, 42vw);
+  gap: 4px;
+  max-width: min(460px, 58vw);
+  max-height: calc(100% - 16px);
+  overflow: auto;
 }
-html.phone-landscape .art-row { gap: 6px; }
+html.phone-landscape .art-row { gap: 4px; }
