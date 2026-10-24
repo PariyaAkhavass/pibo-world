@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { ASSETS } from "../data/assets.js";
 import { isBlocked, isBlueWater } from "../world/biome.js";
 import { placeOnPlate } from "../world/iso.js";
-import { loadLook, paintLook } from "./piboLook.js";
+import { loadLook, onHairSprite, paintLook } from "./piboLook.js";
 
 /**
  * Pibo on the flat island. The body is a swappable sprite sheet (idle, walk,
@@ -81,6 +81,7 @@ export class Pibo {
     this._lookGrow = 1;
     this._lookTex = null;
     if (controllable && this._baseImage) this.applyLook(loadLook());
+    if (controllable) onHairSprite(() => { if (this.look) this.applyLook(this.look); });
     this._apply();
   }
 

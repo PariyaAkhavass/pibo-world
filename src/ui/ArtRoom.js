@@ -6,6 +6,7 @@ import {
   POTS,
   SCARVES,
   loadLook,
+  onHairSprite,
   paintLook,
   saveLook,
 } from "../entities/piboLook.js";
@@ -26,6 +27,11 @@ export class ArtRoom {
     this.source = null;
     this._build();
     this._loadSource();
+    onHairSprite(() => {
+      if (!this.isOpen) return;
+      this._paint();
+      this.layout();
+    });
   }
 
   _build() {

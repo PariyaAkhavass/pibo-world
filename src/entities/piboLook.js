@@ -28,13 +28,23 @@ export const POTS = [
   { id: "stars", label: "Stars", color: [58, 130, 220], pattern: "stars" },
 ];
 
+/**
+ * Extra hair is a transparent PNG, not a drawing in code.
+ * Paint each file at HAIR_FRAME (645×360). The bottom center of that image
+ * sits on the pot rim. scale 1 is one image pixel per sprite pixel.
+ * offset nudges from the rim in sprite pixels (x right, y down).
+ * The original tuft is not a file: it is the leaf layer of assets/pibo/pibo.png.
+ * Replace a PNG and refresh. No build step.
+ */
+export const HAIR_FRAME = { width: 645, height: 360 };
+
 export const HAIRS = [
   { id: "tuft", label: "Big leaf tuft" },
-  { id: "sprout", label: "Two-leaf sprout" },
-  { id: "lily", label: "Lily pads" },
-  { id: "aloe", label: "Spiky leaves" },
-  { id: "vine", label: "Curly vine" },
-  { id: "flower", label: "Flower" },
+  { id: "sprout", label: "Two-leaf sprout", src: "assets/pibo/hair/sprout.png", anchor: { x: 0.5, y: 1 }, offset: { x: 0, y: 0 }, scale: 1 },
+  { id: "lily", label: "Lily pads", src: "assets/pibo/hair/lily.png", anchor: { x: 0.5, y: 1 }, offset: { x: 0, y: 0 }, scale: 1 },
+  { id: "aloe", label: "Spiky leaves", src: "assets/pibo/hair/aloe.png", anchor: { x: 0.5, y: 1 }, offset: { x: 0, y: 0 }, scale: 1 },
+  { id: "vine", label: "Curly vine", src: "assets/pibo/hair/vine.png", anchor: { x: 0.5, y: 1 }, offset: { x: 0, y: 0 }, scale: 1 },
+  { id: "flower", label: "Flower", src: "assets/pibo/hair/flower.png", anchor: { x: 0.5, y: 1 }, offset: { x: 0, y: 0 }, scale: 1 },
 ];
 
 export const HATS = [
@@ -57,9 +67,30 @@ export const GLASSES = [
 ];
 
 const INK = "#3a2a24";
-const LEAF = "#7ec83a";
-const LEAF_DEEP = "#3d8f24";
 const layersOf = new WeakMap();
+const hairImages = new Map();
+const hairListeners = new Set();
+
+if (typeof Image !== "undefined") {
+  for (const hair of HAIRS) {
+    if (!hair.src) continue;
+    const img = new Image();
+    img.onload = () => {
+      if (img.naturalWidth) hairImages.set(hair.id, img);
+      for (const fn of hairListeners) fn(hair.id);
+    };
+    img.onerror = () => {
+      hairImages.delete(hair.id);
+    };
+    img.src = hair.src;
+  }
+}
+
+/** Fires when a hair PNG finishes loading, so the island and art room can repaint. */
+export function onHairSprite(fn) {
+  hairListeners.add(fn);
+  return () => hairListeners.delete(fn);
+}
 
 export function loadLook() {
   try {
@@ -97,7 +128,7 @@ export function paintLook(source, look, target) {
   if (!hat?.color) {
     const hair = HAIRS.some((item) => item.id === look.hair) ? look.hair : "tuft";
     if (hair === "tuft") ctx.drawImage(layers.leaves, 0, 0);
-    else drawHair(ctx, layers, hair);
+    else drawHairSprite(ctx, layers, hair);
   }
   const scarf = SCARVES.find((item) => item.id === look.scarf);
   if (scarf?.color) drawScarf(ctx, layers, scarf.color);
@@ -295,129 +326,18 @@ function drawPattern(ctx, layers, pattern) {
   ctx.drawImage(scratch, 0, 0);
 }
 
-function drawHair(ctx, layers, id) {
-  const { w, h, rim } = layers;
-  ctx.save();
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = Math.max(10, w * 0.026);
-  ctx.fillStyle = LEAF;
-  const cx = rim.x;
-  const y = rim.y + 2;
-  if (id === "sprout") {
-    leafBlob(ctx, cx - w * 0.01, y, -0.85, w * 0.2, h * 0.15);
-    leafBlob(ctx, cx + w * 0.01, y, 0.85, w * 0.2, h * 0.15);
-  } else if (id === "lily") {
-    const r = w * 0.13;
-    lily(ctx, cx - r * 0.85, y - r * 0.35, r);
-    lily(ctx, cx + r * 0.85, y - r * 0.35, r);
-    lily(ctx, cx, y - r * 1.05, r * 0.92);
-  } else if (id === "aloe") {
-    const angles = [-1.05, -0.55, 0, 0.55, 1.05];
-    angles.forEach((angle, i) => {
-      spike(ctx, cx, y, angle, h * (i === 2 ? 0.26 : 0.2), w * 0.055);
-    });
-  } else if (id === "vine") {
-    vine(ctx, cx, y, w, h);
-  } else if (id === "flower") {
-    flower(ctx, cx, y, w, h);
-  }
-  ctx.restore();
-}
-
-function leafBlob(ctx, x, y, angle, len, wid) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(angle);
-  ctx.beginPath();
-  ctx.ellipse(0, -len * 0.45, wid * 0.42, len * 0.5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.strokeStyle = LEAF_DEEP;
-  ctx.lineWidth = Math.max(4, wid * 0.12);
-  ctx.beginPath();
-  ctx.moveTo(0, -4);
-  ctx.lineTo(0, -len * 0.75);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function lily(ctx, x, y, r) {
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.strokeStyle = LEAF_DEEP;
-  ctx.lineWidth = Math.max(4, r * 0.12);
-  ctx.moveTo(x - r * 0.2, y);
-  ctx.lineTo(x + r * 0.85, y - r * 0.15);
-  ctx.stroke();
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = Math.max(10, r * 0.22);
-}
-
-function spike(ctx, x, y, angle, len, wid) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(angle);
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.quadraticCurveTo(wid, -len * 0.45, 0, -len);
-  ctx.quadraticCurveTo(-wid, -len * 0.45, 0, 0);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
-}
-
-function vine(ctx, cx, y, w, h) {
-  ctx.lineWidth = Math.max(16, w * 0.04);
-  ctx.strokeStyle = INK;
-  ctx.beginPath();
-  ctx.moveTo(cx + w * 0.02, y);
-  ctx.bezierCurveTo(cx + w * 0.28, y - h * 0.08, cx - w * 0.02, y - h * 0.16, cx + w * 0.08, y - h * 0.26);
-  ctx.stroke();
-  ctx.strokeStyle = LEAF;
-  ctx.lineWidth = Math.max(8, w * 0.022);
-  ctx.stroke();
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = Math.max(10, w * 0.026);
-  ctx.fillStyle = LEAF;
-  leafBlob(ctx, cx + w * 0.16, y - h * 0.1, 0.4, w * 0.12, h * 0.08);
-  leafBlob(ctx, cx + w * 0.02, y - h * 0.2, -0.8, w * 0.11, h * 0.07);
-  leafBlob(ctx, cx + w * 0.08, y - h * 0.26, 0.2, w * 0.1, h * 0.06);
-}
-
-function flower(ctx, cx, y, w, h) {
-  const top = y - h * 0.28;
-  ctx.lineWidth = Math.max(12, w * 0.03);
-  ctx.strokeStyle = INK;
-  ctx.beginPath();
-  ctx.moveTo(cx, y);
-  ctx.lineTo(cx, top + h * 0.04);
-  ctx.stroke();
-  ctx.strokeStyle = LEAF_DEEP;
-  ctx.lineWidth = Math.max(6, w * 0.016);
-  ctx.stroke();
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = Math.max(10, w * 0.026);
-  ctx.fillStyle = LEAF;
-  leafBlob(ctx, cx, y - h * 0.12, -1.1, w * 0.12, h * 0.07);
-  const petal = w * 0.055;
-  ctx.fillStyle = "#ff8fb8";
-  for (let i = 0; i < 5; i++) {
-    const a = -Math.PI / 2 + (i * Math.PI * 2) / 5;
-    ellipse(ctx, cx + Math.cos(a) * petal * 0.95, top + Math.sin(a) * petal * 0.95, petal * 1.15, petal * 0.85);
-    ctx.fill();
-    ctx.stroke();
-  }
-  ctx.fillStyle = "#ffd24a";
-  ctx.beginPath();
-  ctx.arc(cx, top, petal * 0.55, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
+function drawHairSprite(ctx, layers, id) {
+  const hair = HAIRS.find((item) => item.id === id);
+  const img = hairImages.get(id);
+  if (!hair?.src || !img?.naturalWidth) return;
+  const scale = hair.scale ?? 1;
+  const dw = img.naturalWidth * scale;
+  const dh = img.naturalHeight * scale;
+  const ax = hair.anchor?.x ?? 0.5;
+  const ay = hair.anchor?.y ?? 1;
+  const ox = hair.offset?.x ?? 0;
+  const oy = hair.offset?.y ?? 0;
+  ctx.drawImage(img, layers.rim.x - dw * ax + ox, layers.rim.y - dh * ay + oy, dw, dh);
 }
 
 function drawHat(ctx, layers, color) {
