@@ -500,15 +500,15 @@ export class Game {
   }
 
   _goToArcade() {
-    this._travelTo(LAYOUT.arcadeDoor, LAYOUT.arcade, "Arcade. Press E to step inside.");
+    this._travelTo(LAYOUT.arcadeDoor, LAYOUT.arcade);
   }
 
   _goToLibrary() {
-    this._travelTo(LAYOUT.libraryDoor, LAYOUT.library, "Library. Press E to step inside.");
+    this._travelTo(LAYOUT.libraryDoor, LAYOUT.library);
   }
 
   _goToCottage() {
-    this._travelTo(LAYOUT.cottageDoor, { x: LAYOUT.cottageDoor.x, z: 0.2 }, "The art room. Press E to step inside.");
+    this._travelTo(LAYOUT.cottageDoor, { x: LAYOUT.cottageDoor.x, z: 0.2 });
   }
 
   _handleArtInteraction() {
@@ -536,7 +536,6 @@ export class Game {
     this.pibo.setVisible(true);
     this.pibo.placeAt(pad.x, pad.z, face.x, face.z, this.collision);
     this._frameCameraOnPibo();
-    if (reason === "exit") this.ui.toast("Back outside", 1200);
   }
 
   _handleLibraryInteraction() {
@@ -570,10 +569,10 @@ export class Game {
   }
 
   _goToLighthouse() {
-    this._travelTo(LAYOUT.lighthousePad, LAYOUT.lighthouse, "Lighthouse dock. Press E to step inside.");
+    this._travelTo(LAYOUT.lighthousePad, LAYOUT.lighthouse);
   }
 
-  _travelTo(pad, look, message) {
+  _travelTo(pad, look) {
     if (this.ui.isIdeaOpen) this.ui.closeIdeas();
     if (this.studio.active) this._leaveStudio();
     if (this.libraryRoom?.active) this._leaveLibrary("switch");
@@ -587,7 +586,6 @@ export class Game {
     this.ui.hideIntro();
     this.started = true;
     this._frameCameraOnPibo();
-    this.ui.toast(message, 2800);
   }
 
   _updateLighthouseGuide() {

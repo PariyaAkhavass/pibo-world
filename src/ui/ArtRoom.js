@@ -85,6 +85,7 @@ export class ArtRoom {
     this.look = { ...this.look, [key]: id };
     saveLook(this.look);
     this._paint();
+    this.layout();
     this._mark();
     this.onChange?.(this.look);
   }
@@ -93,7 +94,10 @@ export class ArtRoom {
     const img = new Image();
     img.onload = () => {
       this.source = img;
-      if (this.isOpen) this._paint();
+      if (this.isOpen) {
+        this._paint();
+        this.layout();
+      }
     };
     img.src = "assets/pibo/pibo.png";
   }
@@ -123,8 +127,13 @@ export class ArtRoom {
     const oy = (vh - 720 * scale) / 2;
     const feetX = ox + 633 * scale;
     const feetY = oy + 524 * scale;
-    const ph = 228 * scale;
-    const pw = ph * (645 / 838);
+    const srcW = this.source?.naturalWidth || 645;
+    const srcH = this.source?.naturalHeight || 838;
+    const bmpW = this.canvas.width || srcW;
+    const bmpH = this.canvas.height || srcH;
+    const bodyH = 228 * scale;
+    const ph = bodyH * (bmpH / srcH);
+    const pw = bodyH * (bmpW / srcH);
     this.canvas.style.width = `${pw}px`;
     this.canvas.style.height = `${ph}px`;
     this.canvas.style.left = `${feetX - pw / 2}px`;
@@ -171,7 +180,7 @@ function hatIcon(item) {
 
 function scarfIcon(item) {
   if (item.id === "none") return noneIcon();
-  return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 16h28v8H10z" fill="${item.color}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M16 22h8v16h-8zM26 22h8v12h-8z" fill="${item.color}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/></svg>`;
+  return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 16h32v10H8z" fill="${item.color}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M14 21h20v4H14z" fill="#fff6ee" opacity="0.85"/><path d="M30 22h7v14h-7z" fill="${item.color}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/></svg>`;
 }
 
 function glassesIcon(item) {

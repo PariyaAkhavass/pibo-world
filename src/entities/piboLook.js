@@ -63,34 +63,39 @@ export function saveLook(look) {
   localStorage.setItem(KEY, JSON.stringify(look));
 }
 
+// Extra canvas above the leaves so a hat can sit on the tuft without being clipped.
+const HAT_PAD = 0.32;
+
 export function paintLook(source, look, target) {
   const canvas = target || document.createElement("canvas");
   const w = source.width || source.naturalWidth;
   const h = source.height || source.naturalHeight;
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, w, h);
-  ctx.drawImage(source, 0, 0, w, h);
-  const pot = POTS.find((item) => item.id === look.pot) || POTS[0];
-  if (pot.color) recolorPot(ctx, w, h, pot);
-  const scarf = SCARVES.find((item) => item.id === look.scarf);
-  if (scarf?.color) drawScarf(ctx, w, h, scarf.color);
-  const glasses = GLASSES.find((item) => item.id === look.glasses);
-  if (glasses?.color) drawGlasses(ctx, w, h, glasses.color);
   const hat = HATS.find((item) => item.id === look.hat);
-  if (hat?.color) drawHat(ctx, w, h, hat.color);
+  const pad = hat?.color ? Math.round(h * HAT_PAD) : 0;
+  canvas.width = w;
+  canvas.height = h + pad;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(source, 0, pad, w, h);
+  const pot = POTS.find((item) => item.id === look.pot) || POTS[0];
+  if (pot.color) recolorPot(ctx, w, canvas.height, pot, pad, h);
+  const scarf = SCARVES.find((item) => item.id === look.scarf);
+  if (scarf?.color) drawScarf(ctx, w, h, scarf.color, pad);
+  const glasses = GLASSES.find((item) => item.id === look.glasses);
+  if (glasses?.color) drawGlasses(ctx, w, h, glasses.color, pad);
+  if (hat?.color) drawHat(ctx, w, h, hat.color, pad);
   return canvas;
 }
 
-function recolorPot(ctx, w, h, pot) {
-  const img = ctx.getImageData(0, 0, w, h);
+function recolorPot(ctx, w, canvasH, pot, pad, srcH) {
+  const img = ctx.getImageData(0, 0, w, canvasH);
   const data = img.data;
   const [tr, tg, tb] = pot.color;
   const dots = pot.pattern === "dots";
   const stars = pot.pattern === "stars";
-  for (let y = 0; y < h; y++) {
-    const fy = y / h;
+  for (let y = 0; y < canvasH; y++) {
+    const fy = (y - pad) / srcH;
+    if (fy < 0 || fy > 1) continue;
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
       const a = data[i + 3];
@@ -114,41 +119,39 @@ function recolorPot(ctx, w, h, pot) {
     }
   }
   ctx.putImageData(img, 0, 0);
-  if (stars) drawStars(ctx, w, h);
+  if (stars) drawStars(ctx, w, srcH, pad);
 }
 
+// Bright yellow pot body only. Leaves, eyes, feet, and anything drawn later stay put.
 function isPot(r, g, b, fy) {
-  if (fy > 0.93) return false;
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  if (max < 90) return false;
-  if (min > 210) return false;
+  if (fy < 0.436 || fy > 0.9) return false;
   if (g > r + 8 && g > b) return false;
-  return r > 150 && g > 90 && b < 170 && r > b + 35 && g < r + 45;
+  return r >= 220 && g >= 175 && b <= 110 && g < r + 8 && r > b + 40;
 }
 
 function inDot(fx, fy) {
   const gx = (fx - 0.18) / 0.16;
-  const gy = (fy - 0.42) / 0.11;
+  const gy = (fy - 0.5) / 0.11;
   const cx = gx - Math.round(gx);
   const cy = gy - Math.round(gy);
-  return cx * cx + cy * cy < 0.16 && fy > 0.4 && fy < 0.9 && fx > 0.16 && fx < 0.86;
+  return cx * cx + cy * cy < 0.16 && fy > 0.46 && fy < 0.86 && fx > 0.18 && fx < 0.82;
 }
 
-function drawStars(ctx, w, h) {
+function drawStars(ctx, w, srcH, pad) {
   const spots = [
-    [0.34, 0.5],
-    [0.62, 0.56],
-    [0.46, 0.74],
-    [0.7, 0.78],
+    [0.3, 0.5],
+    [0.7, 0.5],
+    [0.34, 0.8],
+    [0.66, 0.8],
   ];
   ctx.save();
   ctx.fillStyle = "#ffe56a";
   ctx.strokeStyle = INK;
-  ctx.lineWidth = Math.max(3, w * 0.012);
+  ctx.lineWidth = Math.max(4, w * 0.014);
   ctx.lineJoin = "round";
+  const radius = w * 0.042;
   for (const [fx, fy] of spots) {
-    star(ctx, fx * w, fy * h, w * 0.055);
+    star(ctx, fx * w, pad + fy * srcH, radius);
     ctx.fill();
     ctx.stroke();
   }
@@ -168,47 +171,62 @@ function star(ctx, cx, cy, r) {
   ctx.closePath();
 }
 
-function drawHat(ctx, w, h, color) {
+function drawHat(ctx, w, h, color, pad) {
   const cx = w * 0.5;
+  const brimW = w * 0.78;
+  const brimH = h * 0.085;
+  const brimY = pad + h * 0.035;
+  const crownW = w * 0.56;
+  const crownTop = Math.max(6, pad * 0.08);
+  const crownH = brimY - crownTop + brimH * 0.45;
   ctx.save();
   ctx.fillStyle = color;
   ctx.strokeStyle = INK;
-  ctx.lineWidth = Math.max(6, w * 0.028);
+  ctx.lineWidth = Math.max(12, w * 0.042);
   ctx.lineJoin = "round";
-  roundTop(ctx, cx - w * 0.16, h * 0.02, w * 0.32, h * 0.2, w * 0.14);
+  roundTop(ctx, cx - crownW / 2, crownTop, crownW, crownH, crownW * 0.46);
   ctx.fill();
   ctx.stroke();
-  ellipse(ctx, cx, h * 0.2, w * 0.46, h * 0.075);
+  ellipse(ctx, cx, brimY, brimW, brimH);
   ctx.fill();
   ctx.stroke();
   ctx.restore();
 }
 
-function drawScarf(ctx, w, h, color) {
+function drawScarf(ctx, w, h, color, pad) {
+  const y = pad + h * 0.458;
+  const bh = h * 0.1;
+  const x = w * 0.15;
+  const bw = w * 0.7;
+  const tailW = w * 0.1;
+  const tailX = w * 0.76;
   ctx.save();
   ctx.fillStyle = color;
   ctx.strokeStyle = INK;
-  ctx.lineWidth = Math.max(5, w * 0.02);
+  ctx.lineWidth = Math.max(10, w * 0.032);
   ctx.lineJoin = "round";
-  roundRect(ctx, w * 0.2, h * 0.36, w * 0.6, h * 0.09, h * 0.04);
+  roundRect(ctx, tailX, y + bh * 0.55, tailW, h * 0.13, w * 0.03);
   ctx.fill();
   ctx.stroke();
-  roundRect(ctx, w * 0.3, h * 0.42, w * 0.14, h * 0.22, w * 0.04);
+  roundRect(ctx, tailX + tailW * 0.72, y + bh * 0.62, tailW * 0.92, h * 0.09, w * 0.028);
   ctx.fill();
   ctx.stroke();
-  roundRect(ctx, w * 0.52, h * 0.42, w * 0.14, h * 0.18, w * 0.04);
+  roundRect(ctx, x, y, bw, bh, bh * 0.45);
   ctx.fill();
   ctx.stroke();
+  ctx.fillStyle = lighten(color, 0.42);
+  roundRect(ctx, x + w * 0.03, y + bh * 0.36, bw - w * 0.06, bh * 0.28, bh * 0.2);
+  ctx.fill();
   ctx.restore();
 }
 
-function drawGlasses(ctx, w, h, color) {
+function drawGlasses(ctx, w, h, color, pad) {
   ctx.save();
   ctx.strokeStyle = INK;
   ctx.fillStyle = color;
-  ctx.lineWidth = Math.max(6, w * 0.026);
+  ctx.lineWidth = Math.max(8, w * 0.028);
   ctx.lineJoin = "round";
-  const y = h * 0.6;
+  const y = pad + h * 0.6;
   const rw = w * 0.16;
   const rh = h * 0.09;
   roundRect(ctx, w * 0.2, y, rw, rh, rh * 0.45);
@@ -222,6 +240,12 @@ function drawGlasses(ctx, w, h, color) {
   ctx.lineTo(w * 0.58, y + rh * 0.5);
   ctx.stroke();
   ctx.restore();
+}
+
+function lighten(hex, t) {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (c) => Math.round(c + (255 - c) * t);
+  return `rgb(${mix((n >> 16) & 255)}, ${mix((n >> 8) & 255)}, ${mix(n & 255)})`;
 }
 
 function ellipse(ctx, cx, cy, rx, ry) {
