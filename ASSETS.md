@@ -8,9 +8,14 @@ The list of images lives in [`src/data/assets.js`](src/data/assets.js). Where Pi
 
 Bold, saturated, flat color, thick outlines, and very little detail. No letters anywhere in the picture.
 
-- **Plate** (`assets/painted/plate.png`) — the whole scene. Sky, sea, the main island (red cottage, mushroom cottage, market stall, picnic, trees), the book-stack library islet, the lighthouse islet, and the purple arcade islet are all painted into this one file. Pibo is not in it. To use your own island, overwrite this PNG. It is drawn at 2560 × 1632 so it stays sharp on a phone screen. The middle of the picture is the 32 × 18 play area. A strip of sky sits above it and a strip of sea sits below it.
+- **Plate** (`assets/painted/plate.png`) — the whole scene except the red cottage, which is its own layer. Sky, sea, the main island (mushroom cottage, market stall, picnic, trees), the book-stack library islet, the lighthouse islet, and the purple arcade islet are painted into this one file. Pibo is not in it. To use your own island, overwrite this PNG. It is drawn at 2560 × 1632 so it stays sharp on a phone screen. The middle of the picture is the 32 × 18 play area. A strip of sky sits above it and a strip of sea sits below it.
+- **Cottage** (`assets/painted/cottage.png`) — the red-roofed cottage, cut from the plate so Pibo can walk behind it. It is placed in `PAINTED_SPRITES` in `src/data/painted.js`.
+- **Art room** (`assets/painted/art-room.jpg`) — the room behind the cottage door. Pibo is drawn on top of it, not painted in.
 - **Walk mask** (`assets/painted/walk-mask.png`) — red where Pibo may walk, blue for the sea, green for the sky. 640 × 360. Grass, path, and cliff tops are red. The sea is blue, so he swims there. If you change the coastline, paint a new mask in those three colors.
 - **Pibo** (`assets/pibo/pibo.png`) — the yellow pot, transparent around the silhouette, feet at the bottom edge. There should be no white or cream fringe. The game draws a soft black shadow under him and bobs him when he walks. `pibo-swim-1.png` through `pibo-swim-4.png` are the same pot tipped over for the water. Replace `pibo.png` with your own pot. If the new picture is a different size, change `pixelWidth`, `pixelHeight`, `width`, and `height` on `pibo` in `src/data/assets.js`.
+- **Hair** (`assets/pibo/hair/`) — succulent, fern, sunflower, clover, and palm. Each file is a transparent PNG of any size, with no pot, rim, or soil in it. The original big tuft is not one of these files. It is the green layer already in `pibo.png`. `tuft-icon.png` is only the picker picture for that tuft.
+- **Hats** (`assets/pibo/hats/`) — beanie, strawhat, wizard, crown, cap, and pirate. Same rules: transparent PNG, any size, no pot pixels. A hat hides whichever hair is selected.
+- Placement for each id is `anchorPx`, `offset`, and `scale` on that entry in `HAIRS` or `HATS` in `src/entities/piboLook.js`. `anchorPx` is the pixel in the file (x from the left, y from the top) that sits on the middle of the pot rim's top. `scale` 1 means one image pixel per sprite pixel. `offset` is sprite pixels, x to the right and y downward. To use a new painting, overwrite the PNG, update `anchorPx` if the crop changed, and refresh.
 
 `x` grows to the right of the picture. `z` grows down the picture.
 
@@ -25,6 +30,7 @@ The old house, tree, lighthouse, arcade, and library cutouts in `assets/painted/
 Doors are points in `src/data/painted.js`:
 
 - `libraryDoor` opens the story room.
+- `cottageDoor` opens the art room.
 - `lighthousePad` opens the studio. `lighthouse` is the tower he looks at.
 - `arcadeDoor` opens the arcade.
 

@@ -1,7 +1,8 @@
 /**
- * The bright island. The plate is the whole picture: sky, sea, the main
- * island, and the three islets. Houses are painted into that picture, not
- * separate cutouts, so Pibo can be swapped without covering them twice.
+ * The bright island. The plate is the picture: sky, sea, the main island,
+ * and the three islets. The red cottage is the one building lifted onto its
+ * own card (see PAINTED_SPRITES) so Pibo can walk behind it. Everything else
+ * stays painted in the plate.
  * x grows right, z grows down. The picture is 32 units wide and 18 tall,
  * with a little extra sky and sea above and below.
  */
@@ -15,9 +16,22 @@ export const PLATE_PIXELS = {
 };
 export const WALK_MASK_SRC = "assets/painted/walk-mask.png";
 
-// Buildings live in the plate. An empty list keeps the old cutouts from
-// drawing on top of them.
-export const PAINTED_SPRITES = [];
+// The red cottage, cut from the plate and drawn at the depth of its front
+// wall. The card's bottom center is the doorstep.
+export const PAINTED_SPRITES = [
+  {
+    id: "cottage",
+    src: "assets/painted/cottage.png",
+    pixelWidth: 324,
+    pixelHeight: 420,
+    width: 4.05,
+    height: 5.25,
+    anchor: { x: 0.5, y: 0 },
+    x: -6.6875,
+    z: 0.65,
+    depthBias: 0,
+  },
+];
 
 export const LAYOUT = {
   start: { x: -0.8, z: 2.3 },
@@ -29,6 +43,8 @@ export const LAYOUT = {
   arcadeDoor: { x: 13.1, z: 3.55 },
   library: { x: -12.25, z: -5.9 },
   libraryDoor: { x: -12.25, z: -3.3 },
+  // Just south of the red door, on the grass in front of the cottage.
+  cottageDoor: { x: -6.74, z: 1.22 },
   companion: { x: -14, z: 1 },
   pino: { x: -13.5, z: 1.75 },
 };

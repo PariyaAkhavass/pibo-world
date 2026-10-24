@@ -125,16 +125,17 @@ html, body {
   transform: translateX(-50%) translateY(8px);
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 16px 9px 10px;
-  background: var(--card);
+  gap: 0;
+  padding: 6px;
+  background: transparent;
   border-radius: 999px;
-  box-shadow: var(--shadow);
+  box-shadow: none;
   font-weight: 500;
   font-size: 16px;
   opacity: 0;
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
+.prompt-label { display: none; }
 .prompt:not(.hidden) { opacity: 1; transform: translateX(-50%) translateY(0); }
 .key {
   display: inline-grid;
@@ -261,6 +262,15 @@ html, body {
   pointer-events: none;
 }
 .in-library .mobile-controls { display: none !important; }
+.in-art .collection-btn,
+.in-art .collection,
+.in-art .map-btn,
+.in-art .lighthouse-go,
+.in-art .arcade-go-btn,
+.in-art .library-go-btn,
+.in-art .lighthouse-marker,
+.in-art .prompt { display: none !important; }
+.in-art .mobile-controls { display: none !important; }
 .in-studio .toast { bottom: 40%; }
 .in-studio .joystick {
   visibility: hidden;
@@ -559,15 +569,18 @@ html, body {
   position: static;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  border: 2px solid #5c4a3e;
-  border-radius: 14px;
-  padding: 8px 14px 8px 10px;
-  background: #fff8ee;
-  box-shadow: 0 2px 0 rgba(92, 74, 62, 0.08);
+  justify-content: center;
+  gap: 0;
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  padding: 0;
+  border: 3px solid #5c4a3e;
+  border-radius: 50%;
+  background: rgba(255, 248, 238, 0.94);
+  box-shadow: 0 6px 16px rgba(40, 30, 20, 0.18);
   font-family: inherit;
-  font-weight: 600;
-  font-size: 15px;
+  font-size: 0;
   color: #5c4a3e;
   cursor: pointer;
 }
@@ -575,8 +588,8 @@ html, body {
 .arcade-go-btn:hover,
 .library-go-btn:hover { transform: translateY(-2px); }
 .btn-icon {
-  width: 22px;
-  height: 22px;
+  width: 30px;
+  height: 30px;
   flex: none;
   display: block;
 }
@@ -626,20 +639,22 @@ html, body {
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 6px;
-  border: 2px solid #5c4a3e;
-  border-radius: 14px;
-  padding: 8px 14px 8px 10px;
-  background: #fff8ee;
-  box-shadow: 0 2px 0 rgba(92, 74, 62, 0.08);
+  justify-content: center;
+  gap: 0;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 3px solid #5c4a3e;
+  border-radius: 50%;
+  background: rgba(255, 248, 238, 0.94);
+  box-shadow: 0 6px 16px rgba(40, 30, 20, 0.18);
   font-family: inherit;
-  font-weight: 600;
-  font-size: 15px;
+  font-size: 0;
   color: #5c4a3e;
   cursor: pointer;
 }
 .map-btn:hover { transform: translateY(-2px); }
-.map-btn-icon { font-size: 18px; line-height: 1; }
+.map-btn-icon { font-size: 28px; line-height: 1; }
 
 .map-overlay {
   position: absolute;
@@ -993,7 +1008,13 @@ html, body {
 .action-btn.ready {
   animation: action-pulse 1.4s ease-in-out infinite;
 }
-.action-btn.close-mode { font-size: 18px; }
+.action-btn .action-icon {
+  width: 34px;
+  height: 34px;
+  display: block;
+  margin: 0 auto;
+}
+.action-btn.close-mode { font-size: 0; }
 
 .flight-pad {
   position: absolute;
@@ -1334,11 +1355,14 @@ html, body {
   .arcade-go-btn,
   .library-go-btn,
   .map-btn {
-    font-size: 13px;
-    padding: 6px 10px 6px 8px;
-    white-space: nowrap;
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    padding: 0;
+    font-size: 0;
   }
-  .btn-icon { width: 18px; height: 18px; }
+  .btn-icon { width: 26px; height: 26px; }
+  .map-btn-icon { font-size: 24px; }
   .collection-btn,
   .touch-ui .collection-btn {
     top: auto;
@@ -1442,7 +1466,7 @@ html.phone-landscape .prompt {
   display: none !important;
 }
 /* The round control is the door prompt. It stays invisible until Pibo is
-   actually at a door, then appears at full strength (no fade) as "Tap". */
+   actually at a door, then appears at full strength (no fade). */
 html.phone-landscape .action-btn {
   opacity: 0;
   visibility: hidden;
@@ -1453,10 +1477,8 @@ html.phone-landscape .action-btn.ready {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  font-size: 16px;
+  font-size: 0;
   line-height: 1;
-  font-weight: 700;
-  color: #c2410c;
   background: #fff6ee;
   border: 3px solid #fff;
   box-shadow: 0 6px 16px rgba(40, 30, 20, 0.28);
@@ -1554,3 +1576,101 @@ html.phone-landscape .library-card {
 }
 html.phone-landscape .library-title { font-size: 22px; }
 html.phone-landscape .library-story { font-size: 16px; }
+
+/* Art room. The painting fills the window. Icons float over it. */
+.art-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: auto;
+  overflow: hidden;
+}
+.art-overlay.hidden { display: none; }
+.art-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+.art-shadow,
+.art-pibo {
+  position: absolute;
+  pointer-events: none;
+}
+.art-shadow {
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.22) 48%, rgba(0, 0, 0, 0) 72%);
+}
+.art-back,
+.art-choice { pointer-events: auto; }
+.art-back {
+  position: absolute;
+  z-index: 2;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  width: 68px;
+  height: 68px;
+  border: 3px solid #3a2a24;
+  border-radius: 50%;
+  background: rgba(255, 248, 238, 0.94);
+  box-shadow: 0 6px 16px rgba(40, 30, 20, 0.28);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.art-back svg { width: 36px; height: 36px; }
+.art-tools {
+  position: absolute;
+  z-index: 2;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: min(430px, 48vw);
+}
+.art-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.art-choice {
+  width: 56px;
+  height: 56px;
+  padding: 6px;
+  border: 3px solid #3a2a24;
+  border-radius: 50%;
+  background: rgba(255, 248, 238, 0.94);
+  box-shadow: 0 4px 10px rgba(40, 30, 20, 0.18);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.art-choice svg,
+.art-choice img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.art-choice.on {
+  background: #fff;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px #3a2a24;
+}
+html.phone-landscape .art-choice {
+  width: 40px;
+  height: 40px;
+  padding: 3px;
+}
+html.phone-landscape .art-back {
+  width: 56px;
+  height: 56px;
+}
+html.phone-landscape .art-tools {
+  gap: 4px;
+  max-width: min(460px, 58vw);
+  max-height: calc(100% - 16px);
+  overflow: auto;
+}
+html.phone-landscape .art-row { gap: 4px; }

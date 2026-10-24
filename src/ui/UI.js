@@ -6,6 +6,10 @@ import { IdeaPanel } from "./IdeaPanel.js";
 import { WorldMap } from "./WorldMap.js";
 import { ArcadeEditor } from "./ArcadeEditor.js";
 import { LibraryPanel } from "./LibraryPanel.js";
+import { ArtRoom } from "./ArtRoom.js";
+
+const DOOR_ICON = `<svg class="action-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M14 8h18a3 3 0 0 1 3 3v29H11V11a3 3 0 0 1 3-3z" fill="#fff6ee" stroke="#3a2a24" stroke-width="3.5" stroke-linejoin="round"/><circle cx="29" cy="26" r="2.2" fill="#3a2a24"/></svg>`;
+const CLOSE_ICON = `<svg class="action-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M16 16l16 16M32 16L16 32" fill="none" stroke="#3a2a24" stroke-width="4" stroke-linecap="round"/></svg>`;
 
 /**
  * Thin controller over the HTML overlay. Keeps the DOM out of gameplay code:
@@ -80,6 +84,15 @@ export class UI {
         this._syncActionBtn();
         this.onLibraryLeave?.();
       },
+    });
+    this.art = new ArtRoom({
+      root: document.getElementById("art-overlay"),
+      onClose: () => {
+        document.documentElement.classList.remove("in-art");
+        this._syncActionBtn();
+        this.onArtLeave?.();
+      },
+      onChange: (look) => this.onArtChange?.(look),
     });
     this.lastIdea = null;
 
@@ -180,6 +193,10 @@ export class UI {
 
   _onAction() {
     if (!this.input) return;
+    if (this.isArtOpen) {
+      this.closeArt();
+      return;
+    }
     if (this.isLibraryOpen) {
       this.closeLibrary();
       return;
@@ -205,15 +222,15 @@ export class UI {
   _syncActionBtn() {
     const btn = this.el.actionBtn;
     if (!btn) return;
-    if (this.isLibraryOpen || this.isArcadeOpen || this.isMapOpen || this.isIdeaOpen || this.isStudioOpen || this.isModalOpen) {
-      btn.textContent = "back";
+    if (this.isArtOpen || this.isLibraryOpen || this.isArcadeOpen || this.isMapOpen || this.isIdeaOpen || this.isStudioOpen || this.isModalOpen) {
+      btn.innerHTML = CLOSE_ICON;
       btn.classList.add("close-mode");
       btn.classList.remove("ready");
       btn.setAttribute("aria-label", "Close");
     } else {
-      btn.textContent = "E";
+      btn.innerHTML = DOOR_ICON;
       btn.classList.remove("close-mode");
-      btn.setAttribute("aria-label", "Interact");
+      btn.setAttribute("aria-label", "Enter");
     }
   }
 
@@ -237,15 +254,15 @@ export class UI {
   }
 
   /* prompt --------------------------------------------------------- */
-  setPrompt(label) {
-    this.el.promptLabel.textContent = label;
+  setPrompt() {
+    if (this.el.promptLabel) this.el.promptLabel.textContent = "";
     const phone = document.documentElement.classList.contains("phone-landscape")
       || document.documentElement.classList.contains("touch-ui");
-    // Phones tap the round button. The "E …" pill is the keyboard hint.
+    // Phones tap the round door button. Keyboards get the E key cap.
     this.el.prompt.classList.toggle("hidden", phone);
     if (phone && this.el.actionBtn) {
-      this.el.actionBtn.textContent = "Tap";
-      this.el.actionBtn.setAttribute("aria-label", label);
+      this.el.actionBtn.innerHTML = DOOR_ICON;
+      this.el.actionBtn.setAttribute("aria-label", "Enter");
     }
     this.el.actionBtn.classList.add("ready");
   }
@@ -329,6 +346,7 @@ export class UI {
     this.closeMap();
     this.closeArcade();
     this.closeLibrary();
+    this.closeArt();
   }
 
   /* library -------------------------------------------------------- */
@@ -347,6 +365,26 @@ export class UI {
 
   closeLibrary() {
     this.library?.close();
+  }
+
+  /* art room ------------------------------------------------------- */
+  get isArtOpen() {
+    return !!this.art?.isOpen;
+  }
+
+  openArt() {
+    this.closeMap();
+    this.closeCollection();
+    this.art?.open();
+    document.documentElement.classList.add("in-art");
+    this.hidePrompt();
+    this._syncActionBtn();
+  }
+
+  closeArt() {
+    this.art?.close();
+    document.documentElement.classList.remove("in-art");
+    this._syncActionBtn();
   }
 
   /* arcade editor -------------------------------------------------- */
@@ -393,7 +431,7 @@ export class UI {
       marker.classList.add("hidden");
       marker.setAttribute("aria-hidden", "true");
     }
-    const indoors = !!hidden && (this.isStudioOpen || this.isArcadeOpen || this.isLibraryOpen);
+    const indoors = !!hidden && (this.isStudioOpen || this.isArcadeOpen || this.isLibraryOpen || this.isArtOpen);
     this.el.lighthouseGo?.classList.toggle("hidden", indoors);
   }
 
