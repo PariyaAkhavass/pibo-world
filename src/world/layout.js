@@ -1,8 +1,9 @@
 /**
- * Painted-plate layout. x grows to the right of the picture, z grows down.
- * The numbers come from the concept painting (see src/data/painted.js).
+ * Bright-island layout. x grows to the right of the picture, z grows down.
+ * The buildings are painted into the plate, so these polygons are the
+ * footprints Pibo slides along. They are not tied to a cutout sprite.
  */
-import { PLACEMENTS as PLACES, LAYOUT, PLACEMENTS } from "../data/painted.js";
+import { LAYOUT, PLACEMENTS } from "../data/painted.js";
 
 export { LAYOUT, PLACEMENTS };
 
@@ -10,70 +11,76 @@ export const GROUND_Y = 0;
 export const WATER_Y = 0;
 
 /**
- * Keep-outs are the house footprints and a few big trunks.
- * A house is the polygon of its walls on the ground, large enough that
- * Pibo cannot overlap a wall from any side. Trunk circles sit on the
- * trunk, not the canopy. Pibo adds his own body radius when he resolves.
+ * Each ring is the building as it sits on the picture, so Pibo cannot walk
+ * through the walls. The side toward the bottom of the picture (larger z)
+ * is the door side and stays just outside the ring.
  */
 const HOUSES = {
-  cottage: [
-    [-8.85, -0.55],
-    [-5.35, -0.2],
-    [-4.15, -1.4],
-    [-4.2, -2.8],
-    [-8.5, -3.05],
-    [-8.95, -1.6],
-  ],
-  "teal-house": [
-    [-1.5, -2.05],
-    [1.6, -1.95],
-    [1.65, -3.55],
-    [-1.4, -3.7],
-  ],
-  shed: [
-    [4.6, 1.2],
-    [8.75, 1.3],
-    [8.9, 0.15],
-    [8.8, -1.35],
-    [5.15, -1.6],
-    [4.5, -0.45],
-  ],
-  // Library walls on the top-left islet. The steps toward the sea stay open.
+  // Book stack. The south edge stops above the sandy pad in front of the door.
   library: [
-    [-14.15, -4.95],
-    [-11.55, -4.95],
-    [-11.70, -5.85],
-    [-14.30, -5.85],
+    [-14.0, -7.8],
+    [-10.5, -7.8],
+    [-10.5, -4.05],
+    [-14.0, -4.05],
+  ],
+  // Red roof and tan walls. The front grass (z > 0.95) stays walkable.
+  cottage: [
+    [-10.15, -4.25],
+    [-4.95, -4.25],
+    [-4.95, 0.95],
+    [-10.15, 0.95],
+  ],
+  // Cap and stem. The path along the west and south sides stays open.
+  mushroom: [
+    [-0.85, -5.35],
+    [2.85, -5.35],
+    [2.85, -0.85],
+    [-0.85, -0.85],
+  ],
+  // Striped stall. Stops before the grass south of the counter.
+  stall: [
+    [6.35, -0.15],
+    [9.3, -0.15],
+    [9.3, 2.25],
+    [6.35, 2.25],
+  ],
+  // Tower shaft only. The rock apron in front (lighthousePad) stays open.
+  lighthouse: [
+    [7.3, -7.7],
+    [9.15, -7.7],
+    [9.15, -3.55],
+    [7.3, -3.55],
+  ],
+  // Purple arcade. The gray steps just south of z=3.25 are the door pad.
+  arcade: [
+    [11.62, -0.75],
+    [15.38, -0.75],
+    [15.38, 3.25],
+    [11.62, 3.25],
   ],
 };
 
-const TRUNKS = {
-  "tree-west": { dx: 0.25, dz: -0.35, radius: 0.28 },
-  "tree-back": { dx: -0.55, dz: -0.7, radius: 0.24 },
-  "tree-shed": { dx: 0.45, dz: -0.18, radius: 0.18 },
-};
+const TRUNKS = [
+  { id: "tree-left", x: -12.25, z: 3.15, radius: 0.48 },
+  { id: "tree-cottage", x: -11.0, z: 1.05, radius: 0.5 },
+];
 
-export function collidersFromPlacements(placements = PLACES) {
-  const byId = new Map(placements.map((place) => [place.id, place]));
+export function collidersFromPlacements() {
   const out = [];
   for (const [id, ring] of Object.entries(HOUSES)) {
-    const place = byId.get(id);
-    if (!place || place.hidden || place.sky) continue;
     out.push({
       id,
       type: "poly",
       points: ring.map(([x, z]) => ({ x, z })),
     });
   }
-  for (const [id, shape] of Object.entries(TRUNKS)) {
-    const place = byId.get(id);
-    if (!place || place.hidden || place.sky) continue;
+  for (const trunk of TRUNKS) {
     out.push({
-      id,
+      id: trunk.id,
       type: "circle",
-      x: place.x + shape.dx,
-      z: place.z + shape.dz,
-      radius: shape.radius,
+      x: trunk.x,
+      z: trunk.z,
+      radius: trunk.radius,
     });
   }
   return out;

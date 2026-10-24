@@ -1439,9 +1439,27 @@ html.phone-landscape.touch-ui .collection-btn {
   font-size: 26px;
 }
 html.phone-landscape .prompt {
-  bottom: max(18px, env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
+  display: none !important;
+}
+/* The round control is the door prompt. It stays invisible until Pibo is
+   actually at a door, then appears at full strength (no fade) as "Tap". */
+html.phone-landscape .action-btn {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 0.12s ease;
+}
+html.phone-landscape .action-btn.ready {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 700;
+  color: #c2410c;
+  background: #fff6ee;
+  border: 3px solid #fff;
+  box-shadow: 0 6px 16px rgba(40, 30, 20, 0.28);
 }
 html.phone-landscape .intro {
   top: max(8px, env(safe-area-inset-top));

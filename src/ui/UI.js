@@ -164,6 +164,10 @@ export class UI {
     }
   }
 
+  useTouchControls() {
+    this._enableTouchUi();
+  }
+
   _enableTouchUi() {
     if (this._touchUi) return;
     this._touchUi = true;
@@ -228,15 +232,21 @@ export class UI {
   }
 
   hideIntro() {
-    if (this.el.intro.style.opacity === "0") return;
-    this.el.intro.style.opacity = "0";
-    setTimeout(() => this.el.intro.classList.add("hidden"), 1200);
+    // The title used to sit in the sky. It is not drawn.
+    this.el.intro?.classList.add("hidden");
   }
 
   /* prompt --------------------------------------------------------- */
   setPrompt(label) {
     this.el.promptLabel.textContent = label;
-    this.el.prompt.classList.remove("hidden");
+    const phone = document.documentElement.classList.contains("phone-landscape")
+      || document.documentElement.classList.contains("touch-ui");
+    // Phones tap the round button. The "E …" pill is the keyboard hint.
+    this.el.prompt.classList.toggle("hidden", phone);
+    if (phone && this.el.actionBtn) {
+      this.el.actionBtn.textContent = "Tap";
+      this.el.actionBtn.setAttribute("aria-label", label);
+    }
     this.el.actionBtn.classList.add("ready");
   }
   hidePrompt() {
@@ -376,25 +386,15 @@ export class UI {
   }
 
   /* lighthouse guide ----------------------------------------------- */
-  setLighthouseGuide({ hidden, x = 0, y = 0, distance = 0, rotation = 0 } = {}) {
+  setLighthouseGuide({ hidden } = {}) {
+    // The travel buttons are the way to the lighthouse. No distance chip on the island.
     const marker = this.el.lighthouseMarker;
-    const go = this.el.lighthouseGo;
-    const indoors = this.isStudioOpen || this.isArcadeOpen || this.isLibraryOpen;
-    const concealMarker = !!hidden || indoors;
     if (marker) {
-      marker.classList.toggle("hidden", concealMarker);
-      marker.setAttribute("aria-hidden", concealMarker ? "true" : "false");
+      marker.classList.add("hidden");
+      marker.setAttribute("aria-hidden", "true");
     }
-    if (go) go.classList.toggle("hidden", indoors);
-    if (hidden || !marker) return;
-    marker.style.left = `${x}px`;
-    marker.style.top = `${y}px`;
-    if (this.el.lighthouseDistance) {
-      this.el.lighthouseDistance.textContent = `${distance} away`;
-    }
-    if (this.el.lighthouseArrow) {
-      this.el.lighthouseArrow.style.transform = `rotate(${rotation}rad)`;
-    }
+    const indoors = !!hidden && (this.isStudioOpen || this.isArcadeOpen || this.isLibraryOpen);
+    this.el.lighthouseGo?.classList.toggle("hidden", indoors);
   }
 
   /* screen studio -------------------------------------------------- */

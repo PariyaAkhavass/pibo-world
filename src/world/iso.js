@@ -26,30 +26,27 @@ export function placeOnPlate(object, x, z, bias = 0) {
 }
 
 /**
- * Frame the painting.
- * contain — desktop and portrait. 1920×1080 matches the picture. A taller
- * window shows a little extra sky and sea. A portrait phone keeps the
- * island as wide as the screen.
- * cover — phone landscape. The picture fills the viewport edge to edge
- * and the extra height is cropped instead of leaving bars beside the island.
+ * Sky and sea kept around the painting so the lighthouse cap, the library
+ * flag, and the arcade are not cut by the screen edge. Desktop 16:10 and
+ * 16:9, and a sideways phone, all contain this frame.
  */
-export function orthoSize(width, height, options = {}) {
+const FRAME_MARGIN_Y = 1.15;
+
+/**
+ * Frame the painting.
+ * The view always contains the whole picture, with a band of sky above it
+ * and sea below it. A wide window shows a little more sky at the sides.
+ */
+export function orthoSize(width, height) {
   const aspect = width / Math.max(1, height);
-  const plateAspect = PLATE_W / PLATE_H;
-  const cover = options.cover === true;
-  if (cover) {
-    if (aspect >= plateAspect) {
-      const viewW = PLATE_W;
-      return { viewW, viewH: viewW / aspect };
-    }
-    const viewH = PLATE_H;
+  const frameH = PLATE_H + FRAME_MARGIN_Y * 2;
+  const frameW = PLATE_W;
+  const frameAspect = frameW / frameH;
+  if (aspect >= frameAspect) {
+    const viewH = frameH;
     return { viewW: viewH * aspect, viewH };
   }
-  if (aspect >= plateAspect) {
-    const viewH = PLATE_H;
-    return { viewW: viewH * aspect, viewH };
-  }
-  const viewW = PLATE_W;
+  const viewW = frameW;
   return { viewW, viewH: viewW / aspect };
 }
 

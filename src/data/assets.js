@@ -22,7 +22,7 @@ export const ASSETS = {
     pixelHeight: PLATE_PIXELS.pixelHeight,
     width: PLATE_PIXELS.worldW,
     height: PLATE_PIXELS.worldH,
-    note: "The whole painting: sea, cliffs, foam, path, flowers, and the still lighthouse beam.",
+    note: "Bright island background. Houses, islets, and the lighthouse lamp are painted into this picture. Swap assets/painted/plate.png.",
   },
   walkMask: {
     id: "walk-mask",
@@ -34,15 +34,16 @@ export const ASSETS = {
   pibo: {
     id: "pibo",
     kind: "character",
-    // Cut from the concept at the painted pot's size. The bottom edge is the base.
-    width: 1.8,
-    height: 2.3,
-    swimWidth: 3.8,
-    swimHeight: 2.2,
-    radius: 0.56,
+    // About a doorway tall once the game scales him to two thirds.
+    // The bottom edge is the feet. Swap assets/pibo/pibo.png.
+    width: 3.44,
+    height: 4.5,
+    swimWidth: 4.2,
+    swimHeight: 2.4,
+    radius: 0.7,
     waterReach: 0.5,
     anchor: { x: 0.5, y: 0 },
-    ...px(72, 92),
+    ...px(646, 846),
     fps: { idle: 2, walk: 7, swim: 5 },
     states: {
       idle: ["assets/pibo/pibo.png"],
@@ -64,12 +65,6 @@ for (const sprite of PAINTED_SPRITES) {
     footprint: sprite.footprint,
   };
 }
-
-// The whole library islet is one transparent cutout, not painted into the plate.
-// Overwrite assets/painted/sprites/library.png to use your own art.
-ASSETS.library.note =
-  "Isometric library islet: rocky cliff, foam, two-walled book house, tree, and lamp. Transparent around the shore. Swap assets/painted/sprites/library.png.";
-ASSETS.library.slot = "library";
 
 export function collectSources(assets = ASSETS) {
   const urls = new Set();
