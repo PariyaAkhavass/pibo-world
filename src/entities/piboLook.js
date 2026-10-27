@@ -224,6 +224,9 @@ function splitLayers(source) {
         into = ld;
       } else if (inEye(x, y, w, h) && isEyePixel(r, g, b)) {
         into = ed;
+      } else if (inBlush(x, y, w, h) && isBlushPixel(r, g, b)) {
+        // Orange cheek circles stay. Body shading outside these spots recolors.
+        into = ed;
       } else if (y < smooth[x] && !isWarm(r, g, b)) {
         into = ld;
       } else {
@@ -374,7 +377,7 @@ function drawAccessory(ctx, layers, item) {
 
 function drawScarf(ctx, layers, color) {
   const { w, h, mask } = layers;
-  const y = h * 0.8;
+  const y = h * 0.86;
   const span = spanAt(mask, w, y);
   const inset = (span.right - span.left) * 0.03;
   const x = span.left + inset;
@@ -427,13 +430,13 @@ function drawGlasses(ctx, w, h, color) {
   ctx.fillStyle = color;
   ctx.lineWidth = Math.max(6, w * 0.016);
   ctx.lineJoin = "round";
-  // Small lenses on the side-facing bead eyes. The far eye sits higher.
+  // Her left-facing pot: both beads sit on the viewer's left, the outer one higher.
   const lenses = [
-    [0.554, 0.695],
-    [0.805, 0.676],
+    [0.27, 0.734],
+    [0.468, 0.746],
   ];
-  const rw = w * 0.09;
-  const rh = h * 0.062;
+  const rw = w * 0.1;
+  const rh = h * 0.072;
   const boxes = lenses.map(([cx, cy]) => ({
     x: cx * w - rw / 2,
     y: cy * h - rh / 2,
@@ -444,8 +447,8 @@ function drawGlasses(ctx, w, h, color) {
     ctx.stroke();
   }
   ctx.beginPath();
-  ctx.moveTo(boxes[0].x + rw, boxes[0].y + rh * 0.45);
-  ctx.lineTo(boxes[1].x, boxes[1].y + rh * 0.5);
+  ctx.moveTo(boxes[0].x + rw, boxes[0].y + rh * 0.5);
+  ctx.lineTo(boxes[1].x, boxes[1].y + rh * 0.48);
   ctx.stroke();
   ctx.restore();
 }
@@ -460,17 +463,35 @@ function isWarm(r, g, b) {
 
 function isEyePixel(r, g, b) {
   const max = Math.max(r, g, b);
-  // Solid black beads. No white shine on this face.
   if (max < 95) return true;
   return r < 130 && g < 90 && b < 70 && max < 150;
+}
+
+function isBlushPixel(r, g, b) {
+  return r > 180 && g > 70 && g < 200 && b < 110 && r > g + 30;
+}
+
+function inBlush(x, y, w, h) {
+  const fx = x / w;
+  const fy = y / h;
+  const spots = [
+    [0.251, 0.797, 0.04, 0.036],
+    [0.46, 0.823, 0.065, 0.05],
+  ];
+  for (const [cx, cy, rx, ry] of spots) {
+    const dx = (fx - cx) / rx;
+    const dy = (fy - cy) / ry;
+    if (dx * dx + dy * dy <= 1) return true;
+  }
+  return false;
 }
 
 function inEye(x, y, w, h) {
   const fx = x / w;
   const fy = y / h;
   const eyes = [
-    [0.554, 0.695, 0.046, 0.04],
-    [0.805, 0.676, 0.04, 0.038],
+    [0.27, 0.734, 0.05, 0.042],
+    [0.468, 0.746, 0.055, 0.044],
   ];
   for (const [cx, cy, rx, ry] of eyes) {
     const dx = (fx - cx) / rx;

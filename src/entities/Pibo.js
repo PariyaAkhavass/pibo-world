@@ -275,7 +275,8 @@ export class Pibo {
     }
 
     const screenRight = this.faceX * this.basis.screenRight.x + this.faceZ * this.basis.screenRight.z;
-    const flip = screenRight >= 0 ? 1 : -1;
+    // The drawn pot looks toward screen-left. Mirror it when travel faces right.
+    const flip = screenRight > 0 ? -1 : 1;
     // A hat adds clear space above the leaves. Flight keeps that same pot.
     const grow = this._lookGrow || 1;
     const wide = this._lookWide || 1;
