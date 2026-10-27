@@ -43,7 +43,7 @@ export const ASSETS = {
     radius: 0.7,
     waterReach: 0.5,
     anchor: { x: 0.5, y: 0 },
-    ...px(646, 846),
+    ...px(645, 838),
     // Breaststroke frames in assets/pibo/pibo-swim-*.png are unused.
     // Crossing the sea plays an upright flight on the idle pot instead.
     fps: { idle: 2, walk: 7 },

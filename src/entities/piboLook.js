@@ -228,7 +228,8 @@ function splitLayers(source) {
         into = ld;
       } else {
         into = pd;
-        kind = Math.max(r, g, b) < 80 ? 2 : 1;
+        // Thick brown contour stays ink. Brighter cel shading recolors with the pot.
+        kind = Math.max(r, g, b) < 120 ? 2 : 1;
       }
       into[p] = r;
       into[p + 1] = g;
@@ -426,13 +427,13 @@ function drawGlasses(ctx, w, h, color) {
   ctx.fillStyle = color;
   ctx.lineWidth = Math.max(8, w * 0.026);
   ctx.lineJoin = "round";
-  const rw = w * 0.15;
-  const rh = h * 0.078;
-  const y = h * 0.632;
-  roundRect(ctx, w * 0.305 - rw / 2, y, rw, rh, rh * 0.45);
+  const rw = w * 0.17;
+  const rh = h * 0.1;
+  const y = h * 0.602;
+  roundRect(ctx, w * 0.315 - rw / 2, y, rw, rh, rh * 0.45);
   ctx.fill();
   ctx.stroke();
-  roundRect(ctx, w * 0.64 - rw / 2, y, rw, rh, rh * 0.45);
+  roundRect(ctx, w * 0.659 - rw / 2, y, rw, rh, rh * 0.45);
   ctx.fill();
   ctx.stroke();
   ctx.beginPath();
@@ -455,6 +456,8 @@ function isEyePixel(r, g, b) {
   const min = Math.min(r, g, b);
   if (max < 95) return true;
   if (min > 175 && b > 150) return true;
+  // Cream shine. Pot yellow has almost no blue, so this stays inside the eyes.
+  if (r > 200 && g > 140 && b > 90 && b < 230) return true;
   return r < 130 && g < 90 && b < 70 && max < 150;
 }
 
@@ -462,8 +465,8 @@ function inEye(x, y, w, h) {
   const fx = x / w;
   const fy = y / h;
   const eyes = [
-    [0.308, 0.678, 0.082, 0.072],
-    [0.64, 0.682, 0.082, 0.072],
+    [0.315, 0.65, 0.1, 0.086],
+    [0.659, 0.652, 0.098, 0.085],
   ];
   for (const [cx, cy, rx, ry] of eyes) {
     const dx = (fx - cx) / rx;
