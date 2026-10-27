@@ -1605,7 +1605,7 @@ html.phone-landscape .library-card {
 html.phone-landscape .library-title { font-size: 22px; }
 html.phone-landscape .library-story { font-size: 16px; }
 
-/* Art room. The painting fills the window. Icons float over it. */
+/* Art room. The cottage studio fills the window. Icons float over it. */
 .art-overlay {
   position: absolute;
   inset: 0;
