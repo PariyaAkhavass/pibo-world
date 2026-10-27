@@ -69,6 +69,65 @@ export const GLASSES = [
 ];
 
 const INK = "#3a2a24";
+
+/**
+ * Her three drawings. Eyes and blush sit in different places on each one,
+ * so recolor and glasses follow the view instead of one mirrored picture.
+ */
+const FACES = {
+  left: {
+    eyes: [
+      [0.27, 0.734, 0.05, 0.042],
+      [0.468, 0.746, 0.055, 0.044],
+    ],
+    blush: [
+      [0.251, 0.797, 0.04, 0.036],
+      [0.46, 0.823, 0.065, 0.05],
+    ],
+    lenses: [
+      [0.27, 0.734],
+      [0.468, 0.746],
+    ],
+  },
+  right: {
+    eyes: [
+      [0.53, 0.746, 0.055, 0.044],
+      [0.728, 0.734, 0.05, 0.042],
+    ],
+    blush: [
+      [0.538, 0.823, 0.065, 0.05],
+      [0.747, 0.795, 0.04, 0.036],
+    ],
+    lenses: [
+      [0.53, 0.746],
+      [0.728, 0.734],
+    ],
+  },
+  front: {
+    eyes: [
+      [0.391, 0.751, 0.052, 0.042],
+      [0.597, 0.754, 0.052, 0.042],
+    ],
+    blush: [
+      [0.357, 0.815, 0.055, 0.042],
+      [0.629, 0.824, 0.052, 0.046],
+    ],
+    lenses: [
+      [0.391, 0.751],
+      [0.597, 0.754],
+    ],
+  },
+};
+
+export const FACE_SRC = {
+  left: "assets/pibo/pibo.png",
+  right: "assets/pibo/pibo-face-right.png",
+  front: "assets/pibo/pibo-face-front.png",
+};
+
+function faceProfile(view) {
+  return FACES[view] || FACES.left;
+}
 const layersOf = new WeakMap();
 const spriteImages = new Map();
 const hairListeners = new Set();
@@ -114,9 +173,9 @@ export function saveLook(look) {
   localStorage.setItem(KEY, JSON.stringify(look));
 }
 
-export function paintLook(source, look, target) {
+export function paintLook(source, look, target, view = "left") {
   const canvas = target || document.createElement("canvas");
-  const layers = splitLayers(source);
+  const layers = splitLayers(source, view);
   const { w, h } = layers;
   const pot = POTS.find((item) => item.id === look.pot) || POTS[0];
   const hat = HATS.find((item) => item.id === look.hat);
@@ -158,15 +217,16 @@ export function paintLook(source, look, target) {
   const scarf = SCARVES.find((item) => item.id === look.scarf);
   if (scarf?.color) drawScarf(ctx, layers, scarf.color);
   const glasses = GLASSES.find((item) => item.id === look.glasses);
-  if (glasses?.color) drawGlasses(ctx, w, h, glasses.color);
+  if (glasses?.color) drawGlasses(ctx, layers, glasses.color);
   if (wearHat) drawAccessory(ctx, layers, hat);
   ctx.restore();
   return canvas;
 }
 
-function splitLayers(source) {
+function splitLayers(source, view = "left") {
   const cached = layersOf.get(source);
   if (cached) return cached;
+  const profile = faceProfile(view);
   const w = source.width || source.naturalWidth;
   const h = source.height || source.naturalHeight;
   const scratch = document.createElement("canvas");
@@ -222,9 +282,9 @@ function splitLayers(source) {
       let kind = 0;
       if (isGreen(r, g, b)) {
         into = ld;
-      } else if (inEye(x, y, w, h) && isEyePixel(r, g, b)) {
+      } else if (inSpot(x, y, w, h, profile.eyes) && isEyePixel(r, g, b)) {
         into = ed;
-      } else if (inBlush(x, y, w, h) && isBlushPixel(r, g, b)) {
+      } else if (inSpot(x, y, w, h, profile.blush) && isBlushPixel(r, g, b)) {
         // Orange cheek circles stay. Body shading outside these spots recolors.
         into = ed;
       } else if (y < smooth[x] && !isWarm(r, g, b)) {
@@ -253,6 +313,8 @@ function splitLayers(source) {
     eyes: eyeC,
     rim: measureRim(mask, w, h),
     pots: new Map(),
+    view,
+    lenses: profile.lenses,
   };
   layersOf.set(source, layers);
   return layers;
@@ -424,17 +486,13 @@ function spanAt(mask, w, y) {
   return { left, right };
 }
 
-function drawGlasses(ctx, w, h, color) {
+function drawGlasses(ctx, layers, color) {
+  const { w, h, lenses } = layers;
   ctx.save();
   ctx.strokeStyle = INK;
   ctx.fillStyle = color;
   ctx.lineWidth = Math.max(6, w * 0.016);
   ctx.lineJoin = "round";
-  // Her left-facing pot: both beads sit on the viewer's left, the outer one higher.
-  const lenses = [
-    [0.27, 0.734],
-    [0.468, 0.746],
-  ];
   const rw = w * 0.1;
   const rh = h * 0.072;
   const boxes = lenses.map(([cx, cy]) => ({
@@ -471,29 +529,10 @@ function isBlushPixel(r, g, b) {
   return r > 180 && g > 70 && g < 200 && b < 110 && r > g + 30;
 }
 
-function inBlush(x, y, w, h) {
+function inSpot(x, y, w, h, spots) {
   const fx = x / w;
   const fy = y / h;
-  const spots = [
-    [0.251, 0.797, 0.04, 0.036],
-    [0.46, 0.823, 0.065, 0.05],
-  ];
   for (const [cx, cy, rx, ry] of spots) {
-    const dx = (fx - cx) / rx;
-    const dy = (fy - cy) / ry;
-    if (dx * dx + dy * dy <= 1) return true;
-  }
-  return false;
-}
-
-function inEye(x, y, w, h) {
-  const fx = x / w;
-  const fy = y / h;
-  const eyes = [
-    [0.27, 0.734, 0.05, 0.042],
-    [0.468, 0.746, 0.055, 0.044],
-  ];
-  for (const [cx, cy, rx, ry] of eyes) {
     const dx = (fx - cx) / rx;
     const dy = (fy - cy) / ry;
     if (dx * dx + dy * dy <= 1) return true;

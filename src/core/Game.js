@@ -530,7 +530,7 @@ export class Game {
     this.started = true;
     this.ui.hideIntro();
     this.pibo.setVisible(false);
-    this.ui.openArt();
+    this.ui.openArt(this.pibo.facing);
   }
 
   _leaveArt(reason = "exit") {

@@ -5,6 +5,28 @@ import { placeOnPlate } from "../world/iso.js";
 import { loadLook, onHairSprite, paintLook } from "./piboLook.js";
 
 /**
+ * Pick left, right, or front from screen travel.
+ * verticalness is 0 for pure left/right and 1 for pure up/down.
+ * The band between 0.42 and 0.62 keeps the current facing so diagonals
+ * do not flicker. A stop keeps the last facing.
+ */
+export function chooseFacing(right, away, current = "front", force = false) {
+  const ax = Math.abs(right);
+  const ay = Math.abs(away);
+  const verticalness = ay / (ax + ay + 1e-6);
+  const side = right >= 0 ? "right" : "left";
+  if (force) return verticalness >= 0.5 ? "front" : side;
+  if (current === "left" || current === "right") {
+    const opposite = (current === "left" && right > 0.35) || (current === "right" && right < -0.35);
+    if (opposite && verticalness < 0.62) return side;
+    if (verticalness > 0.62) return "front";
+    return current;
+  }
+  if (verticalness < 0.42) return side;
+  return "front";
+}
+
+/**
  * Pibo on the flat island. The body is the upright pot (idle, walk).
  * Leaving land for the open sea starts a flight: the pot lifts, keeps its
  * face up, and can cross to another islet. Breaststroke swimming is retired.
@@ -25,6 +47,7 @@ export class Pibo {
     this._safeZ = z;
     this.faceX = basis.screenUp.x;
     this.faceZ = basis.screenUp.z;
+    this._facing = "front";
     this.radius = (this.asset.radius ?? 0.42) * scale;
     this.waterReach = (this.asset.waterReach ?? 0.5) * scale;
     // Body radius against houses and trunks. Scales with the pot.
@@ -80,34 +103,64 @@ export class Pibo {
     this.group.scale.setScalar(scale);
     this.group.add(this.shadow);
     this.group.add(this.pivot);
-    this._baseImage = this.frames.idle[0]?.image || null;
-    this._lookGrow = 1;
-    this._lookWide = 1;
-    this._lookTex = null;
-    if (controllable && this._baseImage) this.applyLook(loadLook());
+    this._faceImage = {};
+    this._faceMap = {};
+    this._painted = {};
+    this._grow = { left: 1, right: 1, front: 1 };
+    this._wide = { left: 1, right: 1, front: 1 };
+    const faces = this.asset.faces || {};
+    for (const view of ["left", "right", "front"]) {
+      const tex = textures.get(faces[view]);
+      this._faceImage[view] = tex?.image || null;
+      this._faceMap[view] = tex || null;
+    }
+    if (!this._faceImage.left) this._faceImage.left = this.frames.idle[0]?.image || null;
+    if (!this._faceMap.left) this._faceMap.left = this.frames.idle[0] || null;
+    if (controllable && this._faceImage.left) this.applyLook(loadLook());
+    else this._showFacing();
     if (controllable) onHairSprite(() => { if (this.look) this.applyLook(this.look); });
     this._apply();
   }
 
+  get facing() {
+    return this._facing || "front";
+  }
+
   applyLook(look) {
-    if (!this._baseImage) return;
+    const base = this._faceImage?.left;
+    if (!base) return;
     this.look = look;
-    const canvas = paintLook(this._baseImage, look);
-    const srcH = this._baseImage.height || this._baseImage.naturalHeight || canvas.height;
-    const srcW = this._baseImage.width || this._baseImage.naturalWidth || canvas.width;
-    this._lookGrow = srcH ? canvas.height / srcH : 1;
-    this._lookWide = srcW ? canvas.width / srcW : 1;
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.magFilter = THREE.LinearFilter;
-    tex.minFilter = THREE.LinearMipmapLinearFilter;
-    tex.needsUpdate = true;
-    this._lookTex?.dispose();
-    this._lookTex = tex;
-    this.frames.idle[0] = tex;
-    this.frames.walk[0] = tex;
-    this.material.map = tex;
-    this.material.needsUpdate = true;
+    for (const view of ["left", "right", "front"]) {
+      const image = this._faceImage[view] || base;
+      const canvas = paintLook(image, look, null, view);
+      const srcH = image.height || image.naturalHeight || canvas.height;
+      const srcW = image.width || image.naturalWidth || canvas.width;
+      this._grow[view] = srcH ? canvas.height / srcH : 1;
+      this._wide[view] = srcW ? canvas.width / srcW : 1;
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.magFilter = THREE.LinearFilter;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.needsUpdate = true;
+      this._painted[view]?.dispose();
+      this._painted[view] = tex;
+    }
+    this._showFacing();
+  }
+
+  _screenAxes() {
+    const right = this.faceX * this.basis.screenRight.x + this.faceZ * this.basis.screenRight.z;
+    const away = this.faceX * this.basis.screenUp.x + this.faceZ * this.basis.screenUp.z;
+    return { right, away };
+  }
+
+  _showFacing() {
+    const view = this.facing;
+    const tex = this._painted[view] || this._faceMap[view] || this._faceMap.left;
+    if (tex && this.material.map !== tex) {
+      this.material.map = tex;
+      this.material.needsUpdate = true;
+    }
   }
 
   get scriptedFlight() {
@@ -129,6 +182,9 @@ export class Pibo {
     const len = Math.hypot(faceX, faceZ) || 1;
     this.faceX = faceX / len;
     this.faceZ = faceZ / len;
+    this.moving = false;
+    const axes = this._screenAxes();
+    this._facing = chooseFacing(axes.right, axes.away, this._facing, true);
     this._flight = null;
     this._keepOnLand();
     this._setFlying(isFlightAir(this.x, this.z, this.faceX, this.faceZ, this.waterReach));
@@ -234,7 +290,6 @@ export class Pibo {
   _animate(dt) {
     const fps = this.asset.fps;
     let state = "idle";
-    let index = 0;
     this.idleT += dt;
 
     let bob = Math.sin(this.idleT * 2.1) * 0.028;
@@ -258,7 +313,6 @@ export class Pibo {
     } else if (this.moving) {
       state = "walk";
       this.walkPhase += dt * fps.walk;
-      index = Math.floor(this.walkPhase) % this.frames.walk.length;
       const step = Math.sin(this.walkPhase * Math.PI);
       const hit = step * step;
       // Squash on the step, stretch back up, and lean into the walk.
@@ -268,21 +322,18 @@ export class Pibo {
       tilt = 0.07 + step * 0.1;
     }
 
-    const tex = this.frames[state][index];
-    if (tex && this.material.map !== tex) {
-      this.material.map = tex;
-      this.material.needsUpdate = true;
-    }
+    const axes = this._screenAxes();
+    if (this.moving) this._facing = chooseFacing(axes.right, axes.away, this._facing, false);
+    this._showFacing();
 
-    const screenRight = this.faceX * this.basis.screenRight.x + this.faceZ * this.basis.screenRight.z;
-    // The drawn pot looks toward screen-left. Mirror it when travel faces right.
-    const flip = screenRight > 0 ? -1 : 1;
-    // A hat adds clear space above the leaves. Flight keeps that same pot.
-    const grow = this._lookGrow || 1;
-    const wide = this._lookWide || 1;
-    this.mesh.scale.set(flip * sx * wide, sy * grow, 1);
-    // Positive rotation leans the top to screen-left, so flip it with facing.
-    this.mesh.rotation.z = state === "walk" || state === "idle" && this.flying ? -flip * tilt : 0;
+    // Her drawing already faces the way she is going. Do not mirror it.
+    const view = this.facing;
+    const grow = this._grow?.[view] || 1;
+    const wide = this._wide?.[view] || 1;
+    this.mesh.scale.set(sx * wide, sy * grow, 1);
+    // Positive rotation leans the top toward screen-left.
+    const lean = state === "walk" || (state === "idle" && this.flying) ? -axes.right * tilt : 0;
+    this.mesh.rotation.z = lean;
     // The plane is centered. Park its base on the ground while it squishes or lies flat.
     this.mesh.position.y = this.asset.height * sy * grow * 0.5 + bob;
     if (this.shadow) {

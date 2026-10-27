@@ -372,10 +372,10 @@ export class UI {
     return !!this.art?.isOpen;
   }
 
-  openArt() {
+  openArt(view) {
     this.closeMap();
     this.closeCollection();
-    this.art?.open();
+    this.art?.open(view);
     document.documentElement.classList.add("in-art");
     this.hidePrompt();
     this._syncActionBtn();

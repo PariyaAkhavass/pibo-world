@@ -5,6 +5,7 @@ import {
   HATS,
   POTS,
   SCARVES,
+  FACE_SRC,
   loadLook,
   onHairSprite,
   paintLook,
@@ -24,9 +25,10 @@ export class ArtRoom {
     this.onChange = onChange || null;
     this.isOpen = false;
     this.look = loadLook();
-    this.source = null;
+    this.view = "front";
+    this.sources = {};
     this._build();
-    this._loadSource();
+    this._loadSources();
     onHairSprite(() => {
       if (!this.isOpen) return;
       this._paint();
@@ -98,19 +100,22 @@ export class ArtRoom {
     this.onChange?.(this.look);
   }
 
-  _loadSource() {
-    const img = new Image();
-    img.onload = () => {
-      this.source = img;
-      if (this.isOpen) {
-        this._paint();
-        this.layout();
-      }
-    };
-    img.src = "assets/pibo/pibo.png";
+  _loadSources() {
+    for (const [view, url] of Object.entries(FACE_SRC)) {
+      const img = new Image();
+      img.onload = () => {
+        this.sources[view] = img;
+        if (this.isOpen && this.view === view) {
+          this._paint();
+          this.layout();
+        }
+      };
+      img.src = url;
+    }
   }
 
-  open() {
+  open(view = this.view) {
+    if (FACE_SRC[view]) this.view = view;
     this.isOpen = true;
     this.look = loadLook();
     this.root.classList.remove("hidden");
@@ -135,8 +140,9 @@ export class ArtRoom {
     const oy = (vh - 720 * scale) / 2;
     const feetX = ox + 633 * scale;
     const feetY = oy + 524 * scale;
-    const srcW = this.source?.naturalWidth || 645;
-    const srcH = this.source?.naturalHeight || 838;
+    const shown = this.sources[this.view];
+    const srcW = shown?.naturalWidth || 645;
+    const srcH = shown?.naturalHeight || 838;
     const bmpW = this.canvas.width || srcW;
     const bmpH = this.canvas.height || srcH;
     const bodyH = 228 * scale;
@@ -155,8 +161,9 @@ export class ArtRoom {
   }
 
   _paint() {
-    if (!this.source) return;
-    paintLook(this.source, this.look || DEFAULT_LOOK, this.canvas);
+    const source = this.sources[this.view];
+    if (!source) return;
+    paintLook(source, this.look || DEFAULT_LOOK, this.canvas, this.view);
   }
 
   _mark() {
