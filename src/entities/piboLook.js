@@ -374,7 +374,7 @@ function drawAccessory(ctx, layers, item) {
 
 function drawScarf(ctx, layers, color) {
   const { w, h, mask } = layers;
-  const y = h * 0.785;
+  const y = h * 0.8;
   const span = spanAt(mask, w, y);
   const inset = (span.right - span.left) * 0.03;
   const x = span.left + inset;
@@ -425,20 +425,27 @@ function drawGlasses(ctx, w, h, color) {
   ctx.save();
   ctx.strokeStyle = INK;
   ctx.fillStyle = color;
-  ctx.lineWidth = Math.max(8, w * 0.026);
+  ctx.lineWidth = Math.max(6, w * 0.016);
   ctx.lineJoin = "round";
-  const rw = w * 0.17;
-  const rh = h * 0.1;
-  const y = h * 0.602;
-  roundRect(ctx, w * 0.315 - rw / 2, y, rw, rh, rh * 0.45);
-  ctx.fill();
-  ctx.stroke();
-  roundRect(ctx, w * 0.659 - rw / 2, y, rw, rh, rh * 0.45);
-  ctx.fill();
-  ctx.stroke();
+  // Small lenses on the side-facing bead eyes. The far eye sits higher.
+  const lenses = [
+    [0.554, 0.695],
+    [0.805, 0.676],
+  ];
+  const rw = w * 0.09;
+  const rh = h * 0.062;
+  const boxes = lenses.map(([cx, cy]) => ({
+    x: cx * w - rw / 2,
+    y: cy * h - rh / 2,
+  }));
+  for (const box of boxes) {
+    roundRect(ctx, box.x, box.y, rw, rh, rh * 0.45);
+    ctx.fill();
+    ctx.stroke();
+  }
   ctx.beginPath();
-  ctx.moveTo(w * 0.305 + rw / 2, y + rh * 0.5);
-  ctx.lineTo(w * 0.64 - rw / 2, y + rh * 0.5);
+  ctx.moveTo(boxes[0].x + rw, boxes[0].y + rh * 0.45);
+  ctx.lineTo(boxes[1].x, boxes[1].y + rh * 0.5);
   ctx.stroke();
   ctx.restore();
 }
@@ -453,11 +460,8 @@ function isWarm(r, g, b) {
 
 function isEyePixel(r, g, b) {
   const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
+  // Solid black beads. No white shine on this face.
   if (max < 95) return true;
-  if (min > 175 && b > 150) return true;
-  // Cream shine. Pot yellow has almost no blue, so this stays inside the eyes.
-  if (r > 200 && g > 140 && b > 90 && b < 230) return true;
   return r < 130 && g < 90 && b < 70 && max < 150;
 }
 
@@ -465,8 +469,8 @@ function inEye(x, y, w, h) {
   const fx = x / w;
   const fy = y / h;
   const eyes = [
-    [0.315, 0.65, 0.1, 0.086],
-    [0.659, 0.652, 0.098, 0.085],
+    [0.554, 0.695, 0.046, 0.04],
+    [0.805, 0.676, 0.04, 0.038],
   ];
   for (const [cx, cy, rx, ry] of eyes) {
     const dx = (fx - cx) / rx;

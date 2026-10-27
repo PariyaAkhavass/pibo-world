@@ -1,9 +1,10 @@
-"""Cut the approved style-matched Pibo into a transparent game sprite.
+"""Cut the approved side-facing Pibo into a transparent game sprite.
 
-Reads assets/pibo/sources/pibo-style-matched.jpg. Drops the flat blue
+Reads assets/pibo/sources/pibo-side-smile-v1.jpg. Drops the flat blue
 background and the painted ground shadow (the game draws its own). Feet sit
-on the bottom edge so the existing anchor still works. No walk or flight
-frames: the game bobs this one picture.
+on the bottom edge so the existing anchor still works. The black bead eyes
+and the thin smile stay in the picture. No walk or flight frames: the game
+bobs this one picture.
 """
 from collections import deque
 from pathlib import Path
@@ -12,7 +13,7 @@ import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "assets" / "pibo" / "sources" / "pibo-style-matched.jpg"
+SRC = ROOT / "assets" / "pibo" / "sources" / "pibo-side-smile-v1.jpg"
 OUT = ROOT / "assets" / "pibo" / "pibo.png"
 OUT_W, OUT_H = 645, 838
 
@@ -111,10 +112,11 @@ def main():
     opaque = alpha > 30
     yellow = opaque & (red > 150) & (green > 80) & (blue < 100) & (red > blue + 30)
     solid = np.where(yellow.sum(1) >= 30)[0]
-    if len(solid):
-        out[int(solid.max()) + 6:, :, 3] = 0
-        alpha = out[:, :, 3]
-    shadow = (alpha > 0) & (chroma < 26) & (peak < 120) & (rows > 740)
+    foot_line = int(solid.max()) if len(solid) else out.shape[0] - 8
+    out[foot_line + 6:, :, 3] = 0
+    alpha = out[:, :, 3]
+    # Only the gap under the belly. The smile and bead eyes are higher and must stay.
+    shadow = (alpha > 0) & (chroma < 26) & (peak < 120) & (rows > foot_line - 28)
     out[shadow, 3] = 0
     Image.fromarray(out, "RGBA").save(OUT)
     print(f"wrote {OUT} {OUT_W}x{OUT_H} from crop {cw}x{ch} scale {scale:.3f} at {ox},{oy}")
