@@ -1,3 +1,4 @@
+import { LIBRARY_MASCOT } from "../data/layers.js";
 import { FOOD_LIKES_LESSON } from "../data/lessons/foodLikes.js";
 import { highlightStory, lessonWords, makeStory, STORY_THEMES } from "../systems/storyGen.js";
 import { loadLibraryLog, saveLibraryLog } from "../systems/libraryLog.js";
@@ -63,6 +64,21 @@ export class LibraryPanel {
 
   _render() {
     this.root.innerHTML = "";
+    const scene = h("div", "library-scene");
+    const stage = h("div", "library-stage");
+    const bg = h("img", "library-bg");
+    bg.alt = "";
+    bg.src = LIBRARY_MASCOT.background;
+    const mascot = h("img", "library-mascot");
+    mascot.alt = "";
+    mascot.src = LIBRARY_MASCOT.src;
+    mascot.style.left = LIBRARY_MASCOT.left;
+    mascot.style.top = LIBRARY_MASCOT.top;
+    mascot.style.width = LIBRARY_MASCOT.width;
+    stage.append(bg, mascot);
+    scene.append(stage);
+    this.root.append(scene);
+
     const card = h("div", "library-card");
     const bar = h("div", "library-bar");
     bar.append(h("div", "library-kicker", "Library"));

@@ -4,7 +4,7 @@ import { Collision } from "./Collision.js";
 import { Island } from "../world/Island.js";
 import { SpriteSet } from "../world/SpriteSet.js";
 import { PLATE_H, PLATE_W, isoBasis, isPhoneLandscape, orthoSize } from "../world/iso.js";
-import { loadWalkMask } from "../world/biome.js";
+import { isFlightAir, loadWalkMask } from "../world/biome.js";
 import { LAYOUT, PLACEMENTS, collidersFromPlacements } from "../world/layout.js";
 import { ASSETS, collectSources } from "../data/assets.js";
 import { loadTextureSet, textureSizes } from "../world/textures.js";
@@ -48,7 +48,7 @@ export class Game {
     this._isoOffset = this.basis.offset.clone();
     this._guideTip = new THREE.Vector3();
     this._guideNdc = new THREE.Vector3();
-    this._wasSwimming = false;
+    this._wasFlying = false;
     this._viewW = PLATE_W;
     this._viewH = 18;
     this._phoneLandscape = false;
@@ -261,10 +261,10 @@ export class Game {
       this.started = true;
       this.ui.hideIntro();
     }
-    if (this.pibo.inWater && !this._wasSwimming) {
-      this.ui.toast("Splash — Pibo swims!", 1600);
+    if (this.pibo.flying && !this._wasFlying) {
+      this.ui.toast("Pibo takes off", 1400);
     }
-    this._wasSwimming = this.pibo.inWater;
+    this._wasFlying = this.pibo.flying;
 
     this._updateCamera(dt);
     this._updateLighthouseGuide();
@@ -302,6 +302,11 @@ export class Game {
 
   _handleInteraction() {
     const ui = this.ui;
+
+    if (this.pibo?.scriptedFlight) {
+      ui.hidePrompt();
+      return;
+    }
 
     if (ui.isArcadeOpen) {
       ui.hidePrompt();
@@ -582,10 +587,26 @@ export class Game {
     this.ui.closeCollection();
     const face = this._faceToward(pad, look);
     this.pibo.setVisible(true);
-    this.pibo.placeAt(pad.x, pad.z, face.x, face.z, this.collision);
     this.ui.hideIntro();
     this.started = true;
+    const across = this._crossesAir(this.pibo.x, this.pibo.z, pad.x, pad.z);
+    const far = Math.hypot(pad.x - this.pibo.x, pad.z - this.pibo.z) > 2.4;
+    if (across || (far && across)) {
+      this.pibo.flyTo(pad.x, pad.z, face, () => this._frameCameraOnPibo());
+      this._frameCameraOnPibo();
+      return;
+    }
+    this.pibo.placeAt(pad.x, pad.z, face.x, face.z, this.collision);
     this._frameCameraOnPibo();
+  }
+
+  _crossesAir(x0, z0, x1, z1) {
+    const steps = 10;
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      if (isFlightAir(x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, 0, 0, 0.15)) return true;
+    }
+    return false;
   }
 
   _updateLighthouseGuide() {
