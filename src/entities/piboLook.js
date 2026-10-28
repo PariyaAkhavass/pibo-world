@@ -207,18 +207,29 @@ export function paintLook(source, look, target, view = "left") {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
   ctx.translate(padX, padY);
-  ctx.drawImage(potCanvas(layers, pot), 0, 0);
+  const colored = potCanvas(layers, pot);
+  ctx.drawImage(colored, 0, 0);
   if (pot.pattern) drawPattern(ctx, layers, pot.pattern);
   ctx.drawImage(layers.eyes, 0, 0);
+  let worn = null;
   if (!wearHat) {
     if (!hair?.src) ctx.drawImage(layers.leaves, 0, 0);
-    else drawAccessory(ctx, layers, hair);
+    else {
+      drawAccessory(ctx, layers, hair);
+      worn = hair;
+    }
   }
   const scarf = SCARVES.find((item) => item.id === look.scarf);
   if (scarf?.color) drawScarf(ctx, layers, scarf.color);
   const glasses = GLASSES.find((item) => item.id === look.glasses);
   if (glasses?.color) drawGlasses(ctx, layers, glasses.color);
-  if (wearHat) drawAccessory(ctx, layers, hat);
+  if (wearHat) {
+    drawAccessory(ctx, layers, hat);
+    worn = hat;
+  }
+  // Hair sits on the pot, then the rim ink is painted back so a soft
+  // leaf edge cannot break the black outline.
+  reinforcePot(ctx, layers, worn, colored);
   ctx.restore();
   return canvas;
 }
@@ -287,12 +298,16 @@ function splitLayers(source, view = "left") {
       } else if (inSpot(x, y, w, h, profile.blush) && isBlushPixel(r, g, b)) {
         // Orange cheek circles stay. Body shading outside these spots recolors.
         into = ed;
+      } else if (Math.max(r, g, b) < 120) {
+        // The rim stroke sits above the yellow lip. It is pot ink, not hair,
+        // or choosing a flower would throw the outline away.
+        into = pd;
+        kind = 2;
       } else if (y < smooth[x] && !isWarm(r, g, b)) {
         into = ld;
       } else {
         into = pd;
-        // Thick brown contour stays ink. Brighter cel shading recolors with the pot.
-        kind = Math.max(r, g, b) < 120 ? 2 : 1;
+        kind = 1;
       }
       into[p] = r;
       into[p + 1] = g;
@@ -315,6 +330,7 @@ function splitLayers(source, view = "left") {
     pots: new Map(),
     view,
     lenses: profile.lenses,
+    outline: buildOutline(src, mask, w, h),
   };
   layersOf.set(source, layers);
   return layers;
@@ -435,6 +451,91 @@ function drawAccessory(ctx, layers, item) {
   const box = accessoryBounds(layers, item);
   if (!box) return;
   ctx.drawImage(spriteImages.get(item.id), box.x, box.y, box.dw, box.dh);
+}
+
+/**
+ * The outer black stroke, about 30px thick. The dark mouth inside the rim
+ * is farther from the transparent outside, so it stays behind the flower.
+ */
+function buildOutline(src, mask, w, h) {
+  const count = w * h;
+  const reach = 32;
+  const dist = new Int16Array(count);
+  dist.fill(32767);
+  const queue = new Int32Array(count);
+  let tail = 0;
+  for (let n = 0; n < count; n++) {
+    if (src[n * 4 + 3] >= 16) continue;
+    dist[n] = 0;
+    queue[tail++] = n;
+  }
+  let head = 0;
+  while (head < tail) {
+    const n = queue[head++];
+    const d = dist[n];
+    if (d >= reach) continue;
+    const x = n % w;
+    const y = (n / w) | 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      const ny = y + dy;
+      if (ny < 0 || ny >= h) continue;
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx;
+        if (nx < 0 || nx >= w) continue;
+        const next = ny * w + nx;
+        if (dist[next] <= d + 1) continue;
+        dist[next] = d + 1;
+        queue[tail++] = next;
+      }
+    }
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  const img = ctx.createImageData(w, h);
+  const data = img.data;
+  for (let n = 0; n < count; n++) {
+    if (mask[n] !== 2 || dist[n] > reach) continue;
+    const p = n * 4;
+    data[p] = src[p];
+    data[p + 1] = src[p + 1];
+    data[p + 2] = src[p + 2];
+    data[p + 3] = src[p + 3];
+  }
+  ctx.putImageData(img, 0, 0);
+  return canvas;
+}
+
+function reinforcePot(ctx, layers, item, colored) {
+  const { w, h, mask } = layers;
+  const box = item ? accessoryBounds(layers, item) : null;
+  const img = item ? spriteImages.get(item.id) : null;
+  if (box && img) {
+    const scratch = document.createElement("canvas");
+    scratch.width = w;
+    scratch.height = h;
+    const sctx = scratch.getContext("2d", { willReadFrequently: true });
+    sctx.drawImage(img, box.x, box.y, box.dw, box.dh);
+    const hair = sctx.getImageData(0, 0, w, h).data;
+    const pot = colored.getContext("2d").getImageData(0, 0, w, h).data;
+    const restored = sctx.createImageData(w, h);
+    const out = restored.data;
+    for (let n = 0; n < mask.length; n++) {
+      if (!mask[n]) continue;
+      const alpha = hair[n * 4 + 3];
+      // A half-transparent leaf edge blends into the pot and breaks the ink.
+      if (alpha === 0 || alpha === 255) continue;
+      const p = n * 4;
+      out[p] = pot[p];
+      out[p + 1] = pot[p + 1];
+      out[p + 2] = pot[p + 2];
+      out[p + 3] = pot[p + 3];
+    }
+    sctx.putImageData(restored, 0, 0);
+    ctx.drawImage(scratch, 0, 0);
+  }
+  ctx.drawImage(layers.outline, 0, 0);
 }
 
 function drawScarf(ctx, layers, color) {
