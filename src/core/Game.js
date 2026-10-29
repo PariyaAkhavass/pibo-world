@@ -6,6 +6,7 @@ import { SpriteSet } from "../world/SpriteSet.js";
 import { PLATE_H, PLATE_W, isoBasis, isPhoneLandscape, orthoSize } from "../world/iso.js";
 import { isFlightAir, loadWalkMask } from "../world/biome.js";
 import { LAYOUT, PLACEMENTS, collidersFromPlacements } from "../world/layout.js";
+import { MascotWander } from "../world/Mascots.js";
 import { ASSETS, collectSources } from "../data/assets.js";
 import { loadTextureSet, textureSizes } from "../world/textures.js";
 import { GardenSystem } from "../systems/GardenSystem.js";
@@ -106,6 +107,7 @@ export class Game {
     this.island = new Island(this.scene, this.textures);
     this.sprites = new SpriteSet(this.scene, this.textures);
     this.collision = new Collision(collidersFromPlacements(PLACEMENTS, ASSETS));
+    this.mascots = new MascotWander(this.sprites, this.collision);
 
     // Garden beds are not in the concept painting, so they stay off the island.
     this.garden = new GardenSystem(this.scene, { isoQuat: this.basis.quaternion });
@@ -256,6 +258,7 @@ export class Game {
     }
 
     this.pibo.update(dt, this.input, { frozen, collision: this.collision });
+    this.mascots?.update(dt, this.pibo);
 
     if (!this.started && this.pibo.moving) {
       this.started = true;

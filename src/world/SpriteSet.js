@@ -37,6 +37,16 @@ export class IsoSprite {
   setVisible(v) {
     this.group.visible = v;
   }
+
+  /**
+   * Walk or flutter pose. flip mirrors the painting, bob lifts the feet,
+   * and sx/sy squash the step. The feet stay on the ground line.
+   */
+  setMotion({ flip = 1, bob = 0, sx = 1, sy = 1, lean = 0 } = {}) {
+    this.mesh.scale.set(flip * sx, sy, 1);
+    this.mesh.position.y = this.baseLocalY * sy + bob;
+    this.mesh.rotation.z = lean;
+  }
 }
 
 export class SpriteSet {
