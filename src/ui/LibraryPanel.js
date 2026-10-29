@@ -43,6 +43,7 @@ export class LibraryPanel {
   close() {
     if (!this.isOpen) return;
     this._stopSpeech();
+    this._stopMascotWander();
     this.isOpen = false;
     this.root.classList.add("hidden");
     this.root.setAttribute("aria-hidden", "true");
@@ -63,6 +64,7 @@ export class LibraryPanel {
   }
 
   _render() {
+    this._stopMascotWander();
     this.root.innerHTML = "";
     const scene = h("div", "library-scene");
     const stage = h("div", "library-stage");
@@ -77,6 +79,7 @@ export class LibraryPanel {
     mascot.style.width = LIBRARY_MASCOT.width;
     stage.append(bg, mascot);
     scene.append(stage);
+    this._wanderMascot(mascot);
     this.root.append(scene);
 
     const card = h("div", "library-card");
@@ -251,6 +254,43 @@ export class LibraryPanel {
     saveLibraryLog(this.log, { lessonId: this.lesson.id });
     synth.cancel();
     synth.speak(utter);
+  }
+
+  _wanderMascot(img) {
+    this._stopMascotWander();
+    const homeLeft = parseFloat(img.style.left) || 43.2;
+    const homeTop = parseFloat(img.style.top) || 36.11;
+    let left = homeLeft;
+    let top = homeTop;
+    let goalL = homeLeft;
+    let goalT = homeTop;
+    let hold = 0.4;
+    let bob = Math.random() * Math.PI * 2;
+    let last = performance.now();
+    const tick = (now) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      hold -= dt;
+      bob += dt * 2.4;
+      if (hold <= 0) {
+        goalL = homeLeft + (Math.random() * 2 - 1) * 7;
+        goalT = homeTop + (Math.random() * 2 - 1) * 5;
+        hold = 1.4 + Math.random() * 2.2;
+      }
+      left += (goalL - left) * Math.min(1, dt * 0.7);
+      top += (goalT - top) * Math.min(1, dt * 0.7);
+      img.style.left = `${left}%`;
+      img.style.top = `${top}%`;
+      const hop = Math.sin(bob) * 5;
+      img.style.transform = `translateY(${hop}px)`;
+      this._mascotFrame = requestAnimationFrame(tick);
+    };
+    this._mascotFrame = requestAnimationFrame(tick);
+  }
+
+  _stopMascotWander() {
+    if (this._mascotFrame) cancelAnimationFrame(this._mascotFrame);
+    this._mascotFrame = 0;
   }
 
   _stopSpeech() {

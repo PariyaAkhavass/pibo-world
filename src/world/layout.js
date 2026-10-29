@@ -20,6 +20,9 @@ export function collidersFromPlacements() {
     });
   }
   for (const circle of CIRCLES) {
+    // Mascots wander, so a circle glued to their old spot would be an invisible wall.
+    // Trunks stay. Pibo walks through a creature instead of getting stuck on it.
+    if (circle.role === "mascot") continue;
     out.push({
       id: circle.id,
       type: "circle",
