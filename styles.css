@@ -1492,20 +1492,48 @@ html.phone-landscape .collection {
   touch-action: pan-y;
 }
 
-/* Library story maker. The room is behind this card. */
+/* Library story maker. The hangout painting is behind the card. */
 #ui > .library-overlay { pointer-events: none; }
 .library-overlay {
   position: absolute;
   inset: 0;
   z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: max(12px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
+}
+.library-scene {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  padding: max(12px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
+  background: #8ec8e6;
+  pointer-events: none;
+}
+.library-stage {
+  position: relative;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+}
+.library-bg {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+}
+.library-mascot {
+  position: absolute;
+  height: auto;
+  pointer-events: none;
 }
 .library-overlay.hidden { display: none; }
 .library-card {
   pointer-events: auto;
-  width: min(640px, 100%);
+  position: relative;
+  z-index: 1;
+  width: min(440px, 46vw);
   max-height: calc(100dvh - 24px);
   overflow: auto;
   background: #fff8ee;
@@ -1577,7 +1605,7 @@ html.phone-landscape .library-card {
 html.phone-landscape .library-title { font-size: 22px; }
 html.phone-landscape .library-story { font-size: 16px; }
 
-/* Art room. The painting fills the window. Icons float over it. */
+/* Art room. The cottage studio fills the window. Icons float over it. */
 .art-overlay {
   position: absolute;
   inset: 0;

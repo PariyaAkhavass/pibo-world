@@ -69,6 +69,65 @@ export const GLASSES = [
 ];
 
 const INK = "#3a2a24";
+
+/**
+ * Her three drawings. Eyes and blush sit in different places on each one,
+ * so recolor and glasses follow the view instead of one mirrored picture.
+ */
+const FACES = {
+  left: {
+    eyes: [
+      [0.27, 0.734, 0.05, 0.042],
+      [0.468, 0.746, 0.055, 0.044],
+    ],
+    blush: [
+      [0.251, 0.797, 0.04, 0.036],
+      [0.46, 0.823, 0.065, 0.05],
+    ],
+    lenses: [
+      [0.27, 0.734],
+      [0.468, 0.746],
+    ],
+  },
+  right: {
+    eyes: [
+      [0.53, 0.746, 0.055, 0.044],
+      [0.728, 0.734, 0.05, 0.042],
+    ],
+    blush: [
+      [0.538, 0.823, 0.065, 0.05],
+      [0.747, 0.795, 0.04, 0.036],
+    ],
+    lenses: [
+      [0.53, 0.746],
+      [0.728, 0.734],
+    ],
+  },
+  front: {
+    eyes: [
+      [0.391, 0.751, 0.052, 0.042],
+      [0.597, 0.754, 0.052, 0.042],
+    ],
+    blush: [
+      [0.357, 0.815, 0.055, 0.042],
+      [0.629, 0.824, 0.052, 0.046],
+    ],
+    lenses: [
+      [0.391, 0.751],
+      [0.597, 0.754],
+    ],
+  },
+};
+
+export const FACE_SRC = {
+  left: "assets/pibo/pibo.png",
+  right: "assets/pibo/pibo-face-right.png",
+  front: "assets/pibo/pibo-face-front.png",
+};
+
+function faceProfile(view) {
+  return FACES[view] || FACES.left;
+}
 const layersOf = new WeakMap();
 const spriteImages = new Map();
 const hairListeners = new Set();
@@ -114,9 +173,9 @@ export function saveLook(look) {
   localStorage.setItem(KEY, JSON.stringify(look));
 }
 
-export function paintLook(source, look, target) {
+export function paintLook(source, look, target, view = "left") {
   const canvas = target || document.createElement("canvas");
-  const layers = splitLayers(source);
+  const layers = splitLayers(source, view);
   const { w, h } = layers;
   const pot = POTS.find((item) => item.id === look.pot) || POTS[0];
   const hat = HATS.find((item) => item.id === look.hat);
@@ -148,25 +207,37 @@ export function paintLook(source, look, target) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
   ctx.translate(padX, padY);
-  ctx.drawImage(potCanvas(layers, pot), 0, 0);
+  const colored = potCanvas(layers, pot);
+  ctx.drawImage(colored, 0, 0);
   if (pot.pattern) drawPattern(ctx, layers, pot.pattern);
   ctx.drawImage(layers.eyes, 0, 0);
+  let worn = null;
   if (!wearHat) {
     if (!hair?.src) ctx.drawImage(layers.leaves, 0, 0);
-    else drawAccessory(ctx, layers, hair);
+    else {
+      drawAccessory(ctx, layers, hair);
+      worn = hair;
+    }
   }
   const scarf = SCARVES.find((item) => item.id === look.scarf);
   if (scarf?.color) drawScarf(ctx, layers, scarf.color);
   const glasses = GLASSES.find((item) => item.id === look.glasses);
-  if (glasses?.color) drawGlasses(ctx, w, h, glasses.color);
-  if (wearHat) drawAccessory(ctx, layers, hat);
+  if (glasses?.color) drawGlasses(ctx, layers, glasses.color);
+  if (wearHat) {
+    drawAccessory(ctx, layers, hat);
+    worn = hat;
+  }
+  // Hair sits on the pot, then the rim ink is painted back so a soft
+  // leaf edge cannot break the black outline.
+  reinforcePot(ctx, layers, worn, colored);
   ctx.restore();
   return canvas;
 }
 
-function splitLayers(source) {
+function splitLayers(source, view = "left") {
   const cached = layersOf.get(source);
   if (cached) return cached;
+  const profile = faceProfile(view);
   const w = source.width || source.naturalWidth;
   const h = source.height || source.naturalHeight;
   const scratch = document.createElement("canvas");
@@ -222,13 +293,21 @@ function splitLayers(source) {
       let kind = 0;
       if (isGreen(r, g, b)) {
         into = ld;
-      } else if (inEye(x, y, w, h) && isEyePixel(r, g, b)) {
+      } else if (inSpot(x, y, w, h, profile.eyes) && isEyePixel(r, g, b)) {
         into = ed;
+      } else if (inSpot(x, y, w, h, profile.blush) && isBlushPixel(r, g, b)) {
+        // Orange cheek circles stay. Body shading outside these spots recolors.
+        into = ed;
+      } else if (Math.max(r, g, b) < 120) {
+        // The rim stroke sits above the yellow lip. It is pot ink, not hair,
+        // or choosing a flower would throw the outline away.
+        into = pd;
+        kind = 2;
       } else if (y < smooth[x] && !isWarm(r, g, b)) {
         into = ld;
       } else {
         into = pd;
-        kind = Math.max(r, g, b) < 80 ? 2 : 1;
+        kind = 1;
       }
       into[p] = r;
       into[p + 1] = g;
@@ -249,6 +328,9 @@ function splitLayers(source) {
     eyes: eyeC,
     rim: measureRim(mask, w, h),
     pots: new Map(),
+    view,
+    lenses: profile.lenses,
+    outline: buildOutline(src, mask, w, h),
   };
   layersOf.set(source, layers);
   return layers;
@@ -371,9 +453,94 @@ function drawAccessory(ctx, layers, item) {
   ctx.drawImage(spriteImages.get(item.id), box.x, box.y, box.dw, box.dh);
 }
 
+/**
+ * The outer black stroke, about 30px thick. The dark mouth inside the rim
+ * is farther from the transparent outside, so it stays behind the flower.
+ */
+function buildOutline(src, mask, w, h) {
+  const count = w * h;
+  const reach = 32;
+  const dist = new Int16Array(count);
+  dist.fill(32767);
+  const queue = new Int32Array(count);
+  let tail = 0;
+  for (let n = 0; n < count; n++) {
+    if (src[n * 4 + 3] >= 16) continue;
+    dist[n] = 0;
+    queue[tail++] = n;
+  }
+  let head = 0;
+  while (head < tail) {
+    const n = queue[head++];
+    const d = dist[n];
+    if (d >= reach) continue;
+    const x = n % w;
+    const y = (n / w) | 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      const ny = y + dy;
+      if (ny < 0 || ny >= h) continue;
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx;
+        if (nx < 0 || nx >= w) continue;
+        const next = ny * w + nx;
+        if (dist[next] <= d + 1) continue;
+        dist[next] = d + 1;
+        queue[tail++] = next;
+      }
+    }
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  const img = ctx.createImageData(w, h);
+  const data = img.data;
+  for (let n = 0; n < count; n++) {
+    if (mask[n] !== 2 || dist[n] > reach) continue;
+    const p = n * 4;
+    data[p] = src[p];
+    data[p + 1] = src[p + 1];
+    data[p + 2] = src[p + 2];
+    data[p + 3] = src[p + 3];
+  }
+  ctx.putImageData(img, 0, 0);
+  return canvas;
+}
+
+function reinforcePot(ctx, layers, item, colored) {
+  const { w, h, mask } = layers;
+  const box = item ? accessoryBounds(layers, item) : null;
+  const img = item ? spriteImages.get(item.id) : null;
+  if (box && img) {
+    const scratch = document.createElement("canvas");
+    scratch.width = w;
+    scratch.height = h;
+    const sctx = scratch.getContext("2d", { willReadFrequently: true });
+    sctx.drawImage(img, box.x, box.y, box.dw, box.dh);
+    const hair = sctx.getImageData(0, 0, w, h).data;
+    const pot = colored.getContext("2d").getImageData(0, 0, w, h).data;
+    const restored = sctx.createImageData(w, h);
+    const out = restored.data;
+    for (let n = 0; n < mask.length; n++) {
+      if (!mask[n]) continue;
+      const alpha = hair[n * 4 + 3];
+      // A half-transparent leaf edge blends into the pot and breaks the ink.
+      if (alpha === 0 || alpha === 255) continue;
+      const p = n * 4;
+      out[p] = pot[p];
+      out[p + 1] = pot[p + 1];
+      out[p + 2] = pot[p + 2];
+      out[p + 3] = pot[p + 3];
+    }
+    sctx.putImageData(restored, 0, 0);
+    ctx.drawImage(scratch, 0, 0);
+  }
+  ctx.drawImage(layers.outline, 0, 0);
+}
+
 function drawScarf(ctx, layers, color) {
   const { w, h, mask } = layers;
-  const y = h * 0.785;
+  const y = h * 0.86;
   const span = spanAt(mask, w, y);
   const inset = (span.right - span.left) * 0.03;
   const x = span.left + inset;
@@ -420,24 +587,27 @@ function spanAt(mask, w, y) {
   return { left, right };
 }
 
-function drawGlasses(ctx, w, h, color) {
+function drawGlasses(ctx, layers, color) {
+  const { w, h, lenses } = layers;
   ctx.save();
   ctx.strokeStyle = INK;
   ctx.fillStyle = color;
-  ctx.lineWidth = Math.max(8, w * 0.026);
+  ctx.lineWidth = Math.max(6, w * 0.016);
   ctx.lineJoin = "round";
-  const rw = w * 0.15;
-  const rh = h * 0.078;
-  const y = h * 0.632;
-  roundRect(ctx, w * 0.305 - rw / 2, y, rw, rh, rh * 0.45);
-  ctx.fill();
-  ctx.stroke();
-  roundRect(ctx, w * 0.64 - rw / 2, y, rw, rh, rh * 0.45);
-  ctx.fill();
-  ctx.stroke();
+  const rw = w * 0.1;
+  const rh = h * 0.072;
+  const boxes = lenses.map(([cx, cy]) => ({
+    x: cx * w - rw / 2,
+    y: cy * h - rh / 2,
+  }));
+  for (const box of boxes) {
+    roundRect(ctx, box.x, box.y, rw, rh, rh * 0.45);
+    ctx.fill();
+    ctx.stroke();
+  }
   ctx.beginPath();
-  ctx.moveTo(w * 0.305 + rw / 2, y + rh * 0.5);
-  ctx.lineTo(w * 0.64 - rw / 2, y + rh * 0.5);
+  ctx.moveTo(boxes[0].x + rw, boxes[0].y + rh * 0.5);
+  ctx.lineTo(boxes[1].x, boxes[1].y + rh * 0.48);
   ctx.stroke();
   ctx.restore();
 }
@@ -452,20 +622,18 @@ function isWarm(r, g, b) {
 
 function isEyePixel(r, g, b) {
   const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
   if (max < 95) return true;
-  if (min > 175 && b > 150) return true;
   return r < 130 && g < 90 && b < 70 && max < 150;
 }
 
-function inEye(x, y, w, h) {
+function isBlushPixel(r, g, b) {
+  return r > 180 && g > 70 && g < 200 && b < 110 && r > g + 30;
+}
+
+function inSpot(x, y, w, h, spots) {
   const fx = x / w;
   const fy = y / h;
-  const eyes = [
-    [0.308, 0.678, 0.082, 0.072],
-    [0.64, 0.682, 0.082, 0.072],
-  ];
-  for (const [cx, cy, rx, ry] of eyes) {
+  for (const [cx, cy, rx, ry] of spots) {
     const dx = (fx - cx) / rx;
     const dy = (fy - cy) / ry;
     if (dx * dx + dy * dy <= 1) return true;

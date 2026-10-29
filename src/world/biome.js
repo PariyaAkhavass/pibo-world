@@ -2,11 +2,11 @@ import { PLATE_W, PLATE_H } from "./iso.js";
 import { PLATE_PIXELS } from "../data/painted.js";
 
 /**
- * Walk and water samples painted from the concept image.
- * Red = grass and path, blue = sea. Green in the mask is everything else
- * (sky, rocks, flowers, bushes). Only the sky that touches the top of the
- * picture blocks a step. Rocks, flowers, and the coast stay walkable.
- * The strip of sea painted under the picture is water, same as the sea.
+ * Walk and air samples painted from the concept image.
+ * Red = grass and path, blue = open air over the sea (Pibo flies there).
+ * Green in the mask is everything else. Only the sky that touches the top of
+ * the picture blocks a step. Rocks, flowers, and the coast stay walkable.
+ * The strip of sea painted under the picture is air, same as the sea.
  */
 
 const IMG_W = 1280;
@@ -92,8 +92,8 @@ export function isBlocked(x, z) {
   return sample(x, z) === "block";
 }
 
-/** Swim as soon as any sample on the pot is in the painted sea. */
-export function isBlueWater(x, z, fx = 0, fz = 0, reach = 0.5) {
+/** True when any sample on the pot is over open sea, which is flight air. */
+export function isFlightAir(x, z, fx = 0, fz = 0, reach = 0.5) {
   const points = [
     [x, z],
     [x + fx * reach, z + fz * reach],
@@ -103,6 +103,11 @@ export function isBlueWater(x, z, fx = 0, fz = 0, reach = 0.5) {
     [x, z - reach],
   ];
   return points.some(([px, pz]) => sample(px, pz) === "water");
+}
+
+/** @deprecated Swimming is retired. The sea is flight air. */
+export function isBlueWater(x, z, fx = 0, fz = 0, reach = 0.5) {
+  return isFlightAir(x, z, fx, fz, reach);
 }
 
 export const OCEAN_LAT = 64;

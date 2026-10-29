@@ -56,6 +56,9 @@ export function textureSizes(assets) {
   };
   for (const entry of Object.values(assets)) {
     add(entry.src, entry);
+    if (entry.faces) {
+      for (const url of Object.values(entry.faces)) add(url, entry);
+    }
     if (entry.states) {
       for (const frames of Object.values(entry.states)) {
         for (const url of frames) add(url, entry);

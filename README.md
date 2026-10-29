@@ -8,8 +8,7 @@ The goal of this build is one feeling, not a feature list:
 
 > **"I own this tiny world, it feels alive, and I want to keep shaping it."**
 
-You wake up on a handcrafted **home island** painted like the concept. Walk the sandy paths, swim the moment you
-touch the water, and visit the lighthouse studio or the arcade.
+You wake up on a handcrafted **home island** painted like the concept. Walk the paths, fly across the sea to another islet, and visit the lighthouse studio, the library, or the arcade.
 
 ## Run it
 
@@ -37,8 +36,8 @@ connection the first time.
 - The blue friend and little white Pino are hidden for now. Turn them back on with `SHOW_VILLAGE_FRIENDS` in `src/config.js`. The garden beds and the collection button are hidden too, so the island matches the painting.
 - **Phone / tablet** — a little joystick (bottom-left) steers Pibo; tap **E** (bottom-right) to interact. On-screen prompts and plant cards are tappable too.
 - The cottage, teal house, shed, trees, and rocks are solid — Pibo slides around them.
-- **Lighthouse studio** — a gold beam sweeps from the islet. Swim there, or tap **Go to lighthouse** (top left), then press **E**.
-- **Swimming** — the instant Pibo touches blue water it lies face-down and breaststrokes (both arms sweep out and back together, legs kick). It never plays a walking pose in the water. Stepping onto grass or either islet stands it upright and it walks again.
+- **Lighthouse studio** — fly to the islet, or tap the lighthouse icon (top left), then press **E**.
+- **Flying** — the moment Pibo leaves the grass for open sea, the pot lifts and glides. Steer to the arcade islet, the lighthouse islet, or any other patch of land. Touching grass lands and walks again. The old breaststroke is not used.
 - **Need an idea?** — inside the lighthouse studio. Rolls a tiny game prompt that stays inside the demo lesson (food words + “I like / I don’t like”). Lock a slot, reroll the rest, then **Use this idea** to drop the hint into the sentence box.
 - **Arcade room** — tap **Go to Arcade** (under Go to lighthouse), or use the map, then press **E** to step inside. The machine's screen shows your game as you choose a template or answer the idea chips. Drag pictures on the screen, set the key, the treasure, the order, and the English clues. **Play / Test** runs on that screen. **Exit** or **Esc** steps back outside. **Save** and **Export log (JSON)** work from the side panel.
 
@@ -130,10 +129,10 @@ src/
     SpriteSet.js    one camera-facing card per object
     iso.js          fixed yaw/pitch and the screen-relative move axes
     layout.js       flat x/z layout, land shapes, placements
-    biome.js        water test: swim the moment the body leaves land
+    biome.js        air test: fly the moment the body leaves land
     textures.js     SVG/PNG → texture
   entities/
-    Pibo.js         swappable idle / walk / swim frames
+    Pibo.js         upright pot; idle, walk, and flight over the sea
   data/
     assets.js       id → image, size, anchor, footprint
     planets.js      island list for the map (ISLANDS, same data as PLANETS)

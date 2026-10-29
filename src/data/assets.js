@@ -43,12 +43,19 @@ export const ASSETS = {
     radius: 0.7,
     waterReach: 0.5,
     anchor: { x: 0.5, y: 0 },
-    ...px(646, 846),
-    fps: { idle: 2, walk: 7, swim: 5 },
+    ...px(645, 838),
+    // Breaststroke frames in assets/pibo/pibo-swim-*.png are unused.
+    // Crossing the sea plays an upright flight on the idle pot instead.
+    // Left, right, and front are her three drawings. The walker swaps them.
+    fps: { idle: 2, walk: 7 },
+    faces: {
+      left: "assets/pibo/pibo.png",
+      right: "assets/pibo/pibo-face-right.png",
+      front: "assets/pibo/pibo-face-front.png",
+    },
     states: {
       idle: ["assets/pibo/pibo.png"],
       walk: ["assets/pibo/pibo.png"],
-      swim: [1, 2, 3, 4].map((i) => `assets/pibo/pibo-swim-${i}.png`),
     },
   },
 };
@@ -71,6 +78,9 @@ export function collectSources(assets = ASSETS) {
   for (const entry of Object.values(assets)) {
     if (entry.kind === "mask") continue;
     if (entry.src) urls.add(entry.src);
+    if (entry.faces) {
+      for (const url of Object.values(entry.faces)) urls.add(url);
+    }
     if (entry.states) {
       for (const frames of Object.values(entry.states)) {
         for (const url of frames) urls.add(url);
