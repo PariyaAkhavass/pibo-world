@@ -12,7 +12,7 @@ Replace one PNG and refresh. Positions stay in `src/data/layers.js`. Rebuild fro
 
 ### Ground
 
-- **Plate** (`assets/painted/plate.png`) — terrain only: sky, sea, islet grass, paths, cliffs, and small flowers. Buildings, hero trees, the picnic blanket, and mascots are not in this file. 2560 × 1632. The middle is the 32 × 18 play area.
+- **Plate** (`assets/painted/plate.png`) — terrain only: sky, sea, islet grass, paths, cliffs, and small flowers. Buildings, hero trees, the picnic blanket, and mascots are not in this file. 2560 × 1440, which is the 32 × 18 play area. Do not pad it by stretching the edge rows.
 - **Walk mask** (`assets/painted/walk-mask.png`) — red where Pibo may walk, blue for open sea (he flies there), green for the top sky edge. 640 × 360.
 
 ### Buildings — one file each

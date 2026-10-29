@@ -285,14 +285,10 @@ def build_island():
 
     ground = Image.fromarray(cv2.cvtColor(ground_bgr, cv2.COLOR_BGR2RGB))
     plate = ground.resize((W * 2, H * 2), Image.Resampling.LANCZOS)
-    pad = 96
-    canvas = Image.new("RGB", (W * 2, H * 2 + pad * 2))
-    top = plate.crop((0, 0, plate.width, 28)).resize((plate.width, pad), Image.Resampling.LANCZOS)
-    bot = plate.crop((0, plate.height - 28, plate.width, plate.height)).resize((plate.width, pad), Image.Resampling.LANCZOS)
-    canvas.paste(top, (0, 0))
-    canvas.paste(plate, (0, pad))
-    canvas.paste(bot, (0, pad + plate.height))
-    canvas.save(ROOT / "assets" / "painted" / "plate.png", optimize=True)
+    # Save the painting only. A vertical pad made by stretching the top and
+    # bottom rows becomes a hard seam: the cliff, flowers, and foliage smear
+    # into streaks. The camera frames these pixels and does not show past them.
+    plate.save(ROOT / "assets" / "painted" / "plate.png", optimize=True)
     mask.save(ROOT / "assets" / "painted" / "walk-mask.png")
 
     preview = ground.convert("RGBA")
