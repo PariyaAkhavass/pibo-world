@@ -8,7 +8,7 @@ The list of images lives in [`src/data/assets.js`](src/data/assets.js) and [`src
 
 Bold, saturated, flat color, thick outlines, and very little detail. No letters anywhere in the picture. No human characters. Outdoor animals are not part of the island picture.
 
-Replace the plate and refresh. Doors and walls stay in `src/data/layers.js`. Rebuild from the locked concept with `python3 tools/build-layers.py`.
+Replace the plate and refresh. Doors and walls stay in `src/data/layers.js`. The clean outdoor picture is `assets/painted/sources/island-outdoor.png` (1280 × 720, no animals, no edge pad). `python3 tools/build-layers.py` copies it to the plate at 2560 × 1440. It does not cut the painting apart.
 
 ### Ground
 
