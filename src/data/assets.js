@@ -10,6 +10,7 @@
  * Pibo's frames live under `states`. See ASSETS.md.
  */
 import { PAINTED_SPRITES, PLATE_PIXELS, PLATE_SRC, WALK_MASK_SRC } from "./painted.js";
+import { MASCOTS } from "./mascots.js";
 
 const px = (w, h) => ({ pixelWidth: w, pixelHeight: h });
 
@@ -59,6 +60,20 @@ export const ASSETS = {
     },
   },
 };
+
+for (const mascot of MASCOTS) {
+  ASSETS[mascot.id] = {
+    id: mascot.id,
+    src: mascot.src,
+    kind: "mascot",
+    pixelWidth: mascot.pixelWidth,
+    pixelHeight: mascot.pixelHeight,
+    width: mascot.width,
+    height: mascot.height,
+    anchor: { x: 0.5, y: 0 },
+    note: "Transparent friend of Pibo. Not painted into the plate.",
+  };
+}
 
 for (const sprite of PAINTED_SPRITES) {
   ASSETS[sprite.id] = {

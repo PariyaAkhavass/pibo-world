@@ -6,13 +6,14 @@ The list of images lives in [`src/data/assets.js`](src/data/assets.js) and [`src
 
 ## What to draw
 
-Bold, saturated, flat color, thick outlines, and very little detail. No letters anywhere in the picture. No human characters. Outdoor animals are not part of the island picture.
+Bold, saturated, flat color, thick outlines, and very little detail. No letters anywhere in the picture. No human characters. Outdoor animals are not part of the island picture. The friends that walk the grass are separate transparent sprites (`assets/mascots/`), drawn in the same cel style as Pibo: thick ink, flat color, one shade, black bead eyes, a tiny smile, and orange blush.
 
 Replace the plate and refresh. Doors and walls stay in `src/data/layers.js`. The clean outdoor picture is `assets/painted/sources/island-outdoor.png` (1280 × 720, no animals, no edge pad). `python3 tools/build-layers.py` copies it to the plate at 2560 × 1440. It does not cut the painting apart.
 
 ### Ground
 
 - **Plate** (`assets/painted/plate.png`) — the whole outdoor island: sky, sea, islets, grass, paths, cliffs, flowers, buildings, and trees. Outdoor animals and butterflies are not in this file. 2560 × 1440, which is the 32 × 18 play area. Do not pad it by stretching the edge rows.
+- **Mascots** (`assets/mascots/fox.png`, `cat.png`, `snail.png`, `chick.png`, `bird.png`) — transparent PNGs with feet on the bottom edge. Rebuild them with `python3 tools/build-mascots.py`. Homes and stroll radii live in `src/data/mascots.js`. They idle, stroll on walkable ground, slide along the house and trunk keep-outs, and step aside for Pibo. The bird is the only one that hops, and it stays on the lighthouse grass.
 - **Walk mask** (`assets/painted/walk-mask.png`) — red where Pibo may walk, blue for open sea (he flies there), green for the top sky edge. 640 × 360.
 
 ### Library room

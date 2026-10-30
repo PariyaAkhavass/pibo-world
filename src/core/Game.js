@@ -13,6 +13,8 @@ import { TvStudio } from "../systems/TvStudio.js";
 import { ArcadeRoom } from "../systems/ArcadeRoom.js";
 import { LibraryRoom } from "../systems/LibraryRoom.js";
 import { Pibo } from "../entities/Pibo.js";
+import { Mascot } from "../entities/Mascot.js";
+import { MASCOTS } from "../data/mascots.js";
 import { getPlant } from "../data/plants.js";
 import { SHOW_VILLAGE_FRIENDS } from "../config.js";
 
@@ -138,6 +140,12 @@ export class Game {
       scale: 2 / 3,
     });
     this.scene.add(this.pibo.group);
+    this.mascots = MASCOTS.map((def) => new Mascot({
+      textures: this.textures,
+      basis: this.basis,
+      def,
+    }));
+    for (const mascot of this.mascots) this.scene.add(mascot.group);
 
     this.friendsVisible = SHOW_VILLAGE_FRIENDS;
     this.companion = new Pibo({
@@ -256,6 +264,11 @@ export class Game {
     }
 
     this.pibo.update(dt, this.input, { frozen, collision: this.collision });
+    if (!frozen) {
+      for (const mascot of this.mascots) {
+        mascot.update(dt, this.collision, this.pibo, this.mascots);
+      }
+    }
 
     if (!this.started && this.pibo.moving) {
       this.started = true;
