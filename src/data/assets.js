@@ -22,7 +22,7 @@ export const ASSETS = {
     pixelHeight: PLATE_PIXELS.pixelHeight,
     width: PLATE_PIXELS.worldW,
     height: PLATE_PIXELS.worldH,
-    note: "Bright island background. Houses, islets, and the lighthouse lamp are painted into this picture. Swap assets/painted/plate.png.",
+    note: "The whole outdoor island, unpadded. Buildings and trees are in this picture. Swap assets/painted/plate.png.",
   },
   walkMask: {
     id: "walk-mask",

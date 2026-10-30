@@ -279,11 +279,12 @@ export class Game {
   }
 
   _updateCamera(dt = 0) {
-    // Keep the whole painting on screen. Slide only when the view is smaller
-    // than the picture, which the current frame never is.
+    // Keep the view inside the painting. A short window crops the top and
+    // bottom evenly so the lighthouse stays on screen. Slide only on a
+    // sideways phone, when the view is smaller than the picture.
     let x = 0;
     let y = 0;
-    const pictureFits = this._viewW + 0.01 >= PLATE_W && this._viewH + 0.01 >= PLATE_H;
+    const pictureFits = this._viewW + 0.12 >= PLATE_W && this._viewH + 0.12 >= PLATE_H;
     if (this._phoneLandscape && this.pibo && !pictureFits) {
       const plateH = ASSETS.plate.height;
       const limitX = Math.max(0, (PLATE_W - this._viewW) / 2);
