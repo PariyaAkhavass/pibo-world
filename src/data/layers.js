@@ -1,7 +1,8 @@
 /**
  * Island layout. The outdoor picture is one painting (assets/painted/plate.png).
  * Buildings and trees stay in that painting so they cannot clip through each other.
- * Outdoor animals and butterflies are not drawn. The library room still has its own files.
+ * Outdoor animals are not painted into the plate. Living friends are separate
+ * sprites. The library room still has its own files.
  * The anchor of a future outdoor sprite is the bottom center.
  */
 export const PAINTED_SPRITES = [];
