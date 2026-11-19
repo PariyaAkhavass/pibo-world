@@ -8,7 +8,7 @@ The list of images lives in [`src/data/assets.js`](src/data/assets.js) and [`src
 
 Bold, saturated, flat color, thick outlines, and very little detail. No letters anywhere in the picture. No human characters. Outdoor animals are not part of the island picture.
 
-Replace the plate and refresh. Doors and walls stay in `src/data/layers.js`. The clean outdoor picture is `assets/painted/sources/island-outdoor.png` (1280 × 720, no animals, no edge pad). `python3 tools/build-layers.py` copies it to the plate at 2560 × 1440. It does not cut the painting apart.
+Replace the plate, then rebuild the runtime pictures. Doors and walls stay in `src/data/layers.js`. The clean outdoor picture is `assets/painted/sources/island-outdoor.png` (1280 × 720, no animals, no edge pad). `python3 tools/build-layers.py` copies it to the plate at 2560 × 1440. It does not cut the painting apart. The game does not download the PNG. `python3 tools/optimize-runtime.py` writes a hashed WebP under `assets/runtime/` and points `src/data/assetManifest.js` at it.
 
 ### Ground
 
@@ -37,8 +37,9 @@ The library hangout background, with the raccoon removed, is `assets/painted/lay
 ## How to swap the island or Pibo
 
 1. Export a PNG. The island can be opaque. Pibo needs a transparent background.
-2. Overwrite `assets/painted/plate.png` or `assets/pibo/pibo.png`.
-3. Refresh the game. There is no build step.
+2. Overwrite `assets/painted/plate.png` or `assets/pibo/pibo.png`. Those PNG files stay in the repo as the sources.
+3. Run `python3 tools/optimize-runtime.py`. That refreshes the WebP files the game loads.
+4. Refresh the browser.
 
 The old cutouts in `assets/painted/sprites/` are not drawn. Outdoor buildings are not separate stickers. Footprints are `HOUSES` and `CIRCLES` in `src/data/layers.js`. If a new painting moves a building, move that polygon so Pibo still slides along the wall.
 

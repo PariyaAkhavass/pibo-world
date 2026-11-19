@@ -13,6 +13,7 @@ import { TvStudio } from "../systems/TvStudio.js";
 import { ArcadeRoom } from "../systems/ArcadeRoom.js";
 import { LibraryRoom } from "../systems/LibraryRoom.js";
 import { Pibo } from "../entities/Pibo.js";
+import { loadEquippedWearable, loadLook } from "../entities/piboLook.js";
 import { Critter } from "../entities/Critter.js";
 import { CRITTERS } from "../data/critters.js";
 import { getPlant } from "../data/plants.js";
@@ -74,6 +75,9 @@ export class Game {
     const [textures] = await Promise.all([
       loadTextureSet(sources, textureSizes(ASSETS)),
       loadWalkMask(ASSETS.walkMask.src),
+      // Only the hair or hat already saved on this browser. The rest wait
+      // for the art room.
+      loadEquippedWearable(loadLook()),
     ]);
     this.textures = textures;
     this._initWorld();

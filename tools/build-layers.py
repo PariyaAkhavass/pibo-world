@@ -138,6 +138,7 @@ def main():
             path.unlink()
             print("retired", path.name)
     write_layers()
+    print("next: python3 tools/optimize-runtime.py")
 
 
 if __name__ == "__main__":

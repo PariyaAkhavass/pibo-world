@@ -1,0 +1,7 @@
+# Screenshot journals and the PNG/JPEG masters are for editing, not the site.
+# The game downloads the hashed WebP files in assets/runtime/.
+progress
+assets/**/sources
+assets/**/*.png
+assets/**/*.jpg
+assets/**/*.jpeg
