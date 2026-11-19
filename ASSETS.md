@@ -13,6 +13,8 @@ Replace the plate and refresh. Doors and walls stay in `src/data/layers.js`. The
 ### Ground
 
 - **Plate** (`assets/painted/plate.png`) — the whole outdoor island: sky, sea, islets, grass, paths, cliffs, flowers, buildings, and trees. Outdoor animals and butterflies are not in this file. 2560 × 1440, which is the 32 × 18 play area. Do not pad it by stretching the edge rows.
+- **Pot friends** (`assets/pot-friends/front.png`, `side.png`, `closed.png`) — Paria's three yellow pots, cut from her sheet. Feet sit on the bottom center. They wander the outdoor grass as their own sprites (`src/data/potFriends.js`). Left and right travel uses the three-quarter drawing, mirrored when it walks the other way. Front and closed eyes are the idle looks. Rebuild the cuts with `python3 tools/cut-pot-friends.py`.
+- **Animal mascots** (`assets/critters/`) — her cat, dog, bunny, panda, frog, penguin, unicorn, and fox, cut off the checker sheet. They are smaller than Pibo and the pot friends, and they hop around the same grass (`src/data/critters.js`). Rebuild with `python3 tools/cut-critters.py`.
 - **Walk mask** (`assets/painted/walk-mask.png`) — red where Pibo may walk, blue for open sea (he flies there), green for the top sky edge. 640 × 360.
 
 ### Library room

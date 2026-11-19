@@ -1,6 +1,7 @@
 /**
  * The bright island. One painting holds the ground, buildings, and trees so
- * they read as a single world. Outdoor animals are not separate cards.
+ * they read as a single world. Pot friends and the little mascots are their own
+ * sprites, not cards cut from this painting. Outdoor animals are not on the plate.
  * x grows right, z grows down. The picture is 32 units wide and 18 tall.
  * It is not padded: stretching the edge rows smears the cliff and flowers.
  */
