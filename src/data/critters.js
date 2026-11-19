@@ -3,7 +3,7 @@
  * front, three-quarter left, side left, back-three-quarter left,
  * front, three-quarter right, side right, back-three-quarter right.
  * Both sides are her drawings. The game does not mirror them.
- * They are smaller than Pibo and the pot friends.
+ * They are smaller than Pibo. Pibo is the only pot.
  */
 const UNIT = 0.0076;
 

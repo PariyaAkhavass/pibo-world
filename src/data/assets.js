@@ -10,7 +10,6 @@
  * Pibo's frames live under `states`. See ASSETS.md.
  */
 import { PAINTED_SPRITES, PLATE_PIXELS, PLATE_SRC, WALK_MASK_SRC } from "./painted.js";
-import { POT_FRIEND_POSES, POT_FRIEND_SIZE } from "./potFriends.js";
 import { CRITTERS } from "./critters.js";
 
 const px = (w, h) => ({ pixelWidth: w, pixelHeight: h });
@@ -61,20 +60,6 @@ export const ASSETS = {
     },
   },
 };
-
-for (const [pose, src] of Object.entries(POT_FRIEND_POSES)) {
-  ASSETS[`pot-friend-${pose}`] = {
-    id: `pot-friend-${pose}`,
-    src,
-    kind: "character",
-    pixelWidth: POT_FRIEND_SIZE.pixelWidth,
-    pixelHeight: POT_FRIEND_SIZE.pixelHeight,
-    width: POT_FRIEND_SIZE.width,
-    height: POT_FRIEND_SIZE.height,
-    anchor: { x: 0.5, y: 0 },
-    note: "Paria's pot friend. A separate sprite, not painted into the plate.",
-  };
-}
 
 for (const critter of CRITTERS) {
   ASSETS[critter.id] = {
