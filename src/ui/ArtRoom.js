@@ -6,11 +6,17 @@ import {
   POTS,
   SCARVES,
   FACE_SRC,
+  TUFT_ICON,
   loadLook,
+  loadWearableImages,
   onHairSprite,
   paintLook,
   saveLook,
 } from "../entities/piboLook.js";
+import { loadImage, resolveAsset } from "../data/runtimeAssets.js";
+import { withBoot } from "./boot.js";
+
+const ART_BG = "assets/painted/art-room.jpg";
 
 const INK = "#3a2a24";
 
@@ -31,8 +37,8 @@ export class ArtRoom {
     this.look = loadLook();
     this.view = "front";
     this.sources = {};
+    this._token = 0;
     this._build();
-    this._loadSources();
     onHairSprite(() => {
       if (!this.isOpen) return;
       this._paint();
@@ -49,7 +55,7 @@ export class ArtRoom {
     const bg = document.createElement("img");
     bg.className = "art-bg";
     bg.alt = "";
-    bg.src = "assets/painted/art-room.jpg";
+    this.bg = bg;
     this.root.appendChild(bg);
 
     this.shadow = document.createElement("div");
@@ -104,33 +110,39 @@ export class ArtRoom {
     this.onChange?.(this.look);
   }
 
-  _loadSources() {
-    for (const [view, url] of Object.entries(FACE_SRC)) {
-      const img = new Image();
-      img.onload = () => {
-        this.sources[view] = img;
-        if (this.isOpen && this.view === view) {
-          this._paint();
-          this.layout();
-        }
-      };
-      img.src = url;
+  _mountIcons() {
+    for (const img of this.root.querySelectorAll("img[data-lazy]")) {
+      if (img.getAttribute("src") !== img.dataset.lazy) img.src = img.dataset.lazy;
     }
   }
 
   open(view = this.view) {
     if (FACE_SRC[view]) this.view = view;
+    const token = (this._token += 1);
     this.isOpen = true;
     this.look = loadLook();
-    this.root.classList.remove("hidden");
-    this.root.setAttribute("aria-hidden", "false");
-    this._paint();
-    this._mark();
-    this.layout();
+    const faces = Object.entries(FACE_SRC).map(async ([name, url]) => {
+      this.sources[name] = await loadImage(url);
+    });
+    withBoot(() => Promise.all([loadImage(ART_BG), loadWearableImages(), ...faces])).then(() => {
+      if (!this.isOpen || this._token !== token) return;
+      this.bg.src = resolveAsset(ART_BG);
+      this._mountIcons();
+      this.root.classList.remove("hidden");
+      this.root.setAttribute("aria-hidden", "false");
+      this._paint();
+      this._mark();
+      this.layout();
+    }).catch(() => {
+      if (!this.isOpen || this._token !== token) return;
+      this.root.classList.remove("hidden");
+      this.root.setAttribute("aria-hidden", "false");
+    });
   }
 
   close() {
     this.isOpen = false;
+    this._token += 1;
     this.root.classList.add("hidden");
     this.root.setAttribute("aria-hidden", "true");
   }
@@ -250,14 +262,14 @@ function potIcon(item) {
 }
 
 function hairIcon(item) {
-  const src = item.src || (item.id === "tuft" ? "assets/pibo/hair/tuft-icon.png" : "");
+  const src = item.src || (item.id === "tuft" ? TUFT_ICON : "");
   if (!src) return noneIcon();
-  return `<img src="${src}" alt="">`;
+  return `<img alt="" data-lazy="${resolveAsset(src)}">`;
 }
 
 function hatIcon(item) {
   if (!item.src) return noneIcon();
-  return `<img src="${item.src}" alt="">`;
+  return `<img alt="" data-lazy="${resolveAsset(item.src)}">`;
 }
 
 function scarfIcon(item) {

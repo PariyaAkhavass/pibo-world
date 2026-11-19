@@ -6,7 +6,10 @@
  * Saved on this browser and drawn on the island and in the art room.
  */
 
+import { loadImage } from "../data/runtimeAssets.js";
+
 const KEY = "pibo-look";
+export const TUFT_ICON = "assets/pibo/hair/tuft-icon.png";
 
 export const DEFAULT_LOOK = {
   pot: "yellow",
@@ -132,19 +135,41 @@ const layersOf = new WeakMap();
 const spriteImages = new Map();
 const hairListeners = new Set();
 
-if (typeof Image !== "undefined") {
+function rememberWearable(item, img) {
+  if (img?.naturalWidth) spriteImages.set(item.id, img);
+  for (const fn of hairListeners) fn(item.id);
+}
+
+/** Hair and hat pictures, plus the tuft picker. Loaded when the art room opens. */
+export function loadWearableImages() {
+  const jobs = [];
   for (const item of [...HAIRS, ...HATS]) {
     if (!item.src) continue;
-    const img = new Image();
-    img.onload = () => {
-      if (img.naturalWidth) spriteImages.set(item.id, img);
-      for (const fn of hairListeners) fn(item.id);
-    };
-    img.onerror = () => {
+    jobs.push(loadImage(item.src).then((img) => {
+      rememberWearable(item, img);
+      return img;
+    }).catch(() => {
       spriteImages.delete(item.id);
-    };
-    img.src = item.src;
+      return null;
+    }));
   }
+  jobs.push(loadImage(TUFT_ICON).catch(() => null));
+  return Promise.all(jobs);
+}
+
+/** The one accessory already chosen, so the island pot matches the save. */
+export function loadEquippedWearable(look) {
+  const hat = HATS.find((item) => item.id === look?.hat && item.src);
+  const hair = HAIRS.find((item) => item.id === look?.hair && item.src);
+  const item = look?.hat && look.hat !== "none" ? hat : hair;
+  if (!item?.src) return Promise.resolve(null);
+  return loadImage(item.src).then((img) => {
+    rememberWearable(item, img);
+    return img;
+  }).catch(() => {
+    spriteImages.delete(item.id);
+    return null;
+  });
 }
 
 /** Fires when a hair PNG finishes loading, so the island and art room can repaint. */

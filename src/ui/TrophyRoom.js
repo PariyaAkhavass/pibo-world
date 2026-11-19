@@ -1,5 +1,9 @@
 import { DEFAULT_LOOK, loadLook } from "../entities/piboLook.js";
 import { loadLibraryLog } from "../systems/libraryLog.js";
+import { loadImages, resolveAsset } from "../data/runtimeAssets.js";
+import { withBoot } from "./boot.js";
+
+const TROPHY_BG = "assets/painted/trophy-room.jpg";
 
 /**
  * Full-screen trophy room. One painted mushroom interior, with the prizes
@@ -30,6 +34,7 @@ export class TrophyRoom {
     this.root = root;
     this.onClose = onClose || null;
     this.isOpen = false;
+    this._token = 0;
     this.slots = [];
     this._build();
   }
@@ -43,7 +48,6 @@ export class TrophyRoom {
     const bg = document.createElement("img");
     bg.className = "trophy-bg";
     bg.alt = "";
-    bg.src = "assets/painted/trophy-room.jpg";
     bg.addEventListener("load", () => this.layout());
     this.bg = bg;
     this.root.appendChild(bg);
@@ -56,7 +60,6 @@ export class TrophyRoom {
       img.className = "trophy-sprite";
       img.alt = "";
       img.draggable = false;
-      img.src = slot.src;
       const shadow = document.createElement("span");
       shadow.className = "trophy-shadow";
       el.append(img, shadow);
@@ -74,15 +77,30 @@ export class TrophyRoom {
   }
 
   open() {
+    const token = (this._token += 1);
     this.isOpen = true;
-    this.root.classList.remove("hidden");
-    this.root.setAttribute("aria-hidden", "false");
-    this._mark();
-    this.layout();
+    withBoot(() => loadImages([TROPHY_BG, ...SLOTS.map((slot) => slot.src)])).then(() => {
+      if (!this.isOpen || this._token !== token) return;
+      this.bg.src = resolveAsset(TROPHY_BG);
+      for (const slot of this.slots) {
+        const img = slot.el.querySelector("img");
+        const url = resolveAsset(slot.src);
+        if (img.getAttribute("src") !== url) img.src = url;
+      }
+      this.root.classList.remove("hidden");
+      this.root.setAttribute("aria-hidden", "false");
+      this._mark();
+      this.layout();
+    }).catch(() => {
+      if (!this.isOpen || this._token !== token) return;
+      this.root.classList.remove("hidden");
+      this.root.setAttribute("aria-hidden", "false");
+    });
   }
 
   close() {
     this.isOpen = false;
+    this._token += 1;
     this.root.classList.add("hidden");
     this.root.setAttribute("aria-hidden", "true");
   }

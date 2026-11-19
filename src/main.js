@@ -1,5 +1,6 @@
 import { Game } from "./core/Game.js";
 import { UI } from "./ui/UI.js";
+import { hideBoot } from "./ui/boot.js";
 
 /**
  * Pibo — Pocket Planet prototype.
@@ -20,6 +21,7 @@ document.addEventListener("gesturechange", (e) => e.preventDefault());
 document.addEventListener("dblclick", (e) => e.preventDefault());
 await game.preload();
 game.start();
+requestAnimationFrame(() => requestAnimationFrame(() => hideBoot()));
 canvas.focus();
 
 // handy for tinkering in the console

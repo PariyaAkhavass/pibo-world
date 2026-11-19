@@ -1,4 +1,5 @@
 import { LIBRARY_MASCOT } from "../data/layers.js";
+import { assetFrame, resolveAsset } from "../data/runtimeAssets.js";
 import { FOOD_LIKES_LESSON } from "../data/lessons/foodLikes.js";
 import { highlightStory, lessonWords, makeStory, STORY_THEMES } from "../systems/storyGen.js";
 import { loadLibraryLog, saveLibraryLog } from "../systems/libraryLog.js";
@@ -68,10 +69,10 @@ export class LibraryPanel {
     const stage = h("div", "library-stage");
     const bg = h("img", "library-bg");
     bg.alt = "";
-    bg.src = LIBRARY_MASCOT.background;
+    placeLayer(bg, LIBRARY_MASCOT.background);
     const mascot = h("img", "library-mascot");
     mascot.alt = "";
-    mascot.src = LIBRARY_MASCOT.src;
+    mascot.src = resolveAsset(LIBRARY_MASCOT.src);
     mascot.style.left = LIBRARY_MASCOT.left;
     mascot.style.top = LIBRARY_MASCOT.top;
     mascot.style.width = LIBRARY_MASCOT.width;
@@ -261,4 +262,16 @@ export class LibraryPanel {
     }
     this._utter = null;
   }
+}
+
+/** Put a cropped layer back where it sat in the original full-canvas picture. */
+function placeLayer(img, src) {
+  img.src = resolveAsset(src);
+  const frame = assetFrame(src);
+  if (!frame) return;
+  img.style.position = "absolute";
+  img.style.left = `${(frame.x / frame.fullWidth) * 100}%`;
+  img.style.top = `${(frame.y / frame.fullHeight) * 100}%`;
+  img.style.width = `${(frame.width / frame.fullWidth) * 100}%`;
+  img.style.height = `${(frame.height / frame.fullHeight) * 100}%`;
 }

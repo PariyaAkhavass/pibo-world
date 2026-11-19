@@ -1,5 +1,6 @@
 import { PLATE_W, PLATE_H } from "./iso.js";
 import { PLATE_PIXELS } from "../data/painted.js";
+import { resolveAsset } from "../data/runtimeAssets.js";
 
 /**
  * Walk and air samples painted from the concept image.
@@ -32,7 +33,7 @@ export function loadWalkMask(url) {
       resolve();
     };
     img.onerror = () => reject(new Error(`Could not load ${url}`));
-    img.src = url;
+    img.src = resolveAsset(url);
   });
 }
 
