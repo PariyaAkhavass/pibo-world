@@ -13,6 +13,8 @@ import { TvStudio } from "../systems/TvStudio.js";
 import { ArcadeRoom } from "../systems/ArcadeRoom.js";
 import { LibraryRoom } from "../systems/LibraryRoom.js";
 import { Pibo } from "../entities/Pibo.js";
+import { Critter } from "../entities/Critter.js";
+import { CRITTERS } from "../data/critters.js";
 import { getPlant } from "../data/plants.js";
 import { SHOW_VILLAGE_FRIENDS } from "../config.js";
 
@@ -21,7 +23,8 @@ const ENTER_RANGE = 2.15;
 /**
  * Isometric island. The camera angle stays fixed; it only slides to follow
  * Pibo. Props are images from the asset manifest. Studio, arcade, garden,
- * and the hidden friends keep their old jobs.
+ * and the hidden friends keep their old jobs. Paria's eight little animals hop
+ * around the grass. Pibo is the only pot on the island.
  */
 export class Game {
   constructor(canvas, ui) {
@@ -138,6 +141,12 @@ export class Game {
       scale: 2 / 3,
     });
     this.scene.add(this.pibo.group);
+    this.critters = CRITTERS.map((def) => new Critter({
+      textures: this.textures,
+      basis: this.basis,
+      def,
+    }));
+    for (const critter of this.critters) this.scene.add(critter.group);
 
     this.friendsVisible = SHOW_VILLAGE_FRIENDS;
     this.companion = new Pibo({
@@ -256,6 +265,11 @@ export class Game {
     }
 
     this.pibo.update(dt, this.input, { frozen, collision: this.collision });
+    if (!frozen) {
+      for (const critter of this.critters) {
+        critter.update(dt, this.collision, this.pibo, this.critters);
+      }
+    }
 
     if (!this.started && this.pibo.moving) {
       this.started = true;

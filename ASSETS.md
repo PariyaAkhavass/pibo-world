@@ -13,6 +13,7 @@ Replace the plate and refresh. Doors and walls stay in `src/data/layers.js`. The
 ### Ground
 
 - **Plate** (`assets/painted/plate.png`) — the whole outdoor island: sky, sea, islets, grass, paths, cliffs, flowers, buildings, and trees. Outdoor animals and butterflies are not in this file. 2560 × 1440, which is the 32 × 18 play area. Do not pad it by stretching the edge rows.
+- **Animal mascots** (`assets/critters/<name>/`) — her cat, dog, bunny, panda, frog, penguin, unicorn, and fox. Each folder has eight walk drawings from her cycle sheet: front, three-quarter, side, and back-three-quarter, for both sides. They are smaller than Pibo, who is the only pot. Rebuild with `python3 tools/cut-critter-walk.py`. The purple names on the sheet are not part of the sprites.
 - **Walk mask** (`assets/painted/walk-mask.png`) — red where Pibo may walk, blue for open sea (he flies there), green for the top sky edge. 640 × 360.
 
 ### Library room
