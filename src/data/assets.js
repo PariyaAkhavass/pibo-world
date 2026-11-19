@@ -86,7 +86,8 @@ for (const critter of CRITTERS) {
     width: critter.width,
     height: critter.height,
     anchor: { x: 0.5, y: 0 },
-    note: "Paria's little animal mascot. A separate sprite, not painted into the plate.",
+    states: { walk: critter.frames },
+    note: "Paria's little animal. Eight walk drawings, not painted into the plate.",
   };
 }
 

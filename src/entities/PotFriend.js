@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { POT_FRIEND_POSES, POT_FRIEND_SIZE } from "../data/potFriends.js";
 import { isBlocked, onLand } from "../world/biome.js";
 import { placeOnPlate } from "../world/iso.js";
+import { createChatterBubble, nearSomeone, setChatterBubble } from "./chatterBubble.js";
 
 /**
  * One of Paria's yellow pots on the outdoor grass.
@@ -63,6 +64,8 @@ export class PotFriend {
     this.pivot = new THREE.Group();
     this.pivot.quaternion.copy(basis.quaternion);
     this.pivot.add(this.body);
+    this.bubble = createChatterBubble(this.width * 0.55);
+    this.pivot.add(this.bubble);
 
     this.shadow = new THREE.Mesh(
       new THREE.PlaneGeometry(this.width * 0.62, this.height * 0.2),
@@ -89,6 +92,7 @@ export class PotFriend {
     const yielded = this._yield(dt, collision, pibo);
     if (!yielded) this._stroll(dt, collision);
     this._separate(others, collision);
+    setChatterBubble(this.bubble, nearSomeone(this, others, 1.35), dt, this.idleT, this.height);
     this._animate(dt);
     this._apply();
   }

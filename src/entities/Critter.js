@@ -1,12 +1,13 @@
 import * as THREE from "three";
 import { isBlocked, onLand } from "../world/biome.js";
 import { placeOnPlate } from "../world/iso.js";
+import { createChatterBubble, nearSomeone, setChatterBubble } from "./chatterBubble.js";
 
 /**
- * One of Paria's little animal mascots. It hops along a short wander on
- * walkable grass, then chatters in place with a soft bounce. No words.
- * The drawing faces the camera. Walking right mirrors it so a tail or mane
- * sits behind the step.
+ * One of Paria's little animals. It hops a short wander on walkable grass.
+ * While it moves it uses the walk drawing that matches that direction.
+ * She drew both sides, so nothing is mirrored. A soft empty bubble appears
+ * when it chatters or stands near a friend. The bubble has no words.
  */
 export class Critter {
   constructor({ textures, basis, def }) {
@@ -30,12 +31,12 @@ export class Critter {
     this.stuck = 0;
     this.walkPhase = Math.random() * Math.PI * 2;
     this.idleT = Math.random() * 6;
-    this._flip = 1;
     this.chatterLeft = 0;
+    this.frame = 0;
 
-    const map = textures.get(def.src);
+    this.frames = (def.frames || [def.src]).map((src) => textures.get(src) || null);
     this.material = new THREE.MeshBasicMaterial({
-      map,
+      map: this.frames[0],
       transparent: true,
       alphaTest: 0.04,
       depthWrite: true,
@@ -50,6 +51,8 @@ export class Critter {
     this.pivot = new THREE.Group();
     this.pivot.quaternion.copy(basis.quaternion);
     this.pivot.add(this.body);
+    this.bubble = createChatterBubble(this.width);
+    this.pivot.add(this.bubble);
 
     this.shadow = new THREE.Mesh(
       new THREE.PlaneGeometry(this.width * 0.55, this.height * 0.18),
@@ -75,6 +78,8 @@ export class Critter {
     const yielded = this._yield(dt, collision, pibo);
     if (!yielded) this._stroll(dt, collision);
     this._separate(others, collision);
+    const chatting = this.mode === "chatter" || nearSomeone(this, others, 1.2);
+    setChatterBubble(this.bubble, chatting, dt, this.idleT, this.height);
     this._animate(dt);
     this._apply();
   }
@@ -263,17 +268,39 @@ export class Critter {
       sx = 1 + (1 - hop) * 0.04;
     }
 
-    if (this.moving && Math.abs(this.faceX) > Math.abs(this.faceZ) * 0.8) {
-      this._flip = this.faceX > 0.08 ? -1 : 1;
-    }
-
+    this._showFrame();
     this.mesh.scale.set(sx, sy, 1);
-    this.body.scale.x = this._flip;
     this.mesh.position.y = this.height * sy * 0.5 + bob;
     if (this.shadow) {
       const lift = hopping ? bob : 0;
       this.shadow.scale.set(1 - lift * 0.8, 1, 1);
       this.shadow.material.opacity = 0.42 - lift * 0.7;
+    }
+  }
+
+  /**
+   * 0 front, 1 three-left, 2 side-left, 3 back-left,
+   * 4 front, 5 three-right, 6 side-right, 7 back-right.
+   * Toward the camera swaps the two front drawings. Away uses a back view.
+   */
+  _showFrame() {
+    const ax = Math.abs(this.faceX);
+    const az = Math.abs(this.faceZ);
+    const vertical = az / (ax + az + 1e-6);
+    const step = Math.floor(this.walkPhase) % 2;
+    const right = this.faceX >= 0;
+    let frame = 0;
+    const acting = this.moving || this.mode === "chatter";
+    if (acting && vertical > 0.62 && this.faceZ > 0) frame = step ? 4 : 0;
+    else if (acting && vertical > 0.62) frame = right ? 7 : 3;
+    else if (this.moving && vertical < 0.42) frame = right ? 6 : 2;
+    else if (this.moving && this.faceZ > 0) frame = right ? 5 : 1;
+    else if (this.moving) frame = right ? 7 : 3;
+    else if (this.mode === "chatter") frame = step ? 4 : 0;
+    const tex = this.frames[frame] || this.frames[0];
+    if (tex && this.material.map !== tex) {
+      this.material.map = tex;
+      this.material.needsUpdate = true;
     }
   }
 
